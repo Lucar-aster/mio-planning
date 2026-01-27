@@ -185,48 +185,70 @@ with tabs[2]:
     
     c_admin1, c_admin2, c_admin3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
 
+    # --- SOTTO-TAB: COMMESSE ---
     with c_admin1:
         st.subheader("Gestione Commesse")
         commesse = get_data("Commesse")
         if commesse:
             df_c = pd.DataFrame(commesse)
-            st.dataframe(df_c[["nome_commessa"]], use_container_width=True)
+            # Controllo se la colonna esiste, altrimenti mostro tutto il DF
+            col_target = "nome_commessa" if "nome_commessa" in df_c.columns else df_c.columns[1]
+            st.dataframe(df_c[[col_target]], use_container_width=True)
+        else:
+            st.info("Nessuna commessa registrata.")
         
-        with st.form("new_commessa"):
-            n_c = st.text_input("Nuova Commessa")
+        with st.form("new_commessa", clear_on_submit=True):
+            n_c = st.text_input("Nome Nuova Commessa")
             if st.form_submit_button("Aggiungi"):
-                supabase.table("Commesse").insert({"nome_commessa": n_c}).execute()
-                st.rerun()
+                if n_c:
+                    supabase.table("Commesse").insert({"nome_commessa": n_c}).execute()
+                    st.rerun()
 
+    # --- SOTTO-TAB: OPERATORI (Qui c'era l'errore) ---
     with c_admin2:
         st.subheader("Gestione Operatori")
-        # Simile a sopra per Operatori...
         ops = get_data("Operatori")
         if ops:
-            st.dataframe(pd.DataFrame(ops)[["nome_operatore"]], use_container_width=True)
+            df_ops = pd.DataFrame(ops)
+            # Se 'nome_operatore' non esiste, cerchiamo 'nome' o usiamo la prima colonna disponibile
+            possibili_nomi = ["nome_operatore", "nome", "operatore"]
+            col_op = next((c for c in possibili_nomi if c in df_ops.columns), df_ops.columns[0])
+            
+            st.dataframe(df_ops[[col_op]], use_container_width=True)
+        else:
+            st.info("Nessun operatore registrato.")
         
-        with st.form("new_op"):
-            n_o = st.text_input("Nuovo Operatore")
+        with st.form("new_op", clear_on_submit=True):
+            n_o = st.text_input("Nome Nuovo Operatore")
             if st.form_submit_button("Aggiungi"):
-                supabase.table("Operatori").insert({"nome_operatore": n_o}).execute()
-                st.rerun()
+                if n_o:
+                    # Assicurati che il nome della colonna qui coincida con Supabase (es. 'nome_operatore')
+                    supabase.table("Operatori").insert({"nome_operatore": n_o}).execute()
+                    st.rerun()
 
+    # --- SOTTO-TAB: TASK ---
     with c_admin3:
         st.subheader("Gestione Task")
         tasks = get_data("Task")
         cms = get_data("Commesse")
         
         if tasks and cms:
-            c_map = {c['id']: c['nome_commessa'] for c in cms}
             df_t = pd.DataFrame(tasks)
-            df_t['Progetto'] = df_t['commessa_id'].map(c_map)
+            c_map = {c['id']: c['nome_commessa'] for c in cms}
             
-            st.dataframe(df_t[["nome_task", "Progetto"]], use_container_width=True)
+            # Verifichiamo che la colonna 'commessa_id' esista per la mappatura
+            if 'commessa_id' in df_t.columns:
+                df_t['Progetto'] = df_t['commessa_id'].map(c_map)
+            
+            # Visualizzazione sicura delle colonne
+            cols_to_show = [c for c in ["nome_task", "Progetto"] if c in df_t.columns]
+            st.dataframe(df_t[cols_to_show], use_container_width=True)
             
             with st.expander("🆕 Aggiungi Task"):
-                with st.form("new_task"):
+                with st.form("new_task", clear_on_submit=True):
                     t_n = st.text_input("Nome Task")
                     t_c = st.selectbox("Associa a Progetto", options=cms, format_func=lambda x: x['nome_commessa'])
                     if st.form_submit_button("Salva Task"):
-                        supabase.table("Task").insert({"nome_task": t_n, "commessa_id": t_c['id']}).execute()
-                        st.rerun()
+                        if t_n:
+                            supabase.table("Task").insert({"nome_task": t_n, "commessa_id": t_c['id']}).execute()
+                            st.rerun()
