@@ -18,32 +18,28 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE (ESTETICA MIGLIORATA E SCALE TEMPORALI) ---
+# --- TAB 1: TIMELINE ---
 with tabs[0]:
     st.header("📊 Timeline Progetti")
     
-    # --- SELETTORE DI SCALA ---
     col_scale, col_empty = st.columns([2, 4])
     scala = col_scale.selectbox(
         "Seleziona Scala Temporale", 
         ["Settimanale", "Mensile", "Trimestrale", "Semestrale"],
-        index=1
+        index=1, key="scale_sel"
     )
 
     try:
         logs = get_data("Log_Tempi")
-        tasks = {t['id']: t['nome_task'] for t in get_data("Task")}
+        res_tasks = get_data("Task")
+        task_map = {t['id']: t['nome_task'] for t in res_tasks} if res_tasks else {}
         
         if logs:
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
-            df['Task'] = df['task_id'].map(tasks)
-            
-            # Formattazione Etichetta: "01/01/2026 (Sett. 1)"
-            df['label_settimana'] = df['Inizio'].dt.strftime('%d/%m/%Y') + " (Sett. " + df['Inizio'].dt.isocalendar().week.astype(str) + ")"
+            df['Task'] = df['task_id'].map(task_map)
 
-            # Configurazione Scala
             scale_config = {
                 "Settimanale": {"dtick": "D1", "format": "%d %b\nSett.%V"},
                 "Mensile": {"dtick": "D7", "format": "%d/%m\nSett.%V"},
@@ -52,65 +48,33 @@ with tabs[0]:
             }
             conf = scale_config[scala]
 
-            # Creazione Grafico
-            fig = px.timeline(
-                df, 
-                x_start="Inizio", 
-                x_end="Fine", 
-                y="Task", 
-                color="operatore", 
-                text="operatore",
-                color_discrete_sequence=px.colors.qualitative.Pastel # Colori più eleganti
-            )
+            fig = px.timeline(df, x_start="Inizio", x_end="Fine", y="Task", color="operatore", text="operatore")
 
-           # Estetica Avanzata (CON SLIDER E ZOOM)
             fig.update_layout(
                 bargap=0.4,
+                height=200 + (len(df['Task'].unique()) * 50),
                 plot_bgcolor="white",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Arial", size=12, color="#2c3e50"),
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                margin=dict(l=50, r=20, t=80, b=50),
-                
-                # AGGIUNTA DELLO SLIDER
-                xaxis=dict(
-                    rangeslider=dict(visible=True), # Barra di scorrimento sotto
-                    type="date"
-                )
+                xaxis=dict(rangeslider=dict(visible=True), type="date")
             )
 
-            # CALCOLO DEL RANGE INIZIALE (Zoom automatico)
-            # Mostriamo di default da 15 giorni fa a 15 giorni nel futuro
+            # Zoom sull'oggi
             oggi = datetime.now()
             inizio_zoom = (oggi - pd.Timedelta(days=15)).strftime("%Y-%m-%d")
             fine_zoom = (oggi + pd.Timedelta(days=15)).strftime("%Y-%m-%d")
 
-            # Configurazione Asse X
-            fig.update_xaxes(
-                tickformat=conf["format"],
-                dtick=conf["dtick"],
-                gridcolor="#f0f0f0",
-                linecolor="#333",
-                range=[inizio_zoom, fine_zoom], # Applica lo zoom iniziale
-                ticks="outside"
-            )
-
-            fig.update_yaxes(
-                autorange="reversed", 
-                showgrid=True, 
-                gridcolor="#f0f0f0"
-            )
-# Aggiunge una linea rossa per la data odierna
+            fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], range=[inizio_zoom, fine_zoom])
+            fig.update_yaxes(autorange="reversed", type='category', tickfont=dict(family="Arial Black", size=12))
+            
             fig.add_vline(x=datetime.now().timestamp() * 1000, line_width=2, line_dash="dash", line_color="red")
+            
             st.plotly_chart(fig, use_container_width=True)
-            else:
+        else:
             st.info("Nessun dato presente.")
     except Exception as e:
         st.error(f"Errore tecnico nel Tab 1: {e}")
-
-
-# --- TAB 2: REGISTRA TEMPI ---
+        # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
     commesse = get_data("Commesse")
