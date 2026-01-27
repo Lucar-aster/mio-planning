@@ -5,8 +5,8 @@ import plotly.express as px
 from datetime import datetime
 
 # Connessione a Supabase (Inserisci i tuoi dati qui)
-URL = https://vjeqrhseqbfsomketjoj.supabase.co
-KEY = sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8
+URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
+KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
 st.title("⏱️ Team Project Planning")
