@@ -18,42 +18,46 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE CON RAGGRUPPAMENTO COMMESSE ---
+# --- TAB 1: TIMELINE PROFESSIONALE CON RAGGRUPPAMENTO GERARCHICO ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
+    # 1. CONTROLLI DI VISUALIZZAZIONE
     col1, col2, col3, col_button = st.columns([2, 2, 2, 1])
     scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1, key="vista_scala")
     mostra_nomi = col2.checkbox("Nomi su barre", value=True, key="check_nomi")
-    oggi = datetime.now()
     
+    # Tasto per resettare la vista sulla data odierna
+    oggi = datetime.now()
     if col_button.button("📍 Oggi"):
         st.rerun()
     
     try:
-        # Recupero dati
+        # Recupero dati da Supabase
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
         
         if logs and res_tasks and res_commesse:
-            # Creazione mappe per i nomi
+            # Creazione mappe per decodificare gli ID in nomi
             task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
+            # Preparazione DataFrame
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
+            # Estensione alla fine della giornata per rendere visibile anche il singolo giorno
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             
-            # Arricchimento dati per raggruppamento
-            df['Nome_Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
-            df['Nome_Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
+            # Arricchimento dati per la gerarchia
+            df['Nome_Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "Task N/A")
+            df['Nome_Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "Commessa N/A")
             
-            # ORDINAMENTO: Fondamentale per il raggruppamento visivo
+            # ORDINAMENTO: Essenziale per far funzionare il raggruppamento visivo
             df = df.sort_values(by=['Nome_Commessa', 'Nome_Task'])
 
-            # CONFIGURAZIONE SCALE
+            # CONFIGURAZIONE SCALE TEMPORALI
             scale_settings = {
                 "Settimana": {"dtick": 86400000, "format": "%a %d\nSett %V", "zoom": 7},
                 "Mese": {"dtick": 86400000 * 2, "format": "%d %b\nSett %V", "zoom": 30},
@@ -62,27 +66,31 @@ with tabs[0]:
             }
             conf = scale_settings[scala]
 
-            # CREAZIONE GRAFICO CON MULTI-CATEGORIA
-            # Passando una lista di colonne a 'y', Plotly crea i livelli gerarchici
+            # 2. CREAZIONE GRAFICO (Soluzione gerarchia tramite tuple)
+            # Usiamo una tupla (Commessa, Task) come valore Y per forzare il raggruppamento a due livelli
+            df['Gerarchia_Y'] = df[['Nome_Commessa', 'Nome_Task']].apply(tuple, axis=1)
+
             fig = px.timeline(
                 df, 
                 x_start="Inizio", 
                 x_end="Fine_Visual", 
-                y=["Nome_Commessa", "Nome_Task"], # <--- Ordine: Commessa (Esterno), Task (Interno)
+                y="Gerarchia_Y", 
                 color="operatore",
                 text="operatore" if mostra_nomi else None,
-                hover_data={"Nome_Commessa": True, "Nome_Task": True, "Inizio": "|%d %b", "Fine": "|%d %b"},
+                hover_data={"Nome_Commessa": True, "Nome_Task": True, "Inizio": "|%d %b %Y", "Fine": "|%d %b %Y"},
                 color_discrete_sequence=px.colors.qualitative.Safe
             )
 
+            # 3. LOGICA DI ZOOM INIZIALE
             inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2))
             fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2))
 
+            # 4. CONFIGURAZIONE LAYOUT
             fig.update_layout(
                 dragmode='pan',
                 bargap=0.3,
-                height=250 + (len(df['task_id'].unique()) * 50),
-                margin=dict(l=20, r=20, t=70, b=50),
+                height=250 + (len(df['Gerarchia_Y'].unique()) * 50), # Altezza dinamica
+                margin=dict(l=10, r=10, t=70, b=50),
                 plot_bgcolor="white",
                 xaxis=dict(
                     type="date",
@@ -97,16 +105,19 @@ with tabs[0]:
                     autorange="reversed",
                     showgrid=True,
                     gridcolor="#f0f0f0",
-                    fixedrange=True,
-                    # Impostazioni font per la gerarchia
-                    tickfont=dict(family="Arial", size=11),
+                    fixedrange=True, # Blocca lo scroll verticale per stabilità
+                    tickfont=dict(family="Arial", size=11)
                 ),
                 legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
             )
 
+            # Formattazione asse X (Date e Settimane)
             fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#444")
-            fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="dash", line_color="red")
+
+            # Linea rossa per segnare la data odierna
+            fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="dash", line_color="red", opacity=0.6)
             
+            # Rendering del grafico
             st.plotly_chart(
                 fig, 
                 use_container_width=True, 
@@ -119,10 +130,10 @@ with tabs[0]:
             )
             
         else:
-            st.info("Configura Commesse e Task per vedere la timeline.")
+            st.info("Configura Commesse, Task e Log per visualizzare la timeline.")
+            
     except Exception as e:
-        st.error(f"Errore: {e}")
-        
+        st.error(f"Errore tecnico nel caricamento della Timeline: {e}")        
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
