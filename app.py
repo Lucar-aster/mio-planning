@@ -20,7 +20,7 @@ tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
 import plotly.graph_objects as go
 
-# --- TAB 1: TIMELINE CON GRIGLIA GERARCHICA ---
+# --- TAB 1: TIMELINE CON GRIGLIA GERARCHICA (FIX BARRE INFINITE) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -42,13 +42,21 @@ with tabs[0]:
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
             df = pd.DataFrame(logs)
+            
+            # --- PULIZIA E CALCOLO DATE ---
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
-            df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
+            
+            # Se la fine manca o è uguale all'inizio, forziamo 1 giorno di durata
+            # Aggiungiamo 23h 59m per coprire l'intera giornata di fine
+            df['Fine_Effettiva'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59, seconds=59)
+            
+            # CALCOLO DURATA (Questo impedisce le barre infinite)
+            df['Durata_ms'] = (df['Fine_Effettiva'] - df['Inizio']).dt.total_seconds() * 1000
+            
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
             
-            # Ordinamento per raggruppamento visivo
             df = df.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
             # Palette Soft
@@ -62,7 +70,7 @@ with tabs[0]:
                 df_op = df[df['operatore'] == op]
                 fig.add_trace(go.Bar(
                     base=df_op['Inizio'],
-                    x=df_op['Fine_Visual'] - df_op['Inizio'],
+                    x=df_op['Durata_ms'], # Usiamo i millisecondi calcolati
                     y=[df_op['Commessa'], df_op['Task']],
                     orientation='h',
                     name=op,
@@ -70,7 +78,8 @@ with tabs[0]:
                     text=df_op['operatore'] if mostra_nomi else None,
                     textposition='inside',
                     insidetextanchor='middle',
-                    hovertemplate="<b>%{y[1]}</b><br>Progetto: %{y[0]}<br>Inizio: %{base|%d %b}<extra></extra>"
+                    hovertemplate="<b>%{y[1]}</b><br>Inizio: %{base|%d %b}<br>Fine: %{customdata|%d %b}<extra></extra>",
+                    customdata=df_op['Fine'] # Per il tooltip
                 ))
 
             # Configurazione Scale e Griglia
@@ -81,14 +90,16 @@ with tabs[0]:
                 "Semestre": {"dtick": "M1", "format": "%b %Y", "zoom": 180}
             }
             conf = scale_settings[scala]
+            
+            # Impostazione Range X
             inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2))
             fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2))
 
             fig.update_layout(
-                barmode='stack',
+                barmode='overlay', # Overlay per Gantt con go.Bar
                 dragmode='pan',
-                bargap=0.5,
-                height=300 + (len(df.groupby(['Commessa', 'Task'])) * 40),
+                bargap=0.6,
+                height=300 + (len(df.groupby(['Commessa', 'Task'])) * 45),
                 margin=dict(l=10, r=20, t=80, b=50),
                 plot_bgcolor="white",
                 xaxis=dict(
@@ -96,37 +107,25 @@ with tabs[0]:
                     rangeslider=dict(visible=True, thickness=0.03),
                     side="top",
                     range=[inizio_zoom, fine_zoom],
-                    # --- CONFIGURAZIONE GRIGLIA GERARCHICA ---
                     showgrid=True,
-                    gridcolor="#f0f0f0", # Colore base (giorni)
+                    gridcolor="#f0f0f0",
                     gridwidth=1,
-                    # Linee minori (giorni)
-                    minor=dict(
-                        ticklen=6,
-                        showgrid=True,
-                        gridcolor="#f8f8f8",
-                        gridwidth=0.5
-                    )
+                    minor=dict(showgrid=True, gridcolor="#f8f8f8", gridwidth=0.5)
                 ),
                 yaxis=dict(
                     gridcolor="#f5f5f5",
                     tickfont=dict(size=11, color="#333")
                 ),
-                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5),
-                showlegend=True
+                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5)
             )
 
-            # Applicazione logica linee marcate (Settimane e Mesi)
             fig.update_xaxes(
                 tickformat=conf["format"],
                 dtick=conf["dtick"],
-                linecolor="#ddd",
-                # Linee dei tick principali (più marcate)
                 gridcolor="#dcdcdc", 
                 gridwidth=1.5
             )
 
-            # Linea oggi (Molto evidente)
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="solid", line_color="#ff5252")
             
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
