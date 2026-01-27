@@ -18,11 +18,10 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE PROFESSIONALE (VERSIONE DEFINITIVA ANTI-ERRORE) ---
+# --- TAB 1: TIMELINE DESIGN (COLORI SOFT E BORDI CURVI) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
-    # 1. CONTROLLI DI VISUALIZZAZIONE
     col1, col2, col3, col_button = st.columns([2, 2, 2, 1])
     scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1, key="vista_scala")
     mostra_nomi = col2.checkbox("Nomi su barre", value=True, key="check_nomi")
@@ -32,7 +31,6 @@ with tabs[0]:
         st.rerun()
     
     try:
-        # Recupero dati
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
@@ -46,32 +44,27 @@ with tabs[0]:
             df['Fine'] = pd.to_datetime(df['fine'])
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             
-            # Creazione nomi
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
             
-            # ORDINAMENTO
             df = df.sort_values(by=['Commessa', 'Task'])
 
-            # --- LA SOLUZIONE ALL'ERRORE DI LUNGHEZZA ---
-            # Invece di passare una lista di liste a px.timeline (che causa l'errore), 
-            # passiamo i dati al costruttore di oggetti grafici più stabile.
-            
-            import plotly.graph_objects as go
+            # Palette di colori meno contrastanti (Pastelli desaturati)
+            soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
 
+            # Creazione Grafico
             fig = px.timeline(
                 df, 
                 x_start="Inizio", 
                 x_end="Fine_Visual", 
-                # Usiamo una lista semplice per Y, ma con i due livelli come tuple
                 y=[df['Commessa'], df['Task']], 
                 color="operatore",
                 text="operatore" if mostra_nomi else None,
                 hover_data={"Commessa": True, "Task": True},
-                color_discrete_sequence=px.colors.qualitative.Safe
+                color_discrete_sequence=soft_colors
             )
 
-            # Configurazione Scale
+            # Impostazioni Scale
             scale_settings = {
                 "Settimana": {"dtick": 86400000, "format": "%a %d\nSett %V", "zoom": 7},
                 "Mese": {"dtick": 86400000 * 2, "format": "%d %b\nSett %V", "zoom": 30},
@@ -79,23 +72,28 @@ with tabs[0]:
                 "Semestre": {"dtick": "M1", "format": "%b %Y", "zoom": 180}
             }
             conf = scale_settings[scala]
-
-            # Zoom iniziale
             inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
             fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
 
-            # 4. CONFIGURAZIONE LAYOUT
+            # Estetica delle barre e layout
+            fig.update_traces(
+                marker_line_width=0,      # Rimuove il bordo nero
+                insidetextanchor="middle", 
+                textfont=dict(size=10, color="white")
+            )
+
             fig.update_layout(
                 dragmode='pan',
-                bargap=0.3,
-                height=250 + (len(df['task_id'].unique()) * 50),
-                margin=dict(l=10, r=20, t=80, b=50), # Plotly gestisce il margine auto con multicategory
+                bargap=0.6,               # Aumentato per ridurre l'altezza delle barre
+                barcornerradius=10,        # Bordi curvi (Novità Plotly)
+                height=300 + (len(df['task_id'].unique()) * 50),
+                margin=dict(l=10, r=20, t=80, b=50),
                 plot_bgcolor="white",
                 xaxis=dict(
                     type="date",
-                    rangeslider=dict(visible=True, thickness=0.04),
+                    rangeslider=dict(visible=True, thickness=0.03),
                     side="top",
-                    gridcolor="#f0f0f0",
+                    gridcolor="#f5f5f5",
                     range=[inizio_zoom, fine_zoom],
                     fixedrange=False
                 ),
@@ -103,32 +101,22 @@ with tabs[0]:
                     title="", 
                     autorange="reversed",
                     fixedrange=True,
-                    gridcolor="#eeeeee",
-                    tickfont=dict(size=11),
-                    # Questa riga forza il raggruppamento visivo corretto
-                    templateitemname="Commessa" 
+                    gridcolor="#f5f5f5",
+                    tickfont=dict(size=11, color="#555")
                 ),
-                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
+                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5)
             )
 
-            fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#444")
-            fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="dash", line_color="red", opacity=0.6)
+            fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#eee")
+            fig.add_vline(x=oggi.timestamp() * 1000, line_width=1.5, line_dash="solid", line_color="#ff5252")
             
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
             
         else:
-            st.info("Configura i dati per visualizzare la timeline.")
+            st.info("Inserisci dati per visualizzare la timeline.")
             
     except Exception as e:
-        # Se l'errore persiste, usiamo il piano B: Etichetta concatenata "Commessa > Task"
-        st.warning("Ottimizzazione raggruppamento in corso...")
-        try:
-            df['Label_Y'] = df['Commessa'] + " | " + df['Task']
-            fig_b = px.timeline(df, x_start="Inizio", x_end="Fine_Visual", y="Label_Y", color="operatore")
-            fig_b.update_layout(dragmode='pan', xaxis=dict(side="top"))
-            st.plotly_chart(fig_b, use_container_width=True)
-        except:
-            st.error(f"Errore critico: {e}")
+        st.error(f"Errore tecnico: {e}")
         
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
