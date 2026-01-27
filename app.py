@@ -145,7 +145,7 @@ with tabs[0]:
     except Exception as e:
         st.error(f"Errore: {e}")
         
-# --- TAB 2: REGISTRA TEMPI (VERSIONE ROBUSTA) ---
+# --- TAB 2: REGISTRA TEMPI (VERSIONE ANTI-ERRORE) ---
 with tabs[1]:
     st.header("📝 Registrazione Attività")
     
@@ -157,93 +157,87 @@ with tabs[1]:
     if logs and cms and tasks and ops:
         df_logs = pd.DataFrame(logs)
         
-        # 1. Mappature ID -> Nome
-        # Cerchiamo la colonna corretta per l'operatore (nome o nome_operatore)
-        df_o_check = pd.DataFrame(ops)
-        col_op_name = next((c for c in ["nome_operatore", "nome"] if c in df_o_check.columns), df_o_check.columns[0])
+        # --- FUNZIONE DETECTIVE PER COLONNE ---
+        def get_col(df, possibili_nomi):
+            for nome in possibili_nomi:
+                if nome in df.columns:
+                    return nome
+            return df.columns[0] # Fallback sulla prima colonna se non trova nulla
+
+        # Identifichiamo le colonne corrette nelle tabelle
+        col_log_op = get_col(df_logs, ["operatore_id", "id_operatore", "operatore"])
+        col_log_tk = get_col(df_logs, ["task_id", "id_task", "task"])
         
+        col_op_name = get_col(pd.DataFrame(ops), ["nome_operatore", "nome", "operatore"])
+        col_tk_name = get_col(pd.DataFrame(tasks), ["nome_task", "nome", "task"])
+        col_tk_link = get_col(pd.DataFrame(tasks), ["commessa_id", "id_commessa", "progetto_id"])
+        col_cm_name = get_col(pd.DataFrame(cms), ["nome_commessa", "nome", "commessa"])
+
+        # --- MAPPATURE ---
         o_map = {o['id']: o.get(col_op_name, 'N/A') for o in ops}
-        t_map = {t['id']: t.get('nome_task', 'N/A') for t in tasks}
+        t_map = {t['id']: t.get(col_tk_name, 'N/A') for t in tasks}
         
-        # Mappatura Task -> Commessa (per ricavare la commessa dal task_id)
-        # t['commessa_id'] potrebbe chiamarsi anche qui in modo diverso, usiamo un check
-        df_t_check = pd.DataFrame(tasks)
-        col_t_c_link = next((c for c in ["commessa_id", "id_commessa"] if c in df_t_check.columns), "commessa_id")
-        
-        task_to_comm_id = {t['id']: t.get(col_t_c_link) for t in tasks}
-        comm_id_to_name = {c['id']: c.get('nome_commessa', 'N/A') for c in cms}
+        # Mappa Task -> Nome Commessa
+        task_to_comm_id = {t['id']: t.get(col_tk_link) for t in tasks}
+        comm_id_to_name = {c['id']: c.get(col_cm_name, 'N/A') for c in cms}
 
-        # 2. Creazione Colonne per Visualizzazione
-        df_logs['Operatore'] = df_logs['operatore_id'].map(o_map)
-        df_logs['Task'] = df_logs['task_id'].map(t_map)
+        # --- CREAZIONE COLONNE VISUALIZZAZIONE ---
+        df_logs['Operatore'] = df_logs[col_log_op].map(o_map)
+        df_logs['Task'] = df_logs[col_log_tk].map(t_map)
+        df_logs['Commessa'] = df_logs[col_log_tk].map(task_to_comm_id).map(comm_id_to_name)
         
-        # Ricaviamo la Commessa: Log -> Task -> Commessa
-        df_logs['Commessa'] = df_logs['task_id'].map(task_to_comm_id).map(comm_id_to_name)
+        # Gestione date (cerchiamo 'inizio' o 'data')
+        col_inizio = get_col(df_logs, ["inizio", "data_inizio", "start"])
+        col_fine = get_col(df_logs, ["fine", "data_fine", "end"])
         
-        # Formattazione Date
-        df_logs['Inizio'] = pd.to_datetime(df_logs['inizio']).dt.strftime('%d/%m/%Y %H:%M')
-        df_logs['Fine'] = pd.to_datetime(df_logs['fine']).dt.strftime('%d/%m/%Y %H:%M')
+        df_logs['Inizio'] = pd.to_datetime(df_logs[col_inizio]).dt.strftime('%d/%m/%Y %H:%M')
+        df_logs['Fine'] = pd.to_datetime(df_logs[col_fine]).dt.strftime('%d/%m/%Y %H:%M')
 
-        # Mostra Tabella
+        # --- VISUALIZZAZIONE ---
         st.subheader("📋 Storico Log")
-        cols_view = ["Commessa", "Task", "Operatore", "Inizio", "Fine"]
-        st.dataframe(df_logs[cols_view], use_container_width=True)
+        st.dataframe(df_logs[["Commessa", "Task", "Operatore", "Inizio", "Fine"]], use_container_width=True)
         
         st.divider()
 
-        # 3. Gestione (Modifica/Elimina) in fondo
-        c_mod, c_del = st.columns(2)
-        
-        with c_mod:
-            with st.expander("📝 Modifica"):
-                log_edit = st.selectbox("Seleziona Log", options=logs, 
-                                        format_func=lambda x: f"{o_map.get(x['operatore_id'])} - {t_map.get(x['task_id'])}", key="log_ed")
-                # Qui puoi aggiungere i campi di input per modificare...
-                if st.button("Salva Modifica", key="btn_save_log"):
-                    # Logica di update qui
-                    pass
-
-        with c_del:
-            with st.expander("🗑️ Elimina"):
-                log_del = st.selectbox("Log da rimuovere", options=logs, 
-                                       format_func=lambda x: f"{o_map.get(x['operatore_id'])} - {t_map.get(x['task_id'])}", key="log_dl")
-                if st.button("Conferma Elimina", type="primary", key="btn_confirm_dl"):
-                    supabase.table("Log_Tempi").delete().eq("id", log_del["id"]).execute()
+        # --- GESTIONE IN FONDO ---
+        c1, c2 = st.columns(2)
+        with c1:
+            with st.expander("🗑️ Elimina Log"):
+                log_to_del = st.selectbox("Seleziona log da rimuovere", options=logs, 
+                                          format_func=lambda x: f"{o_map.get(x[col_log_op])} - {t_map.get(x[col_log_tk])}", key="del_l")
+                if st.button("Elimina ora", type="primary"):
+                    supabase.table("Log_Tempi").delete().eq("id", log_to_del["id"]).execute()
                     st.rerun()
-    else:
-        st.info("Inizia a registrare attività o configura i dati di base nel Tab 3.")
+        
+        with c2:
+            with st.expander("📝 Modifica Log"):
+                st.info("Seleziona un log per modificarne i dettagli.")
+                # Qui si può implementare la logica di update simile a quella del Tab 3
 
-    # 4. Form per nuovo Log
+    else:
+        st.warning("Dati insufficienti per mostrare lo storico. Controlla le configurazioni.")
+
+    # --- AGGIUNGI NUOVO ---
     with st.expander("➕ Registra Nuova Attività"):
-        with st.form("new_log_final"):
-            # ... (Modulo di inserimento) ...
-            st.form_submit_button("Salva")
-    # --- SEZIONE 3: AGGIUNGI NUOVO (MODULO ESISTENTE POTENZIATO) ---
-    with st.expander("➕ Aggiungi Nuova Registrazione", expanded=False):
-        with st.form("new_log_form", clear_on_submit=True):
-            f_comm = st.selectbox("Commessa", cms, format_func=lambda x: x['nome_commessa'])
-            # Filtra i task in base alla commessa selezionata se vuoi, o mostrali tutti
-            f_task = st.selectbox("Task", tasks, format_func=lambda x: x['nome_task'])
-            f_op = st.selectbox("Operatore", ops, format_func=lambda x: x[col_op_name])
+        with st.form("new_log_form"):
+            sel_op = st.selectbox("Operatore", ops, format_func=lambda x: x[col_op_name])
+            sel_tk = st.selectbox("Task", tasks, format_func=lambda x: f"{x[col_tk_name]} ({comm_id_to_name.get(x[col_tk_link])})")
             
-            c1, c2 = st.columns(2)
-            f_inizio = c1.date_input("Data")
-            f_ora_i = c1.time_input("Ora Inizio")
-            f_fine = c2.date_input("Data Fine (se diversa)")
-            f_ora_f = c2.time_input("Ora Fine")
+            d1, d2 = st.columns(2)
+            data_i = d1.date_input("Inizio")
+            ora_i = d1.time_input("Ora", value=None, key="time_i")
+            data_f = d2.date_input("Fine")
+            ora_f = d2.time_input("Ora", value=None, key="time_f")
             
-            if st.form_submit_button("Salva Attività"):
-                start_dt = f"{f_inizio} {f_ora_i}"
-                end_dt = f"{f_fine} {f_ora_f}"
-                new_entry = {
-                    "commessa_id": f_comm['id'],
-                    "task_id": f_task['id'],
-                    "operatore_id": f_op['id'],
-                    "inizio": start_dt,
-                    "fine": end_dt
+            if st.form_submit_button("Salva Log"):
+                # Inserimento usando le colonne trovate dal detective
+                payload = {
+                    col_log_op: sel_op['id'],
+                    col_log_tk: sel_tk['id'],
+                    col_inizio: f"{data_i} {ora_i}",
+                    col_fine: f"{data_f} {ora_f}"
                 }
-                supabase.table("Log_Tempi").insert(new_entry).execute()
-                st.success("Attività registrata!")
+                supabase.table("Log_Tempi").insert(payload).execute()
                 st.rerun()
         
 # --- TAB 3: CONFIGURAZIONE (GESTIONE IN FONDO) ---
