@@ -63,40 +63,46 @@ with tabs[0]:
                 color_discrete_sequence=px.colors.qualitative.Pastel # Colori più eleganti
             )
 
-           # Estetica Avanzata (CORRETTA)
+           # Estetica Avanzata (CON SLIDER E ZOOM)
             fig.update_layout(
-                bargap=0.4,                # Corretto: senza underscore
-                plot_bgcolor="white",      # Sfondo bianco pulito
+                bargap=0.4,
+                plot_bgcolor="white",
                 paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(family="Arial", size=12, color="#2c3e50"),
                 showlegend=True,
-                legend_title_text="Operatore",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                margin=dict(l=50, r=20, t=80, b=50)
+                margin=dict(l=50, r=20, t=80, b=50),
+                
+                # AGGIUNTA DELLO SLIDER
+                xaxis=dict(
+                    rangeslider=dict(visible=True), # Barra di scorrimento sotto
+                    type="date"
+                )
             )
 
-            # Configurazione Asse X (Date + Settimana)
+            # CALCOLO DEL RANGE INIZIALE (Zoom automatico)
+            # Mostriamo di default da 15 giorni fa a 15 giorni nel futuro
+            oggi = datetime.now()
+            inizio_zoom = (oggi - pd.Timedelta(days=15)).strftime("%Y-%m-%d")
+            fine_zoom = (oggi + pd.Timedelta(days=15)).strftime("%Y-%m-%d")
+
+            # Configurazione Asse X
             fig.update_xaxes(
                 tickformat=conf["format"],
                 dtick=conf["dtick"],
-                gridcolor="#f0f0f0",       # Griglia molto chiara
+                gridcolor="#f0f0f0",
                 linecolor="#333",
-                ticks="outside",
-                tickangle=0                # Etichette dritte per leggibilità
+                range=[inizio_zoom, fine_zoom], # Applica lo zoom iniziale
+                ticks="outside"
             )
 
             fig.update_yaxes(
                 autorange="reversed", 
                 showgrid=True, 
-                gridcolor="#f0f0f0",
-                tickfont=dict(weight="bold") # Task in grassetto
+                gridcolor="#f0f0f0"
             )
 
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Nessun dato presente. Inizia a configurare il sistema.")
-    except Exception as e:
-        st.error(f"Errore nel caricamento del grafico: {e}")        
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
