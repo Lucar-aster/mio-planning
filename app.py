@@ -14,39 +14,51 @@ st.title("⏱️ Team Project Planning")
 # --- SEZIONE INSERIMENTO DATI ---
 with st.sidebar:
     st.header("Registra Tempo")
-    # Qui carichiamo le commesse dal database
-    commesse = supabase.table("Commesse").select("*").execute().data
-    lista_commesse = {c['nome_commessa']: c['id'] for c in commesse}
     
-    scelta_c = st.selectbox("Seleziona Commessa", options=list(lista_commesse.keys()))
+    # Recupero commesse
+    res_c = supabase.table("Commesse").select("*").execute()
+    commesse = res_c.data if res_c.data else []
     
-    # Carichiamo i task relativi
-    task = supabase.table("Task").select("*").eq("commessa_id", lista_commesse[scelta_c]).execute().data
-    lista_task = {t['nome_task']: t['id'] for t in task}
-    
-    scelta_t = st.selectbox("Seleziona Task", options=list(lista_task.keys()))
-    operatore = st.text_input("Nome Operatore")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        data_inizio = st.date_input("Data Inizio")
-        ora_inizio = st.time_input("Ora Inizio")
-    with col2:
-        data_fine = st.date_input("Data Fine")
-        ora_fine = st.time_input("Ora Fine")
-
-    if st.button("Salva Intervallo"):
-        inizio_dt = datetime.combine(data_inizio, ora_inizio).isoformat()
-        fine_dt = datetime.combine(data_fine, ora_fine).isoformat()
+    if not commesse:
+        st.warning("⚠️ Nessuna commessa trovata. Aggiungine una su Supabase!")
+        lista_commesse = {}
+    else:
+        lista_commesse = {c['nome_commessa']: c['id'] for c in commesse}
+        scelta_c = st.selectbox("Seleziona Commessa", options=list(lista_commesse.keys()))
         
-        supabase.table("Log_Tempi").insert({
-            "task_id": lista_task[scelta_t],
-            "operatore": operatore,
-            "inizio": inizio_dt,
-            "fine": fine_dt
-        }).execute()
-        st.success("Tempo registrato!")
+        # Recupero task relativi
+        res_t = supabase.table("Task").select("*").eq("commessa_id", lista_commesse[scelta_c]).execute()
+        tasks = res_t.data if res_t.data else []
+        
+        if not tasks:
+            st.warning("⚠️ Nessun task per questa commessa.")
+            lista_task = {}
+        else:
+            lista_task = {t['nome_task']: t['id'] for t in tasks}
+            scelta_t = st.selectbox("Seleziona Task", options=list(lista_task.keys()))
+            
+            operatore = st.text_input("Nome Operatore", value="Operatore 1")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                data_i = st.date_input("Inizio")
+                ora_i = st.time_input("Ora Inizio")
+            with col2:
+                data_f = st.date_input("Fine")
+                ora_f = st.time_input("Ora Fine")
 
+            if st.button("Salva Intervallo"):
+                inizio_dt = datetime.combine(data_i, ora_i).isoformat()
+                fine_dt = datetime.combine(data_f, ora_f).isoformat()
+                
+                supabase.table("Log_Tempi").insert({
+                    "task_id": lista_task[scelta_t],
+                    "operatore": operatore,
+                    "inizio": inizio_dt,
+                    "fine": fine_dt
+                }).execute()
+                st.success("Registrato! Ricarica la pagina.")
+                
 # --- VISUALIZZAZIONE TIMELINE ---
 st.subheader("Visualizzazione Timeline")
 logs = supabase.table("Log_Tempi").select("*, Task(nome_task)").execute().data
