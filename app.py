@@ -147,73 +147,102 @@ with tabs[0]:
         
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
-    st.header("Nuovo Log Lavoro")
-    commesse = get_data("Commesse")
-    ops = [o['nome'] for o in get_data("Operatori")]
+    st.header("📝 Registrazione Attività")
     
-    if not commesse or not ops:
-        st.error("Configura Commesse e Operatori nel Tab Configurazione.")
+    # --- PARTE A: NUOVO INSERIMENTO (Modulo esistente) ---
+    with st.expander("➕ Inserisci Nuovo Log", expanded=False):
+        # ... (Qui mantieni il tuo codice esistente per il form di inserimento) ...
+        st.write("Modulo di inserimento...")
+
+    st.divider()
+
+    # --- PARTE B: TABELLA EDITABILE LOG ---
+    st.subheader("📋 Storico Log e Modifica Rapida")
+    
+    logs = get_data("Log_Tempi")
+    if logs:
+        df_logs = pd.DataFrame(logs)
+        
+        # Pulizia per la visualizzazione
+        df_logs = df_logs.sort_values(by='inizio', ascending=False)
+        
+        # Configurazione Tabella Editabile
+        edited_df = st.data_editor(
+            df_logs,
+            column_order=("operatore", "task_id", "inizio", "fine"), # Scegli quali colonne mostrare
+            column_config={
+                "operatore": st.column_config.TextColumn("Operatore"),
+                "task_id": st.column_config.SelectboxColumn("ID Task", options=[t['id'] for t in res_tasks]), # Se vuoi mostrare gli ID
+                "inizio": st.column_config.DateColumn("Data Inizio"),
+                "fine": st.column_config.DateColumn("Data Fine"),
+            },
+            num_rows="dynamic", # Permette di aggiungere/eliminare righe
+            use_container_width=True,
+            key="log_editor"
+        )
+        
+        if st.button("💾 Salva modifiche tabella"):
+            # Qui andrebbe la logica per confrontare df_logs e edited_df e fare l'update su Supabase
+            st.info("Funzionalità di salvataggio bulk via tabella in fase di implementazione. Usa il Tab 1 per modifiche puntuali sicure.")
     else:
-        map_c = {c['nome_commessa']: c['id'] for c in commesse}
-        sel_c = st.selectbox("Progetto", options=list(map_c.keys()))
-        
-        tasks_c = supabase.table("Task").select("*").eq("commessa_id", map_c[sel_c]).execute().data
-        if tasks_c:
-            map_t = {t['nome_task']: t['id'] for t in tasks_c}
-            sel_t = st.selectbox("Task", options=list(map_t.keys()))
-            
-            with st.form("log_form"):
-                # Menu a tendina per operatori
-                operatore = st.selectbox("Operatore", options=ops)
-                d1 = st.date_input("Data Inizio")
-                d2 = st.date_input("Data Fine")
-                if st.form_submit_button("Salva"):
-                    supabase.table("Log_Tempi").insert({
-                        "task_id": map_t[sel_t], "operatore": operatore,
-                        "inizio": d1.isoformat(), "fine": d2.isoformat()
-                    }).execute()
-                    st.success("Salvato!")
-                    st.rerun()
-
-# --- TAB 3: CONFIGURAZIONE (Gestione Valori) ---
+        st.info("Nessun log presente.")
+# --- TAB 3: CONFIGURAZIONE ---
 with tabs[2]:
-    st.header("Amministrazione Sistema")
-    c1, c2, c3 = st.columns(3)
+    st.header("⚙️ Configurazione Sistema")
     
-    with c1:
-        st.subheader("Operatori")
-        nuovo_op = st.text_input("Nuovo Operatore")
-        if st.button("Aggiungi Operatore"):
-            supabase.table("Operatori").insert({"nome": nuovo_op}).execute()
-            st.rerun()
+    col_admin1, col_admin2 = st.columns(2)
+    
+    # --- GESTIONE COMMESSE E OPERATORI (Codice esistente) ---
+    with col_admin1:
+        st.subheader("🏗️ Commesse")
+        # ... tuo codice esistente ...
         
-        lista_op = get_data("Operatori")
-        for o in lista_op:
-            col_nome, col_del = st.columns([3,1])
-            col_nome.write(o['nome'])
-            if col_del.button("❌", key=f"del_op_{o['id']}"):
-                supabase.table("Operatori").delete().eq("id", o['id']).execute()
-                st.rerun()
+    with col_admin2:
+        st.subheader("👥 Operatori")
+        # ... tuo codice esistente ...
 
-    with c2:
-        st.subheader("Commesse")
-        n_c = st.text_input("Nome Progetto")
-        if st.button("Aggiungi Commessa"):
-            supabase.table("Commesse").insert({"nome_commessa": n_c}).execute()
-            st.rerun()
+    st.divider()
+
+    # --- NUOVA SEZIONE: GESTIONE TASK ---
+    st.subheader("✅ Elenco Task (Attività)")
+    
+    res_tasks = get_data("Task")
+    res_commesse = get_data("Commesse")
+    
+    if res_tasks and res_commesse:
+        # Creiamo una mappa per vedere il nome della commessa invece dell'ID
+        c_map = {c['id']: c['nome_commessa'] for c in res_commesse}
         
-        for c in commesse:
-            col_n, col_d = st.columns([3,1])
-            col_n.write(c['nome_commessa'])
-            if col_d.button("❌", key=f"del_c_{c['id']}"):
-                supabase.table("Commesse").delete().eq("id", c['id']).execute()
-                st.rerun()
-
-    with c3:
-        st.subheader("Task")
-        if commesse:
-            sel_c_t = st.selectbox("Per Progetto:", options=list(map_c.keys()), key="task_config")
-            n_t = st.text_input("Nome Task")
-            if st.button("Aggiungi Task"):
-                supabase.table("Task").insert({"commessa_id": map_c[sel_c_t], "nome_task": n_t}).execute()
-                st.rerun()
+        df_tasks = pd.DataFrame(res_tasks)
+        df_tasks['Commessa'] = df_tasks['commessa_id'].map(c_map)
+        
+        # Mostriamo la lista dei task
+        st.dataframe(
+            df_tasks[['nome_task', 'Commessa']], 
+            use_container_width=True,
+            column_config={
+                "nome_task": "Nome Attività",
+                "Commessa": "Progetto Associato"
+            }
+        )
+        
+        # Form per aggiungere nuovo Task
+        with st.expander("🆕 Aggiungi Nuovo Task"):
+            with st.form("form_nuovo_task"):
+                nuovo_nome_task = st.text_input("Nome Task")
+                id_commessa_associata = st.selectbox(
+                    "Associa a Commessa", 
+                    options=[c['id'] for c in res_commesse],
+                    format_func=lambda x: c_map[x]
+                )
+                
+                if st.form_submit_button("Aggiungi Task"):
+                    if nuovo_nome_task:
+                        supabase.table("Task").insert({
+                            "nome_task": nuovo_nome_task,
+                            "commessa_id": id_commessa_associata
+                        }).execute()
+                        st.success(f"Task '{nuovo_nome_task}' aggiunto!")
+                        st.rerun()
+    else:
+        st.warning("Configura prima le Commesse per poter aggiungere dei Task.")
