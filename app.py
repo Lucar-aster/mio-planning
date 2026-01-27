@@ -63,31 +63,33 @@ with tabs[0]:
                 color_discrete_sequence=px.colors.qualitative.Pastel # Colori più eleganti
             )
 
-            # Estetica Avanzata
+           # Estetica Avanzata (CORRETTA)
             fig.update_layout(
-                bar_gap=0.4, # Spazio tra le barre
-                plot_bgcolor="rgba(0,0,0,0)", # Sfondo trasparente
+                bargap=0.4,                # Corretto: senza underscore
+                plot_bgcolor="white",      # Sfondo bianco pulito
                 paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Arial", size=12),
+                font=dict(family="Arial", size=12, color="#2c3e50"),
                 showlegend=True,
                 legend_title_text="Operatore",
-                margin=dict(l=20, r=20, t=40, b=20)
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(l=50, r=20, t=80, b=50)
             )
 
             # Configurazione Asse X (Date + Settimana)
             fig.update_xaxes(
                 tickformat=conf["format"],
                 dtick=conf["dtick"],
-                gridcolor="LightGrey",
-                linecolor="Black",
-                mirror=True,
-                ticks="outside"
+                gridcolor="#f0f0f0",       # Griglia molto chiara
+                linecolor="#333",
+                ticks="outside",
+                tickangle=0                # Etichette dritte per leggibilità
             )
 
             fig.update_yaxes(
                 autorange="reversed", 
                 showgrid=True, 
-                gridcolor="whitesmoke"
+                gridcolor="#f0f0f0",
+                tickfont=dict(weight="bold") # Task in grassetto
             )
 
             st.plotly_chart(fig, use_container_width=True)
