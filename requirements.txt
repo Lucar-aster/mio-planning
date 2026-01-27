@@ -2,4 +2,3 @@ streamlit
 supabase
 pandas
 plotly
-pip install streamlit-plotly-events
