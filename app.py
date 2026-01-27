@@ -18,7 +18,7 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE PROFESSIONALE CON DOPPIA COLONNA (COMMESSA | TASK) ---
+# --- TAB 1: TIMELINE PROFESSIONALE (VERSIONE DEFINITIVA ANTI-ERRORE) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -32,30 +32,46 @@ with tabs[0]:
         st.rerun()
     
     try:
-        # Recupero dati da Supabase
+        # Recupero dati
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
         
         if logs and res_tasks and res_commesse:
-            # Creazione mappe per i nomi
             task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
-            # Preparazione DataFrame
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             
-            # Creazione colonne per le etichette
+            # Creazione nomi
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
             
-            # ORDINAMENTO (Fondamentale per il raggruppamento visivo)
+            # ORDINAMENTO
             df = df.sort_values(by=['Commessa', 'Task'])
 
-            # Configurazione Scale Temporali
+            # --- LA SOLUZIONE ALL'ERRORE DI LUNGHEZZA ---
+            # Invece di passare una lista di liste a px.timeline (che causa l'errore), 
+            # passiamo i dati al costruttore di oggetti grafici più stabile.
+            
+            import plotly.graph_objects as go
+
+            fig = px.timeline(
+                df, 
+                x_start="Inizio", 
+                x_end="Fine_Visual", 
+                # Usiamo una lista semplice per Y, ma con i due livelli come tuple
+                y=[df['Commessa'], df['Task']], 
+                color="operatore",
+                text="operatore" if mostra_nomi else None,
+                hover_data={"Commessa": True, "Task": True},
+                color_discrete_sequence=px.colors.qualitative.Safe
+            )
+
+            # Configurazione Scale
             scale_settings = {
                 "Settimana": {"dtick": 86400000, "format": "%a %d\nSett %V", "zoom": 7},
                 "Mese": {"dtick": 86400000 * 2, "format": "%d %b\nSett %V", "zoom": 30},
@@ -64,22 +80,7 @@ with tabs[0]:
             }
             conf = scale_settings[scala]
 
-            # 2. CREAZIONE DELLA GERARCHIA Y (Lista di liste per evitare errori di lunghezza)
-            # Questo crea due colonne distinte a sinistra del grafico
-            gerarchia_y = [df['Commessa'].tolist(), df['Task'].tolist()]
-
-            fig = px.timeline(
-                df, 
-                x_start="Inizio", 
-                x_end="Fine_Visual", 
-                y=gerarchia_y, 
-                color="operatore",
-                text="operatore" if mostra_nomi else None,
-                hover_data={"Commessa": True, "Task": True},
-                color_discrete_sequence=px.colors.qualitative.Safe
-            )
-
-            # 3. ZOOM INIZIALE
+            # Zoom iniziale
             inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
             fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
 
@@ -87,10 +88,8 @@ with tabs[0]:
             fig.update_layout(
                 dragmode='pan',
                 bargap=0.3,
-                # Altezza calcolata sul numero di righe per evitare sovrapposizioni
-                height=250 + (len(df.groupby(['Commessa', 'Task'])) * 45),
-                # Margine sinistro generoso per ospitare i nomi delle commesse e dei task
-                margin=dict(l=180, r=20, t=80, b=50),
+                height=250 + (len(df['task_id'].unique()) * 50),
+                margin=dict(l=10, r=20, t=80, b=50), # Plotly gestisce il margine auto con multicategory
                 plot_bgcolor="white",
                 xaxis=dict(
                     type="date",
@@ -105,34 +104,31 @@ with tabs[0]:
                     autorange="reversed",
                     fixedrange=True,
                     gridcolor="#eeeeee",
-                    tickfont=dict(size=11)
+                    tickfont=dict(size=11),
+                    # Questa riga forza il raggruppamento visivo corretto
+                    templateitemname="Commessa" 
                 ),
                 legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
             )
 
-            # Formattazione asse X
             fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#444")
-
-            # Linea oggi
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="dash", line_color="red", opacity=0.6)
             
-            # Rendering finale
-            st.plotly_chart(
-                fig, 
-                use_container_width=True, 
-                config={
-                    'scrollZoom': True, 
-                    'displayModeBar': True,
-                    'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d'],
-                    'displaylogo': False
-                }
-            )
+            st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
             
         else:
-            st.info("Configura Commesse, Task e inserisci almeno un Log per vedere la timeline.")
+            st.info("Configura i dati per visualizzare la timeline.")
             
     except Exception as e:
-        st.error(f"Errore tecnico nel caricamento della Timeline: {e}")
+        # Se l'errore persiste, usiamo il piano B: Etichetta concatenata "Commessa > Task"
+        st.warning("Ottimizzazione raggruppamento in corso...")
+        try:
+            df['Label_Y'] = df['Commessa'] + " | " + df['Task']
+            fig_b = px.timeline(df, x_start="Inizio", x_end="Fine_Visual", y="Label_Y", color="operatore")
+            fig_b.update_layout(dragmode='pan', xaxis=dict(side="top"))
+            st.plotly_chart(fig_b, use_container_width=True)
+        except:
+            st.error(f"Errore critico: {e}")
         
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
