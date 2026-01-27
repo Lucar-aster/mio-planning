@@ -183,59 +183,50 @@ with tabs[1]:
 with tabs[2]:
     st.header("⚙️ Configurazione Sistema")
     
-    col_admin1, col_admin2 = st.columns(2)
-    
-    # --- GESTIONE COMMESSE E OPERATORI (Codice esistente) ---
-    with col_admin1:
-        st.subheader("🏗️ Commesse")
-        # ... tuo codice esistente ...
-        
-    with col_admin2:
-        st.subheader("👥 Operatori")
-        # ... tuo codice esistente ...
+    c_admin1, c_admin2, c_admin3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
 
-    st.divider()
+    with c_admin1:
+        st.subheader("Gestione Commesse")
+        commesse = get_data("Commesse")
+        if commesse:
+            df_c = pd.DataFrame(commesse)
+            st.dataframe(df_c[["nome_commessa"]], use_container_width=True)
+        
+        with st.form("new_commessa"):
+            n_c = st.text_input("Nuova Commessa")
+            if st.form_submit_button("Aggiungi"):
+                supabase.table("Commesse").insert({"nome_commessa": n_c}).execute()
+                st.rerun()
 
-    # --- NUOVA SEZIONE: GESTIONE TASK ---
-    st.subheader("✅ Elenco Task (Attività)")
-    
-    res_tasks = get_data("Task")
-    res_commesse = get_data("Commesse")
-    
-    if res_tasks and res_commesse:
-        # Creiamo una mappa per vedere il nome della commessa invece dell'ID
-        c_map = {c['id']: c['nome_commessa'] for c in res_commesse}
+    with c_admin2:
+        st.subheader("Gestione Operatori")
+        # Simile a sopra per Operatori...
+        ops = get_data("Operatori")
+        if ops:
+            st.dataframe(pd.DataFrame(ops)[["nome_operatore"]], use_container_width=True)
         
-        df_tasks = pd.DataFrame(res_tasks)
-        df_tasks['Commessa'] = df_tasks['commessa_id'].map(c_map)
+        with st.form("new_op"):
+            n_o = st.text_input("Nuovo Operatore")
+            if st.form_submit_button("Aggiungi"):
+                supabase.table("Operatori").insert({"nome_operatore": n_o}).execute()
+                st.rerun()
+
+    with c_admin3:
+        st.subheader("Gestione Task")
+        tasks = get_data("Task")
+        cms = get_data("Commesse")
         
-        # Mostriamo la lista dei task
-        st.dataframe(
-            df_tasks[['nome_task', 'Commessa']], 
-            use_container_width=True,
-            column_config={
-                "nome_task": "Nome Attività",
-                "Commessa": "Progetto Associato"
-            }
-        )
-        
-        # Form per aggiungere nuovo Task
-        with st.expander("🆕 Aggiungi Nuovo Task"):
-            with st.form("form_nuovo_task"):
-                nuovo_nome_task = st.text_input("Nome Task")
-                id_commessa_associata = st.selectbox(
-                    "Associa a Commessa", 
-                    options=[c['id'] for c in res_commesse],
-                    format_func=lambda x: c_map[x]
-                )
-                
-                if st.form_submit_button("Aggiungi Task"):
-                    if nuovo_nome_task:
-                        supabase.table("Task").insert({
-                            "nome_task": nuovo_nome_task,
-                            "commessa_id": id_commessa_associata
-                        }).execute()
-                        st.success(f"Task '{nuovo_nome_task}' aggiunto!")
+        if tasks and cms:
+            c_map = {c['id']: c['nome_commessa'] for c in cms}
+            df_t = pd.DataFrame(tasks)
+            df_t['Progetto'] = df_t['commessa_id'].map(c_map)
+            
+            st.dataframe(df_t[["nome_task", "Progetto"]], use_container_width=True)
+            
+            with st.expander("🆕 Aggiungi Task"):
+                with st.form("new_task"):
+                    t_n = st.text_input("Nome Task")
+                    t_c = st.selectbox("Associa a Progetto", options=cms, format_func=lambda x: x['nome_commessa'])
+                    if st.form_submit_button("Salva Task"):
+                        supabase.table("Task").insert({"nome_task": t_n, "commessa_id": t_c['id']}).execute()
                         st.rerun()
-    else:
-        st.warning("Configura prima le Commesse per poter aggiungere dei Task.")
