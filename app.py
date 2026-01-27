@@ -18,26 +18,29 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE ---
+# --- TAB 1: TIMELINE (ESTETICA MIGLIORATA E SCALE TEMPORALI) ---
 with tabs[0]:
-    st.header("Timeline Progetti")
-
-# --- SELETTORE DI SCALA ---
+    st.header("📊 Timeline Progetti")
+    
+    # --- SELETTORE DI SCALA ---
     col_scale, col_empty = st.columns([2, 4])
     scala = col_scale.selectbox(
         "Seleziona Scala Temporale", 
         ["Settimanale", "Mensile", "Trimestrale", "Semestrale"],
-        index=1)
+        index=1
+    )
+
     try:
         logs = get_data("Log_Tempi")
         tasks = {t['id']: t['nome_task'] for t in get_data("Task")}
         
         if logs:
             df = pd.DataFrame(logs)
-            df['Inizio'] = pd.to_datetime(df['inizio']).dt.date
-            df['Fine'] = pd.to_datetime(df['fine']).dt.date
+            df['Inizio'] = pd.to_datetime(df['inizio'])
+            df['Fine'] = pd.to_datetime(df['fine'])
             df['Task'] = df['task_id'].map(tasks)
-# Formattazione Etichetta: "01/01/2026 (Sett. 1)"
+            
+            # Formattazione Etichetta: "01/01/2026 (Sett. 1)"
             df['label_settimana'] = df['Inizio'].dt.strftime('%d/%m/%Y') + " (Sett. " + df['Inizio'].dt.isocalendar().week.astype(str) + ")"
 
             # Configurazione Scala
@@ -49,7 +52,7 @@ with tabs[0]:
             }
             conf = scale_config[scala]
 
-# Creazione Grafico
+            # Creazione Grafico
             fig = px.timeline(
                 df, 
                 x_start="Inizio", 
@@ -91,8 +94,7 @@ with tabs[0]:
         else:
             st.info("Nessun dato presente. Inizia a configurare il sistema.")
     except Exception as e:
-        st.error(f"Errore nel caricamento del grafico: {e}")
-        
+        st.error(f"Errore nel caricamento del grafico: {e}")        
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
