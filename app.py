@@ -179,7 +179,7 @@ with tabs[1]:
     else:
         st.info("Nessun log presente.")
         
-# --- TAB 3: CONFIGURAZIONE (VERSIONE ROBUSTA) ---
+# --- TAB 3: CONFIGURAZIONE (GESTIONE IN FONDO) ---
 with tabs[2]:
     st.header("⚙️ Configurazione Sistema")
     
@@ -187,13 +187,17 @@ with tabs[2]:
 
     # --- SOTTO-TAB: COMMESSE ---
     with c_admin1:
-        st.subheader("Gestione Commesse")
+        st.subheader("Elenco Commesse")
         commesse = get_data("Commesse")
         if commesse:
             df_c = pd.DataFrame(commesse)
-            # Rileva colonna: cerca 'nome_commessa', poi 'nome', poi la prima disponibile
             col_c = next((c for c in ["nome_commessa", "nome"] if c in df_c.columns), df_c.columns[0])
             
+            # 1. Visualizzazione (In alto)
+            st.dataframe(df_c[[col_c]], use_container_width=True)
+            st.divider()
+
+            # 2. Pannelli Gestione (In fondo)
             with st.expander("📝 Modifica Nome Commessa"):
                 c_edit = st.selectbox("Seleziona commessa", options=commesse, format_func=lambda x: x[col_c], key="ed_c")
                 n_val_c = st.text_input("Nuovo nome", value=c_edit[col_c], key="txt_c")
@@ -206,24 +210,26 @@ with tabs[2]:
                 if st.button("Elimina Definitivamente", type="primary", key="btn_dl_c"):
                     supabase.table("Commesse").delete().eq("id", c_del["id"]).execute()
                     st.rerun()
-            
-            st.divider()
-            st.dataframe(df_c[[col_c]], use_container_width=True)
         
         with st.form("new_c"):
-            n_c = st.text_input("➕ Nuova Commessa")
-            if st.form_submit_button("Aggiungi"):
+            n_c = st.text_input("➕ Aggiungi Nuova Commessa")
+            if st.form_submit_button("Salva"):
                 supabase.table("Commesse").insert({"nome_commessa": n_c}).execute()
                 st.rerun()
 
     # --- SOTTO-TAB: OPERATORI ---
     with c_admin2:
-        st.subheader("Gestione Operatori")
+        st.subheader("Elenco Operatori")
         ops = get_data("Operatori")
         if ops:
             df_o = pd.DataFrame(ops)
             col_o = next((c for c in ["nome_operatore", "nome"] if c in df_o.columns), df_o.columns[0])
             
+            # 1. Visualizzazione
+            st.dataframe(df_o[[col_o]], use_container_width=True)
+            st.divider()
+
+            # 2. Pannelli Gestione
             with st.expander("📝 Modifica Operatore"):
                 o_edit = st.selectbox("Seleziona operatore", options=ops, format_func=lambda x: x[col_o], key="ed_o")
                 n_val_o = st.text_input("Nuovo nome", value=o_edit[col_o], key="txt_o")
@@ -236,40 +242,46 @@ with tabs[2]:
                 if st.button("Elimina Definitivamente", type="primary", key="btn_dl_o"):
                     supabase.table("Operatori").delete().eq("id", o_del["id"]).execute()
                     st.rerun()
-
-            st.divider()
-            st.dataframe(df_o[[col_o]], use_container_width=True)
         
-        with st.form("new_o"):
-            n_o = st.text_input("➕ Nuovo Operatore")
-            if st.form_submit_button("Aggiungi"):
+        with st.form("new_op"):
+            n_o = st.text_input("➕ Aggiungi Nuovo Operatore")
+            if st.form_submit_button("Salva"):
                 supabase.table("Operatori").insert({"nome_operatore": n_o}).execute()
                 st.rerun()
 
     # --- SOTTO-TAB: TASK ---
     with c_admin3:
-        st.subheader("Gestione Task")
+        st.subheader("Elenco Task")
         tasks = get_data("Task")
         cms = get_data("Commesse")
         if tasks and cms:
             df_t = pd.DataFrame(tasks)
             col_t = next((c for c in ["nome_task", "nome", "task"] if c in df_t.columns), df_t.columns[0])
-            
+            c_map = {c['id']: c.get('nome_commessa', 'N/A') for c in cms}
+            df_t['Progetto'] = df_t['commessa_id'].map(c_map)
+
+            # 1. Visualizzazione
+            st.dataframe(df_t[[col_t, "Progetto"]], use_container_width=True)
+            st.divider()
+
+            # 2. Pannelli Gestione
             with st.expander("📝 Modifica Task"):
                 t_edit = st.selectbox("Seleziona task", options=tasks, format_func=lambda x: x[col_t], key="ed_t")
-                n_val_t = st.text_input("Rinomina", value=t_edit[col_t])
-                t_comm = st.selectbox("Sposta a Commessa", options=cms, format_func=lambda x: x.get('nome_commessa', 'ID:'+str(x['id'])))
-                if st.button("Salva Modifiche"):
+                n_val_t = st.text_input("Rinomina", value=t_edit[col_t], key="txt_v_t")
+                t_comm = st.selectbox("Sposta a Commessa", options=cms, format_func=lambda x: x.get('nome_commessa', 'N/A'), key="ed_t_c")
+                if st.button("Salva Modifiche", key="btn_s_t"):
                     supabase.table("Task").update({col_t: n_val_t, "commessa_id": t_comm["id"]}).eq("id", t_edit["id"]).execute()
                     st.rerun()
 
             with st.expander("🗑️ Elimina Task"):
                 t_del = st.selectbox("Elimina task", options=tasks, format_func=lambda x: x[col_t], key="dl_t")
-                if st.button("Rimuovi Task", type="primary"):
+                if st.button("Rimuovi Task", type="primary", key="btn_d_t"):
                     supabase.table("Task").delete().eq("id", t_del["id"]).execute()
                     st.rerun()
 
-            st.divider()
-            c_map = {c['id']: c.get('nome_commessa', 'N/A') for c in cms}
-            df_t['Progetto'] = df_t['commessa_id'].map(c_map)
-            st.dataframe(df_t[[col_t, "Progetto"]], use_container_width=True)
+        with st.form("new_task"):
+            t_n = st.text_input("➕ Nuovo Task")
+            t_c = st.selectbox("Associa a Progetto", options=cms, format_func=lambda x: x.get('nome_commessa', 'N/A'))
+            if st.form_submit_button("Aggiungi Task"):
+                supabase.table("Task").insert({"nome_task": t_n, "commessa_id": t_c['id']}).execute()
+                st.rerun()
