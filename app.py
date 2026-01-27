@@ -18,14 +18,23 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE PROFESSIONALE ---
+# --- TAB 1: TIMELINE PROFESSIONALE (PAN ATTIVO E TASTO OGGI) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
     # 1. CONTROLLI DI VISUALIZZAZIONE
-    col1, col2, col3 = st.columns([2, 2, 2])
-    scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1)
-    mostra_nomi = col2.checkbox("Mostra nomi su barre", value=True)
+    col1, col2, col3, col_button = st.columns([2, 2, 2, 1])
+    scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1, key="vista_scala")
+    mostra_nomi = col2.checkbox("Nomi su barre", value=True, key="check_nomi")
+    
+    # Calcolo date per lo zoom
+    oggi = datetime.now()
+    
+    # 2. TASTO "TORNA A OGGI"
+    # Usiamo un piccolo trucco: se cliccato, st.rerun() resetterà lo zoom del grafico 
+    # grazie alla logica di range definita sotto.
+    if col_button.button("📍 Oggi"):
+        st.rerun()
     
     try:
         logs = get_data("Log_Tempi")
@@ -36,11 +45,11 @@ with tabs[0]:
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
-            # Importante: per vedere la barra di 1 giorno piena, aggiungiamo 23:59 alla fine
+            # Estendiamo la fine a fine giornata per visibilità
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             df['Task'] = df['task_id'].map(task_map)
 
-            # 2. CONFIGURAZIONE SCALE (SIMILE AL COMPONENTE DASH)
+            # Impostazioni Scale
             scale_settings = {
                 "Settimana": {"dtick": 86400000, "format": "%a %d\nSett %V", "zoom": 7},
                 "Mese": {"dtick": 86400000 * 2, "format": "%d %b\nSett %V", "zoom": 30},
@@ -61,52 +70,55 @@ with tabs[0]:
                 color_discrete_sequence=px.colors.qualitative.Safe
             )
 
-            # 4. LOGICA DI ZOOM (CENTRATA SU OGGI)
-            oggi = datetime.now()
+            # 4. LOGICA DI ZOOM INIZIALE
             inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2))
             fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2))
 
-            # 5. ESTETICA AVANZATA (Layout "Calendar-like")
+            # 5. CONFIGURAZIONE LAYOUT (PAN E ASSE Y BLOCCATO)
             fig.update_layout(
+                dragmode='pan',  # Attiva il trascinamento come default
                 bargap=0.3,
-                height=150 + (len(df['Task'].unique()) * 60), # Altezza dinamica
-                margin=dict(l=10, r=10, t=50, b=100),
+                height=200 + (len(df['Task'].unique()) * 60),
+                margin=dict(l=10, r=10, t=60, b=50),
                 plot_bgcolor="white",
                 xaxis=dict(
                     type="date",
-                    rangeslider=dict(visible=True, thickness=0.05), # Slider sottile
-                    side="top", # Date in alto come nei calendari
+                    rangeslider=dict(visible=True, thickness=0.04),
+                    side="top", # Date in alto
                     gridcolor="#f0f0f0",
-                    zeroline=False,
-                    range=[inizio_zoom, fine_zoom]
+                    range=[inizio_zoom, fine_zoom], # Applica lo zoom centrato su oggi
+                    fixedrange=False # Permette spostamento orizzontale
                 ),
                 yaxis=dict(
                     type='category',
                     tickfont=dict(family="Arial Black", size=13),
                     gridcolor="#f8f8f8",
-                    fixedrange=True # Evita lo scroll verticale del grafico, usa quello della pagina
+                    fixedrange=True # Impedisce lo spostamento verticale
                 ),
-                legend=dict(orientation="h", y=-0.2)
+                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5)
             )
 
-            # Formattazione asse X con numero settimana
-            fig.update_xaxes(
-                tickformat=conf["format"],
-                dtick=conf["dtick"],
-                tickfont=dict(size=10),
-                linecolor="#444"
-            )
+            fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#444")
 
-            # Linea "OGGI"
-            fig.add_vline(x=oggi.timestamp() * 1000, line_width=3, line_dash="solid", line_color="red", opacity=0.5)
+            # Linea oggi
+            fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="dash", line_color="red")
             
-            st.plotly_chart(fig, use_container_width=True)
+            # Mostra il grafico con configurazione toolbar specifica
+            st.plotly_chart(
+                fig, 
+                use_container_width=True, 
+                config={
+                    'scrollZoom': True, 
+                    'displayModeBar': True,
+                    'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d'],
+                    'displaylogo': False
+                }
+            )
             
         else:
-            st.info("Nessun dato registrato.")
+            st.info("Nessun dato registrato. Vai nella sezione Gestione per iniziare.")
     except Exception as e:
-        st.error(f"Errore: {e}")
-        
+        st.error(f"Errore nel caricamento della Timeline: {e}")        
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
