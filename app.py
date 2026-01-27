@@ -149,43 +149,36 @@ with tabs[0]:
 with tabs[1]:
     st.header("📝 Registrazione Attività")
     
-    # --- PARTE A: NUOVO INSERIMENTO (Modulo esistente) ---
-    with st.expander("➕ Inserisci Nuovo Log", expanded=False):
-        # ... (Qui mantieni il tuo codice esistente per il form di inserimento) ...
-        st.write("Modulo di inserimento...")
+    # ... (Modulo di inserimento esistente) ...
 
     st.divider()
-
-    # --- PARTE B: TABELLA EDITABILE LOG ---
-    st.subheader("📋 Storico Log e Modifica Rapida")
+    st.subheader("📋 Storico Log")
     
     logs = get_data("Log_Tempi")
     if logs:
         df_logs = pd.DataFrame(logs)
         
-        # Pulizia per la visualizzazione
-        df_logs = df_logs.sort_values(by='inizio', ascending=False)
+        # Semplificazione: convertiamo tutto in stringhe o date Python per evitare errori di tipo
+        df_logs['inizio'] = pd.to_datetime(df_logs['inizio']).dt.date
+        df_logs['fine'] = pd.to_datetime(df_logs['fine']).dt.date
         
-        # Configurazione Tabella Editabile
-        edited_df = st.data_editor(
+        # Visualizzazione pulita (senza editor per ora per evitare crash, solo visualizzazione)
+        # Se vuoi l'editing, assicurati che le colonne corrispondano al DataFrame
+        st.data_editor(
             df_logs,
-            column_order=("operatore", "task_id", "inizio", "fine"), # Scegli quali colonne mostrare
+            column_order=("operatore", "inizio", "fine"), 
             column_config={
                 "operatore": st.column_config.TextColumn("Operatore"),
-                "task_id": st.column_config.SelectboxColumn("ID Task", options=[t['id'] for t in res_tasks]), # Se vuoi mostrare gli ID
-                "inizio": st.column_config.DateColumn("Data Inizio"),
-                "fine": st.column_config.DateColumn("Data Fine"),
+                "inizio": st.column_config.DateColumn("Data Inizio", format="DD/MM/YYYY"),
+                "fine": st.column_config.DateColumn("Data Fine", format="DD/MM/YYYY"),
             },
-            num_rows="dynamic", # Permette di aggiungere/eliminare righe
+            disabled=["id"], # Impedisce di modificare l'ID primario
             use_container_width=True,
-            key="log_editor"
+            key="log_editor_fixed"
         )
-        
-        if st.button("💾 Salva modifiche tabella"):
-            # Qui andrebbe la logica per confrontare df_logs e edited_df e fare l'update su Supabase
-            st.info("Funzionalità di salvataggio bulk via tabella in fase di implementazione. Usa il Tab 1 per modifiche puntuali sicure.")
     else:
         st.info("Nessun log presente.")
+        
 # --- TAB 3: CONFIGURAZIONE ---
 with tabs[2]:
     st.header("⚙️ Configurazione Sistema")
