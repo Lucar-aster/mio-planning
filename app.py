@@ -258,4 +258,18 @@ with tabs[2]:
             with st.expander("📝 Modifica Task"):
                 t_edit = st.selectbox("Seleziona task", options=tasks, format_func=lambda x: x[col_t], key="ed_t")
                 n_val_t = st.text_input("Rinomina", value=t_edit[col_t])
-                t_comm = st.selectbox("Sposta a Commessa", options=cms, format_func
+                t_comm = st.selectbox("Sposta a Commessa", options=cms, format_func=lambda x: x.get('nome_commessa', 'ID:'+str(x['id'])))
+                if st.button("Salva Modifiche"):
+                    supabase.table("Task").update({col_t: n_val_t, "commessa_id": t_comm["id"]}).eq("id", t_edit["id"]).execute()
+                    st.rerun()
+
+            with st.expander("🗑️ Elimina Task"):
+                t_del = st.selectbox("Elimina task", options=tasks, format_func=lambda x: x[col_t], key="dl_t")
+                if st.button("Rimuovi Task", type="primary"):
+                    supabase.table("Task").delete().eq("id", t_del["id"]).execute()
+                    st.rerun()
+
+            st.divider()
+            c_map = {c['id']: c.get('nome_commessa', 'N/A') for c in cms}
+            df_t['Progetto'] = df_t['commessa_id'].map(c_map)
+            st.dataframe(df_t[[col_t, "Progetto"]], use_container_width=True)
