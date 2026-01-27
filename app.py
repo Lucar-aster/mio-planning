@@ -9,68 +9,90 @@ URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
-st.title("⏱️ Team Project Planning")
+st.set_page_config(page_title="Project Planner", layout="wide")
 
-# --- SEZIONE INSERIMENTO DATI ---
-with st.sidebar:
-    st.header("Registra Tempo")
-    
-    # Recupero commesse
-    res_c = supabase.table("Commesse").select("*").execute()
-    commesse = res_c.data if res_c.data else []
-    
-    if not commesse:
-        st.warning("⚠️ Nessuna commessa trovata. Aggiungine una su Supabase!")
-        lista_commesse = {}
+# --- MENU NAVIGAZIONE ---
+menu = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Gestione Anagrafica"])
+
+# --- TAB 1: TIMELINE (Visualizzazione) ---
+with menu[0]:
+    st.header("Timeline Lavori")
+    # Join tra Log_Tempi e Task per avere i nomi dei task
+    res = supabase.table("Log_Tempi").select("*, Task(nome_task)").execute()
+    logs = res.data if res.data else []
+
+    if logs:
+        df = pd.DataFrame(logs)
+        df['Task'] = df['Task'].apply(lambda x: x['nome_task'] if x else "N/A")
+        
+        fig = px.timeline(df, x_start="inizio", x_end="fine", y="Task", color="operatore",
+                          hover_data=["operatore"], title="Distribuzione Intervalli")
+        fig.update_yaxes(autorange="reversed")
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        lista_commesse = {c['nome_commessa']: c['id'] for c in commesse}
-        scelta_c = st.selectbox("Seleziona Commessa", options=list(lista_commesse.keys()))
-        
-        # Recupero task relativi
-        res_t = supabase.table("Task").select("*").eq("commessa_id", lista_commesse[scelta_c]).execute()
-        tasks = res_t.data if res_t.data else []
-        
-        if not tasks:
-            st.warning("⚠️ Nessun task per questa commessa.")
-            lista_task = {}
-        else:
-            lista_task = {t['nome_task']: t['id'] for t in tasks}
-            scelta_t = st.selectbox("Seleziona Task", options=list(lista_task.keys()))
-            
-            operatore = st.text_input("Nome Operatore", value="Operatore 1")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                data_i = st.date_input("Inizio")
-                ora_i = st.time_input("Ora Inizio")
-            with col2:
-                data_f = st.date_input("Fine")
-                ora_f = st.time_input("Ora Fine")
+        st.info("Nessun log presente. Vai a registrare dei tempi!")
 
-            if st.button("Salva Intervallo"):
-                inizio_dt = datetime.combine(data_i, ora_i).isoformat()
-                fine_dt = datetime.combine(data_f, ora_f).isoformat()
-                
-                supabase.table("Log_Tempi").insert({
-                    "task_id": lista_task[scelta_t],
-                    "operatore": operatore,
-                    "inizio": inizio_dt,
-                    "fine": fine_dt
-                }).execute()
-                st.success("Registrato! Ricarica la pagina.")
-                
-# --- VISUALIZZAZIONE TIMELINE ---
-st.subheader("Visualizzazione Timeline")
-logs = supabase.table("Log_Tempi").select("*, Task(nome_task)").execute().data
-
-if logs:
-    df = pd.DataFrame(logs)
-    # Pulizia dati per il grafico
-    df['Task Name'] = df['Task'].apply(lambda x: x['nome_task'])
+# --- TAB 2: REGISTRA TEMPI (Operatività) ---
+with menu[1]:
+    st.header("Inserimento Intervallo di Lavoro")
+    commesse_res = supabase.table("Commesse").select("*").execute().data
     
-    fig = px.timeline(df, x_start="inizio", x_end="fine", y="Task Name", color="operatore",
-                      title="Distribuzione Carico di Lavoro")
-    fig.update_yaxes(autorange="reversed") 
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.info("Nessun dato presente. Inizia a registrare i tempi!")
+    if not commesse_res:
+        st.warning("Crea prima una Commessa nella sezione Gestione Anagrafica.")
+    else:
+        lista_c = {c['nome_commessa']: c['id'] for c in commesse_res}
+        scelta_c = st.selectbox("Seleziona Progetto", options=list(lista_c.keys()))
+        
+        tasks_res = supabase.table("Task").select("*").eq("commessa_id", lista_c[scelta_c]).execute().data
+        
+        if not tasks_res:
+            st.info("Nessun task associato a questa commessa.")
+        else:
+            lista_t = {t['nome_task']: t['id'] for t in tasks_res}
+            scelta_t = st.selectbox("Seleziona Task", options=list(lista_t.keys()))
+            
+            with st.form("form_log"):
+                operatore = st.text_input("Operatore")
+                c1, c2 = st.columns(2)
+                data_i = c1.date_input("Giorno Inizio")
+                ora_i = c1.time_input("Ora Inizio")
+                data_f = c2.date_input("Giorno Fine")
+                ora_f = c2.time_input("Ora Fine")
+                
+                if st.form_submit_button("Salva Log"):
+                    inizio = datetime.combine(data_i, ora_i).isoformat()
+                    fine = datetime.combine(data_f, ora_f).isoformat()
+                    supabase.table("Log_Tempi").insert({
+                        "task_id": lista_t[scelta_t], "operatore": operatore,
+                        "inizio": inizio, "fine": fine
+                    }).execute()
+                    st.success("Tempo registrato!")
+                    st.rerun()
+
+# --- TAB 3: GESTIONE ANAGRAFICA (Admin) ---
+with menu[2]:
+    st.header("Configurazione Progetti e Task")
+    
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        st.subheader("Nuova Commessa")
+        with st.form("form_commessa"):
+            nome_c = st.text_input("Nome Commessa")
+            cliente = st.text_input("Cliente")
+            if st.form_submit_button("Crea Commessa"):
+                supabase.table("Commesse").insert({"nome_commessa": nome_c, "cliente": cliente}).execute()
+                st.success("Commessa creata!")
+                st.rerun()
+
+    with col_b:
+        st.subheader("Nuovo Task")
+        if commesse_res:
+            with st.form("form_task"):
+                lista_c_task = {c['nome_commessa']: c['id'] for c in commesse_res}
+                sel_c = st.selectbox("Per Commessa:", options=list(lista_c_task.keys()))
+                nome_t = st.text_input("Nome Task (es. Progettazione)")
+                if st.form_submit_button("Crea Task"):
+                    supabase.table("Task").insert({"commessa_id": lista_c_task[sel_c], "nome_task": nome_t}).execute()
+                    st.success("Task creato!")
+                    st.rerun()
