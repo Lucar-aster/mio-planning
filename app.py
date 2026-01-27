@@ -18,6 +18,8 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
+import plotly.graph_objects as go
+
 # --- TAB 1: TIMELINE STABILE E MODERNA ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
