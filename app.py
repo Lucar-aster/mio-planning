@@ -18,40 +18,44 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE PROFESSIONALE (VERSIONE STABILE RAGGRUPPATA) ---
+# --- TAB 1: TIMELINE PROFESSIONALE CON DOPPIA COLONNA (COMMESSA | TASK) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
+    # 1. CONTROLLI DI VISUALIZZAZIONE
     col1, col2, col3, col_button = st.columns([2, 2, 2, 1])
     scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1, key="vista_scala")
     mostra_nomi = col2.checkbox("Nomi su barre", value=True, key="check_nomi")
-    oggi = datetime.now()
     
+    oggi = datetime.now()
     if col_button.button("📍 Oggi"):
         st.rerun()
     
     try:
+        # Recupero dati da Supabase
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
         
         if logs and res_tasks and res_commesse:
+            # Creazione mappe per i nomi
             task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
+            # Preparazione DataFrame
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             
-            # Creiamo le etichette per Commessa e Task
+            # Creazione colonne per le etichette
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
             
-            # ORDINAMENTO: Fondamentale per vedere i task vicini
-            df = df.sort_values(by=['Commessa', 'Task'], ascending=[True, True])
+            # ORDINAMENTO (Fondamentale per il raggruppamento visivo)
+            df = df.sort_values(by=['Commessa', 'Task'])
 
-            # CONFIGURAZIONE SCALE
+            # Configurazione Scale Temporali
             scale_settings = {
                 "Settimana": {"dtick": 86400000, "format": "%a %d\nSett %V", "zoom": 7},
                 "Mese": {"dtick": 86400000 * 2, "format": "%d %b\nSett %V", "zoom": 30},
@@ -60,57 +64,75 @@ with tabs[0]:
             }
             conf = scale_settings[scala]
 
-            # CREAZIONE GRAFICO
-            # Usiamo una lista per y: questo abilita il raggruppamento multicategoria nativo di Plotly
+            # 2. CREAZIONE DELLA GERARCHIA Y (Lista di liste per evitare errori di lunghezza)
+            # Questo crea due colonne distinte a sinistra del grafico
+            gerarchia_y = [df['Commessa'].tolist(), df['Task'].tolist()]
+
             fig = px.timeline(
                 df, 
                 x_start="Inizio", 
                 x_end="Fine_Visual", 
-                y=["Commessa", "Task"], # <--- Doppio livello
+                y=gerarchia_y, 
                 color="operatore",
                 text="operatore" if mostra_nomi else None,
-                hover_data=["Commessa", "Task", "operatore"],
+                hover_data={"Commessa": True, "Task": True},
                 color_discrete_sequence=px.colors.qualitative.Safe
             )
 
-            # Zoom centrato su oggi
-            inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2))
-            fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2))
+            # 3. ZOOM INIZIALE
+            inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
+            fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
 
+            # 4. CONFIGURAZIONE LAYOUT
             fig.update_layout(
                 dragmode='pan',
                 bargap=0.3,
-                height=250 + (len(df.groupby(['Commessa', 'Task'])) * 50),
-                margin=dict(l=10, r=10, t=70, b=50),
+                # Altezza calcolata sul numero di righe per evitare sovrapposizioni
+                height=250 + (len(df.groupby(['Commessa', 'Task'])) * 45),
+                # Margine sinistro generoso per ospitare i nomi delle commesse e dei task
+                margin=dict(l=180, r=20, t=80, b=50),
                 plot_bgcolor="white",
                 xaxis=dict(
                     type="date",
                     rangeslider=dict(visible=True, thickness=0.04),
                     side="top",
                     gridcolor="#f0f0f0",
-                    range=[inizio_zoom.strftime("%Y-%m-%d"), fine_zoom.strftime("%Y-%m-%d")],
+                    range=[inizio_zoom, fine_zoom],
                     fixedrange=False
                 ),
                 yaxis=dict(
-                    title="",
+                    title="", 
                     autorange="reversed",
-                    showgrid=True,
-                    gridcolor="#f0f0f0",
-                    fixedrange=True
+                    fixedrange=True,
+                    gridcolor="#eeeeee",
+                    tickfont=dict(size=11)
                 ),
                 legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5)
             )
 
+            # Formattazione asse X
             fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#444")
+
+            # Linea oggi
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_dash="dash", line_color="red", opacity=0.6)
             
-            st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
+            # Rendering finale
+            st.plotly_chart(
+                fig, 
+                use_container_width=True, 
+                config={
+                    'scrollZoom': True, 
+                    'displayModeBar': True,
+                    'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d'],
+                    'displaylogo': False
+                }
+            )
             
         else:
-            st.info("Configura Commesse, Task e Log per visualizzare la timeline.")
+            st.info("Configura Commesse, Task e inserisci almeno un Log per vedere la timeline.")
             
     except Exception as e:
-        st.error(f"Errore tecnico: {e}")
+        st.error(f"Errore tecnico nel caricamento della Timeline: {e}")
         
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
