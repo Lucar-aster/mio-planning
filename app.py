@@ -19,22 +19,17 @@ def get_data(table):
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
 import plotly.graph_objects as go
-from streamlit_plotly_events import plotly_events
 
-# --- TAB 1: TIMELINE CON SELEZIONE E MODIFICA ---
+# --- TAB 1: TIMELINE STABILE E MODERNA ---
 with tabs[0]:
-    st.header("📊 Planning Interattivo")
+    st.header("📊 Planning Progetti")
     
-    # Inizializziamo lo stato per la selezione se non esiste
-    if 'selected_task' not in st.session_state:
-        st.session_state.selected_task = None
-
+    # Controlli
     col1, col2, col3, col_button = st.columns([2, 2, 2, 1])
-    scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1)
-    mostra_nomi = col2.checkbox("Nomi su barre", value=True)
+    scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1, key="vista_scala")
+    mostra_nomi = col2.checkbox("Nomi su barre", value=True, key="check_nomi")
     
     if col_button.button("📍 Oggi"):
-        st.session_state.selected_task = None
         st.rerun()
 
     try:
@@ -49,82 +44,73 @@ with tabs[0]:
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
-            df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000 + (86400000) # +1 giorno
+            # Calcolo durata precisa per evitare barre infinite
+            df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000 + (86400000)
             
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
             df = df.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # Creazione Grafico
-            fig = go.Figure()
-            operatori = df['operatore'].unique()
-            color_map = {op: ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5"][i%5] for i, op in enumerate(operatori)}
+            # Palette Soft
+            soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5"]
+            ops = df['operatore'].unique()
+            color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(ops)}
 
-            for op in operatori:
+            fig = go.Figure()
+            for op in ops:
                 df_op = df[df['operatore'] == op]
-                # Evidenziazione se selezionato
-                opacities = [1.0 if not st.session_state.selected_task or row['id'] == st.session_state.selected_task['id'] else 0.3 for _, row in df_op.iterrows()]
-                
                 fig.add_trace(go.Bar(
                     base=df_op['Inizio'],
                     x=df_op['Durata_ms'],
                     y=[df_op['Commessa'], df_op['Task']],
                     orientation='h',
                     name=op,
-                    marker=dict(color=color_map[op], cornerradius=10, opacity=opacities),
-                    customdata=df_op['id'], # Passiamo l'ID per riconoscerlo al click
+                    marker=dict(color=color_map[op], cornerradius=10),
                     text=df_op['operatore'] if mostra_nomi else None,
-                    textposition='inside'
+                    textposition='inside',
+                    hovertemplate="<b>%{y[1]}</b><br>Fine: %{customdata|%d %b}<extra></extra>",
+                    customdata=df_op['Fine']
                 ))
 
-            # Configurazione Layout
+            # Layout con griglia marcata
             fig.update_layout(
-                barmode='overlay', dragmode='pan', bargap=0.5,
-                height=400 + (len(df) * 20), plot_bgcolor="white",
-                xaxis=dict(type="date", side="top", showgrid=True, gridcolor="#f0f0f0"),
-                yaxis=dict(gridcolor="#f5f5f5")
+                barmode='overlay', dragmode='pan', bargap=0.6,
+                height=300 + (len(df) * 40), plot_bgcolor="white",
+                xaxis=dict(
+                    type="date", side="top", showgrid=True, 
+                    gridcolor="#e0e0e0", gridwidth=1,
+                    minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5)
+                ),
+                yaxis=dict(gridcolor="#f5f5f5"),
+                legend=dict(orientation="h", y=-0.1)
             )
 
-            # --- GESTIONE EVENTO CLICK ---
-            # Questo sostituisce st.plotly_chart e cattura il click
-            selected_points = plotly_events(fig, click_event=True, hover_event=False, override_height=600)
-
-            if selected_points:
-                point_index = selected_points[0]['pointIndex']
-                curve_index = selected_points[0]['curveNumber']
-                # Troviamo l'ID del log cliccato
-                clicked_id = fig.data[curve_index].customdata[point_index]
-                st.session_state.selected_task = df[df['id'] == clicked_id].iloc[0].to_dict()
-                st.rerun()
-
-            # --- PANNELLO DI MODIFICA (Appare solo se clicchi una barra) ---
-            if st.session_state.selected_task:
-                st.divider()
-                with st.expander("📝 Modifica Rapida Task Selezionato", expanded=True):
-                    task_sel = st.session_state.selected_task
-                    st.write(f"Modifica: **{task_sel['Task']}** ({task_sel['Commessa']})")
-                    
-                    col_edit1, col_edit2, col_edit3 = st.columns(3)
-                    nuovo_inizio = col_edit1.date_input("Inizio", value=pd.to_datetime(task_sel['inizio']))
-                    nuova_fine = col_edit2.date_input("Fine", value=pd.to_datetime(task_sel['fine']))
-                    
-                    if col_edit3.button("Salva Modifiche"):
-                        supabase.table("Log_Tempi").update({
-                            "inizio": nuovo_inizio.isoformat(),
-                            "fine": nuova_fine.isoformat()
-                        }).eq("id", task_sel['id']).execute()
-                        st.success("Aggiornato!")
-                        st.session_state.selected_task = None
-                        st.rerun()
-                    
-                    if st.button("Annulla Selezione"):
-                        st.session_state.selected_task = None
-                        st.rerun()
+            st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
+            
+            # --- MODIFICA RAPIDA SENZA LIBRERIE ESTERNE ---
+            st.divider()
+            with st.expander("📝 Modifica Rapida Date"):
+                st.info("Seleziona il Log dall'elenco per spostare le date")
+                log_options = {f"{r['Commessa']} - {r['Task']} ({r['operatore']})": r['id'] for _, r in df.iterrows()}
+                scelta = st.selectbox("Quale log vuoi spostare?", options=list(log_options.keys()))
+                
+                log_da_mod = df[df['id'] == log_options[scelta]].iloc[0]
+                c1, c2, c3 = st.columns(3)
+                nuovo_in = c1.date_input("Nuovo Inizio", value=log_da_mod['Inizio'])
+                nuovo_fi = c2.date_input("Nuova Fine", value=log_da_mod['Fine'])
+                
+                if c3.button("Applica Spostamento"):
+                    supabase.table("Log_Tempi").update({
+                        "inizio": nuovo_in.isoformat(),
+                        "fine": nuovo_fi.isoformat()
+                    }).eq("id", log_options[scelta]).execute()
+                    st.success("Timeline aggiornata!")
+                    st.rerun()
 
         else:
-            st.info("Nessun dato da mostrare.")
+            st.info("Nessun dato disponibile.")
     except Exception as e:
-        st.error(f"Errore: {e}")
+        st.error(f"Errore tecnico: {e}")
         
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
