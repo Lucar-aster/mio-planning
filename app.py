@@ -20,45 +20,53 @@ tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
 import plotly.graph_objects as go
 
-# --- TAB 1: TIMELINE STABILE E MODERNA ---
+# --- TAB 1: TIMELINE PROFESSIONALE E GESTIONE LOG ---
 with tabs[0]:
-    st.header("📊 Planning Progetti")
+    st.header("📊 Planning e Gestione Progetti")
     
-    # Controlli
-    col1, col2, col3, col_button = st.columns([2, 2, 2, 1])
-    scala = col1.selectbox("Vista", ["Settimana", "Mese", "Trimestre", "Semestre"], index=1, key="vista_scala")
-    mostra_nomi = col2.checkbox("Nomi su barre", value=True, key="check_nomi")
-    
-    if col_button.button("📍 Oggi"):
-        st.rerun()
-
     try:
+        # 1. RECUPERO DATI
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
+        res_operatori = get_data("Operatori") # Assumendo esista una tabella Operatori
         
         if logs and res_tasks and res_commesse:
+            # Mappe di decodifica
             task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
-            
+            lista_op = sorted(list(set([l['operatore'] for l in logs])))
+
+            # Preparazione DataFrame
             df = pd.DataFrame(logs)
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
-            # Calcolo durata precisa per evitare barre infinite
-            df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000 + (86400000)
-            
+            df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000 + 86400000
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
-            df = df.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
+            
+            # --- 2. FILTRI SUPERIORI (Per la Timeline) ---
+            col_f1, col_f2, col_f3, col_f4 = st.columns([2,2,2,1])
+            f_commessa = col_f1.multiselect("Filtra Progetto", options=sorted(df['Commessa'].unique()))
+            f_operatore = col_f2.multiselect("Filtra Operatore", options=lista_op)
+            scala = col_f3.selectbox("Scala", ["Settimana", "Mese", "Trimestre"], index=1)
+            
+            # Applicazione Filtri al DF del grafico
+            df_plot = df.copy()
+            if f_commessa:
+                df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
+            if f_operatore:
+                df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
+            
+            df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # Palette Soft
-            soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5"]
-            ops = df['operatore'].unique()
-            color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(ops)}
-
+            # --- 3. DISEGNO TIMELINE ---
             fig = go.Figure()
-            for op in ops:
-                df_op = df[df['operatore'] == op]
+            soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5"]
+            color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
+
+            for op in df_plot['operatore'].unique():
+                df_op = df_plot[df_plot['operatore'] == op]
                 fig.add_trace(go.Bar(
                     base=df_op['Inizio'],
                     x=df_op['Durata_ms'],
@@ -66,51 +74,76 @@ with tabs[0]:
                     orientation='h',
                     name=op,
                     marker=dict(color=color_map[op], cornerradius=10),
-                    text=df_op['operatore'] if mostra_nomi else None,
+                    text=df_op['operatore'],
                     textposition='inside',
-                    hovertemplate="<b>%{y[1]}</b><br>Fine: %{customdata|%d %b}<extra></extra>",
-                    customdata=df_op['Fine']
+                    hovertemplate="<b>%{y[1]}</b><br>Operatore: %{name}<extra></extra>"
                 ))
 
-            # Layout con griglia marcata
+            # Griglia gerarchica
             fig.update_layout(
                 barmode='overlay', dragmode='pan', bargap=0.6,
-                height=300 + (len(df) * 40), plot_bgcolor="white",
+                height=350 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
+                plot_bgcolor="white", margin=dict(l=10, r=10, t=50, b=50),
                 xaxis=dict(
-                    type="date", side="top", showgrid=True, 
-                    gridcolor="#e0e0e0", gridwidth=1,
+                    type="date", side="top", showgrid=True, gridcolor="#e0e0e0",
                     minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5)
-                ),
-                yaxis=dict(gridcolor="#f5f5f5"),
-                legend=dict(orientation="h", y=-0.1)
+                )
             )
-
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
-            
-            # --- MODIFICA RAPIDA SENZA LIBRERIE ESTERNE ---
+
+            # --- 4. PANNELLO DI MODIFICA AVANZATO ---
             st.divider()
-            with st.expander("📝 Modifica Rapida Date"):
-                st.info("Seleziona il Log dall'elenco per spostare le date")
-                log_options = {f"{r['Commessa']} - {r['Task']} ({r['operatore']})": r['id'] for _, r in df.iterrows()}
-                scelta = st.selectbox("Quale log vuoi spostare?", options=list(log_options.keys()))
+            with st.expander("🛠️ Strumenti di Modifica e Cancellazione", expanded=False):
+                st.subheader("Modifica rapida Log")
                 
-                log_da_mod = df[df['id'] == log_options[scelta]].iloc[0]
+                # Sotto-filtri per trovare il log
                 c1, c2, c3 = st.columns(3)
-                nuovo_in = c1.date_input("Nuovo Inizio", value=log_da_mod['Inizio'])
-                nuovo_fi = c2.date_input("Nuova Fine", value=log_da_mod['Fine'])
+                filtro_c = c1.selectbox("1. Scegli Progetto", options=["Tutti"] + sorted(df['Commessa'].unique()))
                 
-                if c3.button("Applica Spostamento"):
-                    supabase.table("Log_Tempi").update({
-                        "inizio": nuovo_in.isoformat(),
-                        "fine": nuovo_fi.isoformat()
-                    }).eq("id", log_options[scelta]).execute()
-                    st.success("Timeline aggiornata!")
-                    st.rerun()
+                df_filtro = df.copy()
+                if filtro_c != "Tutti":
+                    df_filtro = df_filtro[df_filtro['Commessa'] == filtro_c]
+                
+                filtro_o = c2.selectbox("2. Scegli Operatore", options=["Tutti"] + sorted(df_filtro['operatore'].unique()))
+                if filtro_o != "Tutti":
+                    df_filtro = df_filtro[df_filtro['operatore'] == filtro_o]
+                
+                # Selezione finale del Log specifico
+                log_map = {f"{r['Commessa']} | {r['Task']} ({r['Inizio'].strftime('%d/%m')})": r['id'] for _, r in df_filtro.iterrows()}
+                scelta_log_id = c3.selectbox("3. Seleziona il Log da modificare", options=list(log_map.keys()))
+                
+                if scelta_log_id:
+                    log_id = log_map[scelta_log_id]
+                    curr = df[df['id'] == log_id].iloc[0]
+                    
+                    st.write("---")
+                    col_m1, col_m2, col_m3, col_m4 = st.columns([2,2,2,1])
+                    
+                    n_inizio = col_m1.date_input("Inizio", value=curr['Inizio'])
+                    n_fine = col_m2.date_input("Fine", value=curr['Fine'])
+                    n_op = col_m3.selectbox("Cambia Operatore", options=lista_op, index=lista_op.index(curr['operatore']))
+                    
+                    # Bottone Salva
+                    if col_m4.button("💾 Salva", use_container_width=True):
+                        supabase.table("Log_Tempi").update({
+                            "inizio": n_inizio.isoformat(),
+                            "fine": n_fine.isoformat(),
+                            "operatore": n_op
+                        }).eq("id", log_id).execute()
+                        st.success("Modificato!")
+                        st.rerun()
+                    
+                    # Bottone Elimina (con conferma)
+                    st.write("")
+                    if st.button(f"🗑️ Elimina definitivamente questo Log", type="secondary"):
+                        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+                        st.warning("Log eliminato!")
+                        st.rerun()
 
         else:
             st.info("Nessun dato disponibile.")
     except Exception as e:
-        st.error(f"Errore tecnico: {e}")
+        st.error(f"Errore: {e}")
         
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
