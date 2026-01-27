@@ -57,7 +57,7 @@ with menu[0]:
     st.divider()
 
     # --- VISUALIZZAZIONE GRAFICA ---
-  try:
+   try:
     res_logs = supabase.table("Log_Tempi").select("*").execute().data
     res_tasks = supabase.table("Task").select("id, nome_task").execute().data
     task_map = {t['id']: t['nome_task'] for t in res_tasks} if res_tasks else {}
