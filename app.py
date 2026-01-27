@@ -101,8 +101,11 @@ with tabs[0]:
                 showgrid=True, 
                 gridcolor="#f0f0f0"
             )
-
+# Aggiunge una linea rossa per la data odierna
+            fig.add_vline(x=datetime.now().timestamp() * 1000, line_width=2, line_dash="dash", line_color="red")
             st.plotly_chart(fig, use_container_width=True)
+
+
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
