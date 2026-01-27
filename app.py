@@ -57,27 +57,44 @@ with menu[0]:
     st.divider()
 
     # --- VISUALIZZAZIONE GRAFICA ---
-    try:
-        # Recupero log e nomi task con il metodo "Safe" (Mappa Python)
-        res_logs = supabase.table("Log_Tempi").select("*").execute().data
-        res_tasks = supabase.table("Task").select("id, nome_task").execute().data
-        task_map = {t['id']: t['nome_task'] for t in res_tasks} if res_tasks else {}
+  try:
+    res_logs = supabase.table("Log_Tempi").select("*").execute().data
+    res_tasks = supabase.table("Task").select("id, nome_task").execute().data
+    task_map = {t['id']: t['nome_task'] for t in res_tasks} if res_tasks else {}
 
-        if res_logs:
-            df = pd.DataFrame(res_logs)
-            df['Task'] = df['task_id'].map(task_map).fillna("Sconosciuto")
-            
-            # Creazione Timeline con Plotly
-            fig = px.timeline(df, x_start="inizio", x_end="fine", y="Task", color="operatore",
-                              text="operatore", # Mostra il nome direttamente sulla barra
-                              title="Carico di Lavoro Attuale")
-            fig.update_yaxes(autorange="reversed")
-            fig.update_layout(height=500) # Altezza fissa per leggibilità
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Ancora nessun dato da visualizzare.")
-    except Exception as e:
-        st.error(f"Errore tecnico: {e}")
+    if res_logs:
+        df = pd.DataFrame(res_logs)
+        
+        # Trasformiamo le colonne in oggetti data (rimuovendo l'informazione dell'ora per il calcolo)
+        df['inizio_data'] = pd.to_datetime(df['inizio']).dt.date
+        df['fine_data'] = pd.to_datetime(df['fine']).dt.date
+        
+        df['Task'] = df['task_id'].map(task_map).fillna("Sconosciuto")
+        
+        # Creazione Timeline
+        fig = px.timeline(
+            df, 
+            x_start="inizio_data", 
+            x_end="fine_data", 
+            y="Task", 
+            color="operatore",
+            text="operatore",
+            title="Pianificazione Commesse (Vista Giornaliera)"
+        )
+        
+        # Forza l'asse X a mostrare solo le date
+        fig.update_xaxes(
+            tickformat="%d/%m/%Y", # Formato italiano: Giorno/Mese/Anno
+            dtick="D1"             # Forza uno scatto ogni 1 giorno
+        )
+        
+        fig.update_yaxes(autorange="reversed")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Nessun dato da visualizzare.")
+except Exception as e:
+    st.error(f"Errore tecnico: {e}")
+    
 # --- TAB 2: REGISTRA TEMPI (Operatività) ---
 with menu[1]:
     st.header("Inserimento Intervallo di Lavoro")
