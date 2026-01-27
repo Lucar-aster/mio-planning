@@ -18,7 +18,9 @@ def get_data(table):
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
-# --- TAB 1: TIMELINE DESIGN (COLORI SOFT E BORDI CURVI) ---
+import plotly.graph_objects as go
+
+# --- TAB 1: TIMELINE PROFESSIONALE (VERSIONE STABILE GRAPH OBJECTS) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -43,28 +45,39 @@ with tabs[0]:
             df['Inizio'] = pd.to_datetime(df['inizio'])
             df['Fine'] = pd.to_datetime(df['fine'])
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
-            
             df['Commessa'] = df['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df['Task'] = df['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
             
-            df = df.sort_values(by=['Commessa', 'Task'])
+            df = df.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # Palette di colori meno contrastanti (Pastelli desaturati)
+            # Palette Soft
             soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
+            operatori = df['operatore'].unique()
+            color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(operatori)}
 
-            # Creazione Grafico
-            fig = px.timeline(
-                df, 
-                x_start="Inizio", 
-                x_end="Fine_Visual", 
-                y=[df['Commessa'], df['Task']], 
-                color="operatore",
-                text="operatore" if mostra_nomi else None,
-                hover_data={"Commessa": True, "Task": True},
-                color_discrete_sequence=soft_colors
-            )
+            # --- COSTRUZIONE MANUALE DEL GRAFICO (Soluzione all'errore di lunghezza) ---
+            fig = go.Figure()
 
-            # Impostazioni Scale
+            for op in operatori:
+                df_op = df[df['operatore'] == op]
+                fig.add_trace(go.Bar(
+                    base=df_op['Inizio'],
+                    x=df_op['Fine_Visual'] - df_op['Inizio'],
+                    y=[df_op['Commessa'], df_op['Task']], # Gerarchia passata direttamente
+                    orientation='h',
+                    name=op,
+                    marker=dict(
+                        color=color_map[op],
+                        line_width=0,
+                        cornerradius=10 # Bordi arrotondati
+                    ),
+                    text=df_op['operatore'] if mostra_nomi else None,
+                    textposition='inside',
+                    insidetextanchor='middle',
+                    hovertemplate="<b>%{y[1]}</b><br>Commessa: %{y[0]}<br>Inizio: %{base|%d %b}<br>Fine: %{x|%d %b}<extra></extra>"
+                ))
+
+            # Configurazione Scale
             scale_settings = {
                 "Settimana": {"dtick": 86400000, "format": "%a %d\nSett %V", "zoom": 7},
                 "Mese": {"dtick": 86400000 * 2, "format": "%d %b\nSett %V", "zoom": 30},
@@ -72,21 +85,14 @@ with tabs[0]:
                 "Semestre": {"dtick": "M1", "format": "%b %Y", "zoom": 180}
             }
             conf = scale_settings[scala]
-            inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
-            fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2)).strftime("%Y-%m-%d")
-
-            # Estetica delle barre e layout
-            fig.update_traces(
-                marker_line_width=0,      # Rimuove il bordo nero
-                insidetextanchor="middle", 
-                textfont=dict(size=10, color="white")
-            )
+            inizio_zoom = (oggi - pd.Timedelta(days=conf["zoom"]//2))
+            fine_zoom = (oggi + pd.Timedelta(days=conf["zoom"]//2))
 
             fig.update_layout(
+                barmode='stack', # Necessario per Gantt con go.Bar
                 dragmode='pan',
-                bargap=0.6,               # Aumentato per ridurre l'altezza delle barre
-                barcornerradius=10,        # Bordi curvi (Novità Plotly)
-                height=300 + (len(df['task_id'].unique()) * 50),
+                bargap=0.5, # Barre più sottili
+                height=300 + (len(df.groupby(['Commessa', 'Task'])) * 40),
                 margin=dict(l=10, r=20, t=80, b=50),
                 plot_bgcolor="white",
                 xaxis=dict(
@@ -94,17 +100,14 @@ with tabs[0]:
                     rangeslider=dict(visible=True, thickness=0.03),
                     side="top",
                     gridcolor="#f5f5f5",
-                    range=[inizio_zoom, fine_zoom],
-                    fixedrange=False
+                    range=[inizio_zoom, fine_zoom]
                 ),
                 yaxis=dict(
-                    title="", 
-                    autorange="reversed",
-                    fixedrange=True,
                     gridcolor="#f5f5f5",
                     tickfont=dict(size=11, color="#555")
                 ),
-                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5)
+                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5),
+                showlegend=True
             )
 
             fig.update_xaxes(tickformat=conf["format"], dtick=conf["dtick"], linecolor="#eee")
@@ -113,8 +116,7 @@ with tabs[0]:
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
             
         else:
-            st.info("Inserisci dati per visualizzare la timeline.")
-            
+            st.info("Nessun dato disponibile.")
     except Exception as e:
         st.error(f"Errore tecnico: {e}")
         
