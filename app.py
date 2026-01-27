@@ -21,6 +21,13 @@ tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 # --- TAB 1: TIMELINE ---
 with tabs[0]:
     st.header("Timeline Progetti")
+
+# --- SELETTORE DI SCALA ---
+    col_scale, col_empty = st.columns([2, 4])
+    scala = col_scale.selectbox(
+        "Seleziona Scala Temporale", 
+        ["Settimanale", "Mensile", "Trimestrale", "Semestrale"],
+        index=1)
     try:
         logs = get_data("Log_Tempi")
         tasks = {t['id']: t['nome_task'] for t in get_data("Task")}
@@ -30,13 +37,62 @@ with tabs[0]:
             df['Inizio'] = pd.to_datetime(df['inizio']).dt.date
             df['Fine'] = pd.to_datetime(df['fine']).dt.date
             df['Task'] = df['task_id'].map(tasks)
-            
-            fig = px.timeline(df, x_start="Inizio", x_end="Fine", y="Task", color="operatore", text="operatore")
-            fig.update_xaxes(tickformat="%d/%m/%Y", dtick="D1")
-            fig.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig, use_container_width=True)
-    except: st.info("Inizia a configurare il sistema.")
+# Formattazione Etichetta: "01/01/2026 (Sett. 1)"
+            df['label_settimana'] = df['Inizio'].dt.strftime('%d/%m/%Y') + " (Sett. " + df['Inizio'].dt.isocalendar().week.astype(str) + ")"
 
+            # Configurazione Scala
+            scale_config = {
+                "Settimanale": {"dtick": "D1", "format": "%d %b\nSett.%V"},
+                "Mensile": {"dtick": "D7", "format": "%d/%m\nSett.%V"},
+                "Trimestrale": {"dtick": "M1", "format": "%b %Y\nSett.%V"},
+                "Semestrale": {"dtick": "M1", "format": "%b %Y"}
+            }
+            conf = scale_config[scala]
+
+# Creazione Grafico
+            fig = px.timeline(
+                df, 
+                x_start="Inizio", 
+                x_end="Fine", 
+                y="Task", 
+                color="operatore", 
+                text="operatore",
+                color_discrete_sequence=px.colors.qualitative.Pastel # Colori più eleganti
+            )
+
+            # Estetica Avanzata
+            fig.update_layout(
+                bar_gap=0.4, # Spazio tra le barre
+                plot_bgcolor="rgba(0,0,0,0)", # Sfondo trasparente
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Arial", size=12),
+                showlegend=True,
+                legend_title_text="Operatore",
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+
+            # Configurazione Asse X (Date + Settimana)
+            fig.update_xaxes(
+                tickformat=conf["format"],
+                dtick=conf["dtick"],
+                gridcolor="LightGrey",
+                linecolor="Black",
+                mirror=True,
+                ticks="outside"
+            )
+
+            fig.update_yaxes(
+                autorange="reversed", 
+                showgrid=True, 
+                gridcolor="whitesmoke"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Nessun dato presente. Inizia a configurare il sistema.")
+    except Exception as e:
+        st.error(f"Errore nel caricamento del grafico: {e}")
+        
 # --- TAB 2: REGISTRA TEMPI ---
 with tabs[1]:
     st.header("Nuovo Log Lavoro")
