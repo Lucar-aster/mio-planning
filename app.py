@@ -137,7 +137,7 @@ def modal_edit_log(log_id, data_corrente):
 
     t_nome = st.selectbox("Task", options=lista_nomi_task, index=idx_task)
     
-    def safe_date(d):
+def safe_date(d):
     try:
         return pd.to_datetime(d).date()
     except:
