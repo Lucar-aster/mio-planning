@@ -4,11 +4,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+LOGO_URL = "https://drive.google.com/uc?export=view&id=1fBpKWVv5Yv6NeHzFcOCkLDFnECdz_rGk"
 st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown(
     """
     <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
-        <img src="https://drive.google.com/uc?export=view&id=1fBpKWVv5Yv6NeHzFcOCkLDFnECdz_rGk" width="40"> 
+        <img src="{LOGO_URL}" width="40"> 
         <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
     </div>
     <hr style="margin-top: 5px; margin-bottom: 20px;">
@@ -21,7 +22,7 @@ URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
-st.set_page_config(page_title="Project Planner", layout="wide")
+st.set_page_config(page_title="Project Planner", page_icon=LOGO_URL, layout="wide")
 
 # --- FUNZIONE RECUPERO DATI ---
 def get_data(table):
