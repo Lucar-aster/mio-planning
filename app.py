@@ -23,7 +23,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING (LOGICA SMART TICK E ASSE X DINAMICO) ---
+# --- TAB 1: PLANNING PROGETTI ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -46,7 +46,6 @@ with tabs[0]:
             # --- 2. LOGICA DI FUSIONE (MERGING) ---
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
-            
             if not df_sorted.empty:
                 current_row = df_sorted.iloc[0].to_dict()
                 for i in range(1, len(df_sorted)):
@@ -54,7 +53,6 @@ with tabs[0]:
                     same_op_task = (next_row['operatore'] == current_row['operatore'] and 
                                    next_row['task_id'] == current_row['task_id'])
                     is_consecutive = (next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1))
-                    
                     if same_op_task and is_consecutive:
                         current_row['Fine'] = max(current_row['Fine'], next_row['Fine'])
                     else:
@@ -82,25 +80,22 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-# --- 4. CONFIGURAZIONE ASSE X (FORMATO FISSO A 3 LIVELLI) ---
+            # --- 4. CONFIGURAZIONE ASSE X (ITALIANO E GERARCHIA) ---
             oggi = datetime.now()
             
-            # Formattazione per mostrare Mese e Settimana solo quando cambiano
-            # %b = Mese, %V = Settimana, %d = Giorno, %a = Nome Giorno
-            # Il trucco è usare il formato che Plotly usa per raggruppare i periodi
-            formato_smart = "%b %Y<br>Sett %V<br>%d %a"
+            # Formato: Mese (Gen), Settimana (S05), Giorno (28)
+            # Usiamo tag HTML per forzare le dimensioni e rendere i giorni più visibili
+            formato_smart = "<span style='font-size:11px'>%b</span><br><span style='font-size:10px'>S%V</span><br><b>%d</b>"
 
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-                x_dtick = 86400000 # 1 giorno
+                x_dtick = 86400000 
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-                x_dtick = 86400000 * 2
-                formato_smart = "%b<br>S%V<br>%d"
+                x_dtick = 86400000 * 2 # Ogni 2 giorni
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
-                x_dtick = 86400000 * 7 # 1 settimana
-                formato_smart = "Sett %V<br>%b %Y"
+                x_dtick = 86400000 * 7
 
             # --- 5. GRAFICO ---
             fig = go.Figure()
@@ -122,36 +117,27 @@ with tabs[0]:
                     width=0.4,
                     customdata=c_data,
                     hovertemplate=(
+                        "<b>Operatore:</b> %{customdata[2]}<br>" +
                         "<b>Progetto:</b> %{customdata[0]}<br>" +
                         "<b>Task:</b> %{customdata[1]}<br>" +
-                        "<b>Operatore:</b> %{customdata[2]}<br>" +
-                        "<b>Inizio:</b> %{customdata[3]|%d/%m/%Y}<br>" +
-                        "<b>Fine:</b> %{customdata[4]|%d/%m/%Y}<br>" +
+                        "<b>Periodo:</b> %{customdata[3]|%d/%m} - %{customdata[4]|%d/%m}<br>" +
                         "<b>Durata:</b> %{customdata[5]} giorni<extra></extra>"
                     )
                 ))
 
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
-                height=500 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-                margin=dict(l=10, r=20, t=110, b=50), # Spazio per le 3 righe in alto
+                height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
+                margin=dict(l=10, r=20, t=110, b=50),
                 xaxis=dict(
-                    type="date", 
-                    side="top", 
-                    range=x_range,
+                    type="date", side="top", range=x_range,
                     dtick=x_dtick,
-                    tickformat=formato_smart, # Applichiamo il formato a 3 livelli
-                    # Rimuove le ripetizioni: Plotly scriverà il Mese e la Settimana
-                    # solo sul primo tick del nuovo periodo!
-                    tickformatstops=[
-                        dict(dtickrange=[None, 86400000], value="%d %a<br>Sett %V<br>%b %Y"),
-                        dict(dtickrange=[86400001, None], value="Sett %V<br>%b %Y")
-                    ],
+                    tickformat=formato_smart,
                     tickangle=0,
-                    tickfont=dict(size=10),
-                    showgrid=True, 
-                    gridcolor="#e0e0e0", 
-                    gridwidth=1,
+                    tickfont=dict(size=10, color="#333"),
+                    showgrid=True, gridcolor="#e0e0e0", gridwidth=1,
+                    # nticks forzato per non far sparire i giorni in vista mese
+                    nticks=30 if scala == "Mese" else 20,
                     minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
                     rangeslider=dict(visible=True, thickness=0.04)
                 ),
@@ -159,10 +145,18 @@ with tabs[0]:
                 legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
             )
 
+            # Linea oggi
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
-            st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
+
+            # TRADUZIONE ITALIANA TRAMITE CONFIG
+            st.plotly_chart(fig, use_container_width=True, config={
+                'scrollZoom': True, 
+                'displaylogo': False,
+                'locale': 'it'
+            })
+
         else:
-            st.info("Nessun log trovato.")
+            st.info("Nessun log trovato. Inserisci i dati per attivare il planning.")
 
     except Exception as e:
         st.error(f"Errore tecnico: {e}")
