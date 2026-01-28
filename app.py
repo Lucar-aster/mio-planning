@@ -63,29 +63,53 @@ def modal_task():
 
 @st.dialog("⏱️ Nuovo Log Tempi")
 def modal_log():
-    # Recuperiamo i task esistenti
-    res_t = supabase.table("Task").select("id, nome_task").execute()
-    tasks = {t['nome_task']: t['id'] for t in res_t.data}
-    
-    operatore = st.text_input("Nome Operatore")
-    scelta_t = st.selectbox("Task eseguito", options=list(tasks.keys()))
-    col1, col2 = st.columns(2)
-    inizio = col1.date_input("Data Inizio", datetime.now())
-    fine = col2.date_input("Data Fine", datetime.now())
-    
-    if st.button("Registra Log", type="primary"):
-        if operatore:
-            try:
+    try:
+        # 1. Recupero dati necessari da Supabase
+        res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
+        res_t = supabase.table("Task").select("id, nome_task, commessa_id").execute()
+        res_o = supabase.table("Operatori").select("nome").execute() # Assumendo che la colonna si chiami 'nome'
+        
+        commesse_dict = {c['nome_commessa']: c['id'] for c in res_c.data}
+        operatori_lista = [o['nome'] for o in res_o.data]
+        all_tasks = res_t.data
+
+        # 2. Input Operatore (limitato alla tabella Operatori)
+        operatore = st.selectbox("Seleziona Operatore", options=operatori_lista)
+
+        # 3. Selezione Commessa (per filtrare i task)
+        scelta_c_nome = st.selectbox("Seleziona Commessa", options=list(commesse_dict.keys()))
+        id_commessa_scelta = commesse_dict[scelta_c_nome]
+
+        # 4. Selezione Task (filtrato in base alla commessa scelta sopra)
+        tasks_filtrati = {t['nome_task']: t['id'] for t in all_tasks if t['commessa_id'] == id_commessa_scelta}
+        
+        if not tasks_filtrati:
+            st.warning("Nessun task trovato per questa commessa.")
+            scelta_t_nome = None
+        else:
+            scelta_t_nome = st.selectbox("Seleziona Task", options=list(tasks_filtrati.keys()))
+
+        # 5. Date
+        col1, col2 = st.columns(2)
+        inizio = col1.date_input("Data Inizio", datetime.now())
+        fine = col2.date_input("Data Fine", datetime.now())
+        
+        # 6. Salvataggio
+        if st.button("Registra Log", type="primary"):
+            if operatore and scelta_t_nome:
                 supabase.table("Log_Tempi").insert({
                     "operatore": operatore,
-                    "task_id": tasks[scelta_t],
+                    "task_id": tasks_filtrati[scelta_t_nome],
                     "inizio": str(inizio),
                     "fine": str(fine)
                 }).execute()
-                st.success("Log registrato!")
+                st.success("Log registrato con successo!")
                 st.rerun()
-            except Exception as e:
-                st.error(f"Errore: {e}")
+            else:
+                st.error("Assicurati di aver selezionato tutti i campi.")
+
+    except Exception as e:
+        st.error(f"Errore nel caricamento dei dati: {e}")
                 
 # --- TAB 1: PLANNING (FIX ALLINEAMENTO WEEKEND) ---
 with tabs[0]:
