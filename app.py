@@ -137,10 +137,19 @@ def modal_edit_log(log_id, data_corrente):
 
     t_nome = st.selectbox("Task", options=lista_nomi_task, index=idx_task)
     
+    def safe_date(d):
+    try:
+        return pd.to_datetime(d).date()
+    except:
+        return datetime.now().date()
+        
     col1, col2 = st.columns(2)
-    inizio = col1.date_input("Inizio", pd.to_datetime(data_corrente['inizio']))
-    fine = col2.date_input("Fine", pd.to_datetime(data_corrente['fine']))
+    data_inizio_pulita = safe_date(data_corrente['inizio'])
+    data_fine_pulita = safe_date(data_corrente['fine'])
 
+    inizio = col1.date_input("Inizio", data_inizio_pulita)
+    fine = col2.date_input("Fine", data_fine_pulita)
+    
     col_btn1, col_btn2 = st.columns(2)
     if col_btn1.button("Salva Modifiche", type="primary", use_container_width=True):
         supabase.table("Log_Tempi").update({
