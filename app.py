@@ -189,6 +189,11 @@ def modal_edit_log(log_id, data_corrente):
             st.session_state.chart_key += 1
             st.warning("Log eliminato.")
             st.rerun()
+            
+        if btn_col3.button("✖️ Annulla", type="secondary", use_container_width=True):
+            # Non facciamo nulla al database, resettiamo solo il grafico
+            st.session_state.chart_key += 1 # Pulizia evidenziazione
+            st.rerun()
 
     except Exception as e:
         st.error(f"Errore nella modifica: {e}")
@@ -344,7 +349,8 @@ with tabs[0]:
             })
             if event and "selection" in event and event["selection"]["points"]:
                 # Estraiamo i dati dal customdata del punto cliccato
-                c_data = event["selection"]["points"][0]["customdata"]
+                point = event["selection"]["points"][0]
+                c_data = point["customdata"]
     
                 log_id_scelto = c_data[0]
                 data_info = {
@@ -354,8 +360,7 @@ with tabs[0]:
                     "fine": c_data[4]
                 }
                 modal_edit_log(log_id_scelto, data_info)
-                st.session_state.chart_key += 1
-                st.rerun()
+              
                 
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
