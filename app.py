@@ -21,8 +21,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-if 'chart_key' not in st.session_state:
-    st.session_state.chart_key = 0
+
 
 # --- FUNZIONI DI INSERIMENTO REALI SU SUPABASE ---
 
@@ -197,6 +196,8 @@ def modal_edit_log(log_id, data_corrente):
 # --- TAB 1: PLANNING  ---
 with tabs[0]:
     st.header("📊 Progetti Aster Contract")
+    if 'chart_key' not in st.session_state:
+    st.session_state.chart_key = 0
     
     try:
         logs = get_data("Log_Tempi")
