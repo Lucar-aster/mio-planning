@@ -23,12 +23,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING PROGETTI (CON FUSIONE LOG SEQUENZIALI) ---
+# --- TAB 1: PLANNING (LOGICA SCALA E GRIGLIA CORRETTA) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
     try:
-        # 1. RECUPERO DATI
+        # 1. DATI
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
@@ -38,69 +38,70 @@ with tabs[0]:
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
             df_raw = pd.DataFrame(logs)
-            df_raw['Inizio'] = pd.to_datetime(df_raw['inizio']).dt.normalize() # Solo data, senza ore
+            df_raw['Inizio'] = pd.to_datetime(df_raw['inizio']).dt.normalize()
             df_raw['Fine'] = pd.to_datetime(df_raw['fine']).dt.normalize()
-            
-            # Aggiungiamo info base
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
+
+            # --- 2. FILTRI E SCALA ---
+            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
+            lista_op = sorted(df_raw['operatore'].unique().tolist())
+            f_commessa = col_f1.multiselect("Progetti", options=sorted(df_raw['Commessa'].unique()))
+            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             
-            # --- 2. LOGICA DI FUSIONE (MERGING) ---
-            # Ordiniamo per operatore, task e data inizio
+            # Selezione scala temporale
+            scala = col_f3.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
+            
+            if col_f4.button("📍 Oggi", use_container_width=True):
+                st.rerun()
+
+            # --- 3. LOGICA FUSIONE (MERGING) ---
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
-            
             merged_data = []
             if not df_sorted.empty:
-                # Iniziamo con il primo log
                 current_row = df_sorted.iloc[0].to_dict()
-                
                 for i in range(1, len(df_sorted)):
                     next_row = df_sorted.iloc[i].to_dict()
-                    
-                    # Verifichiamo se è lo stesso operatore, stesso task E se è consecutivo (salto <= 1 giorno)
-                    is_same_op_task = (next_row['operatore'] == current_row['operatore'] and 
-                                     next_row['task_id'] == current_row['task_id'])
-                    
-                    is_consecutive = (next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1))
-                    
-                    if is_same_op_task and is_consecutive:
-                        # Estendiamo la data di fine se quella successiva è maggiore
+                    if (next_row['operatore'] == current_row['operatore'] and 
+                        next_row['task_id'] == current_row['task_id'] and 
+                        next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1)):
                         current_row['Fine'] = max(current_row['Fine'], next_row['Fine'])
                     else:
-                        # Salviamo il log precedente e iniziamo uno nuovo
                         merged_data.append(current_row)
                         current_row = next_row
-                
-                # Aggiungiamo l'ultimo log processato
                 merged_data.append(current_row)
             
             df = pd.DataFrame(merged_data)
-            
-            # Ricalcolo durata per visualizzazione
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             df['Durata_ms'] = (df['Fine_Visual'] - df['Inizio']).dt.total_seconds() * 1000
-            
-            # --- 3. FILTRI E INTERFACCIA ---
-            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
-            lista_op = sorted(df_raw['operatore'].unique().tolist())
-            f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
-            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
-            scala = col_f3.selectbox("Scala", ["Settimana", "Mese", "Trimestre"], index=1)
-            
-            if col_f4.button("📍 Oggi"):
-                st.rerun()
 
-            # Filtriamo il dataframe fuso
+            # Filtri applicati
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. GRAFICO ---
+            # --- 4. CONFIGURAZIONE SCALA (L'ERRORE ERA QUI) ---
+            # Definiamo i parametri dell'asse X in base alla selezione
+            oggi = datetime.now()
+            if scala == "Settimana":
+                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+                x_format = "%a %d %b"
+                x_dtick = 86400000  # 1 giorno
+            elif scala == "Mese":
+                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+                x_format = "%d %b"
+                x_dtick = 86400000 * 2 # Ogni 2 giorni per non affollare
+            else: # Trimestre
+                x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
+                x_format = "%b %Y"
+                x_dtick = "M1" # Ogni mese
+
+            # --- 5. GRAFICO ---
+            fig = go.Figure()
             soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
             color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
-            
-            fig = go.Figure()
+
             for op in df_plot['operatore'].unique():
                 df_op = df_plot[df_plot['operatore'] == op]
                 fig.add_trace(go.Bar(
@@ -110,42 +111,47 @@ with tabs[0]:
                     orientation='h',
                     name=op,
                     offsetgroup=op,
-                    marker=dict(color=color_map[op], cornerradius=10, line=dict(width=1, color="white")),
+                    marker=dict(color=color_map[op], cornerradius=10),
                     width=0.4,
                     text=df_op['operatore'],
                     textposition='inside',
-                    hovertemplate="<b>%{y[1]}</b><br>Dal: %{base|%d/%m}<br>Al: %{customdata|%d/%m}<extra></extra>",
-                    customdata=df_op['Fine']
+                    customdata=df_op['Fine'],
+                    hovertemplate="<b>%{y[1]}</b><br>Fine: %{customdata|%d/%m}<extra></extra>"
                 ))
 
-            # Layout griglia
             fig.update_layout(
-                barmode='group', dragmode='pan', bargap=0.3,
-                height=400 + (len(df_plot.groupby(['Commessa', 'Task'])) * 50),
+                barmode='group',
+                dragmode='pan',
+                bargap=0.3,
+                height=450 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
                 plot_bgcolor="white",
+                margin=dict(l=10, r=20, t=60, b=50),
                 xaxis=dict(
-                    type="date", side="top", showgrid=True, gridcolor="#e0e0e0", gridwidth=1.5,
-                    minor=dict(showgrid=True, gridcolor="#f8f8f8", gridwidth=0.5)
+                    type="date",
+                    side="top",
+                    range=x_range, # Forza lo zoom scelto
+                    tickformat=x_format,
+                    dtick=x_dtick,
+                    showgrid=True,
+                    gridcolor="#e0e0e0",
+                    gridwidth=1.5,
+                    minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
+                    rangeslider=dict(visible=True, thickness=0.04)
                 ),
                 yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
-                legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center")
+                legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center")
             )
 
-            # Oggi e Scala
-            oggi = datetime.now()
+            # Linea Oggi
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
+
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
 
-            # Pannello Gestione (qui usiamo df_raw perché per cancellare serve il singolo log ID)
-            st.divider()
-            with st.expander("🛠️ Gestione Record Originali (Modifica/Elimina)"):
-                st.info("Nota: Qui vedi i log singoli così come inseriti nel database.")
-                # ... (Riprendi il codice del pannello modifica dell'ultimo messaggio) ...
-
         else:
-            st.info("Nessun dato disponibile.")
+            st.info("Inserisci dei log per attivare il planning.")
+            
     except Exception as e:
-        st.error(f"Errore: {e}")
+        st.error(f"Errore tecnico: {e}")
         
 # --- TAB 2: REGISTRA TEMPI (VERSIONE ANTI-ERRORE) ---
 with tabs[1]:
