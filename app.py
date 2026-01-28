@@ -305,7 +305,7 @@ with tabs[0]:
                 ))
 
             fig.update_layout(
-                clickmode='event+select', selectionmode='single', barmode='group', dragmode='pan', plot_bgcolor="white",
+                clickmode='event+select', barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
                 margin=dict(l=10, r=20, t=120, b=50),
                 shapes=shapes,
