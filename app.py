@@ -23,7 +23,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING CON GIORNI SETTIMANA E FESTIVITÀ ---
+# --- TAB 1: PLANNING (SETTIMANA CON INIZIO LUNEDÌ) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -43,7 +43,7 @@ with tabs[0]:
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
 
-            # 2. LOGICA DI FUSIONE
+            # 2. LOGICA DI FUSIONE LOG
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
             if not df_sorted.empty:
@@ -59,6 +59,7 @@ with tabs[0]:
                         current_row = next_row
                 merged_data.append(current_row)
             df = pd.DataFrame(merged_data)
+            # Durata per barre: calcoliamo fino alla fine del giorno
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
             # 3. FILTRI
@@ -74,20 +75,19 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. TRADUZIONE MANUALE PER POPUP ---
+            # --- 4. TRADUZIONE MANUALE ---
             mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
 
-            # --- 5. LOGICA WEEKEND E FESTIVITÀ ---
+            # --- 5. LOGICA WEEKEND E FESTIVITÀ (LUNEDÌ=0) ---
             oggi = datetime.now()
-            # Estendiamo il calcolo degli shapes per coprire un ampio range temporale
-            x_min_shapes = oggi - timedelta(days=180)
-            x_max_shapes = oggi + timedelta(days=180)
-            
+            x_min_sh = oggi - timedelta(days=180)
+            x_max_sh = oggi + timedelta(days=180)
             festivita_it = ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"]
             
             shapes = []
-            curr = x_min_shapes
-            while curr <= x_max_shapes:
+            curr = x_min_sh
+            while curr <= x_max_sh:
+                # In Python weekday() 0=Lunedì, 5=Sabato, 6=Domenica
                 if curr.weekday() >= 5 or curr.strftime("%d-%m") in festivita_it:
                     shapes.append(dict(
                         type="rect", x0=curr, x1=curr + timedelta(days=1),
@@ -97,7 +97,7 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             # --- 6. CONFIGURAZIONE ASSE X ---
-            # %d/%m -> Data, Sett %V -> Settimana, %a -> Giorno (Lun, Mar...)
+            # %V garantisce che il numero di settimana cambi di Lunedì
             formato_it = "%d/%m<br>Sett %V<br>%a"
 
             if scala == "Settimana":
@@ -131,7 +131,7 @@ with tabs[0]:
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-                margin=dict(l=10, r=20, t=120, b=50), # t=120 per far stare 3 righe
+                margin=dict(l=10, r=20, t=120, b=50),
                 shapes=shapes,
                 xaxis=dict(
                     type="date", side="top", range=x_range, dtick=x_dtick,
@@ -146,7 +146,7 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            # Configurazione per forzare l'italiano e i nomi brevi dei giorni
+            # FORZATURA LUNEDÌ E ITALIANO
             st.plotly_chart(fig, use_container_width=True, config={
                 'scrollZoom': True, 'displaylogo': False,
                 'locale': 'it',
@@ -156,7 +156,8 @@ with tabs[0]:
                             'month_names': ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
                             'month_names_short': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
                             'day_names': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
-                            'day_names_short': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
+                            'day_names_short': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'],
+                            'firstdayofweek': 1  # <--- Imposta Lunedì come primo giorno
                         }
                     }
                 }
