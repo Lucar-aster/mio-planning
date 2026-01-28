@@ -23,7 +23,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING PROGETTI CON WEEKEND E TRADUZIONE MANUALE ---
+# --- TAB 1: PLANNING CON TRADUZIONE MANUALE E FESTIVITÀ ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -33,7 +33,7 @@ with tabs[0]:
         res_commesse = get_data("Commesse")
         
         if logs and res_tasks and res_commesse:
-            # Preparazione dati (Mappe e DataFrame)
+            # 1. PREPARAZIONE DATI
             task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
@@ -43,7 +43,7 @@ with tabs[0]:
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
 
-            # Logica Fusione Log Sequenziali
+            # 2. LOGICA DI FUSIONE
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
             if not df_sorted.empty:
@@ -61,7 +61,7 @@ with tabs[0]:
             df = pd.DataFrame(merged_data)
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
-            # Filtri
+            # 3. FILTRI
             col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
             lista_op = sorted(df_raw['operatore'].unique().tolist())
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
@@ -74,27 +74,58 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- CONFIGURAZIONE TEMPORALE E WEEKEND ---
-            oggi = datetime.now()
-            x_min = df_plot['Inizio'].min() - timedelta(days=5) if not df_plot.empty else oggi - timedelta(days=30)
-            x_max = df_plot['Fine'].max() + timedelta(days=5) if not df_plot.empty else oggi + timedelta(days=30)
-            
-            # Creazione rettangoli per weekend
-            weekend_shapes = []
-            curr_d = x_min
-            while curr_d <= x_max:
-                if curr_d.weekday() >= 5: # 5=Sabato, 6=Domenica
-                    weekend_shapes.append(dict(
-                        type="rect", x0=curr_d, x1=curr_d + timedelta(days=1),
-                        y0=0, y1=1, yref="paper", fillcolor="rgba(200, 200, 200, 0.3)",
-                        layer="below", line_width=0,
-                    ))
-                curr_d += timedelta(days=1)
+            # --- 4. TRADUZIONE MANUALE MESI E GIORNI ---
+            mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
+            giorni_it = {0:"Lun", 1:"Mar", 2:"Mer", 3:"Gio", 4:"Ven", 5:"Sab", 6:"Dom"}
 
-            # Formato Scala
+            # --- 5. LOGICA WEEKEND E FESTIVITÀ ---
+            oggi = datetime.now()
+            x_min = oggi - timedelta(days=60)
+            x_max = oggi + timedelta(days=60)
+            
+            festivita_it = [
+                "01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"
+            ]
+            # Pasqua/Pasquetta 2026 (esempio): "05-04", "06-04"
+            
+            shapes = []
+            curr = x_min
+            while curr <= x_max:
+                is_weekend = curr.weekday() >= 5
+                is_festivo = curr.strftime("%d-%m") in festivita_it
+                
+                if is_weekend or is_festivo:
+                    shapes.append(dict(
+                        type="rect", x0=curr, x1=curr + timedelta(days=1),
+                        y0=0, y1=1, yref="paper", fillcolor="rgba(180, 180, 180, 0.25)",
+                        layer="below", line_width=0
+                    ))
+                curr += timedelta(days=1)
+
+            # --- 6. COSTRUZIONE GRAFICO ---
+            fig = go.Figure()
+            soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
+            color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
+
+            for op in df_plot['operatore'].unique():
+                df_op = df_plot[df_plot['operatore'] == op]
+                
+                # Formattiamo le date per il popup in italiano manualmente
+                df_op['Inizio_Str'] = df_op['Inizio'].apply(lambda x: f"{x.day} {mesi_it[x.month]}")
+                df_op['Fine_Str'] = df_op['Fine'].apply(lambda x: f"{x.day} {mesi_it[x.month]}")
+
+                fig.add_trace(go.Bar(
+                    base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
+                    orientation='h', name=op, offsetgroup=op,
+                    marker=dict(color=color_map[op], cornerradius=10), width=0.4,
+                    customdata=df_op[['Commessa', 'Task', 'operatore', 'Inizio_Str', 'Fine_Str']],
+                    hovertemplate="<b>%{customdata[2]}</b><br>%{customdata[0]}<br>%{customdata[1]}<br>Periodo: %{customdata[3]} - %{customdata[4]}<extra></extra>"
+                ))
+
+            # Configurazione Scala
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-                x_dtick = 86400000 
+                x_dtick = 86400000
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
                 x_dtick = 86400000 * 2
@@ -102,30 +133,16 @@ with tabs[0]:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
                 x_dtick = 86400000 * 7
 
-            # --- COSTRUZIONE GRAFICO ---
-            fig = go.Figure()
-            soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
-            color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
-
-            for op in df_plot['operatore'].unique():
-                df_op = df_plot[df_plot['operatore'] == op]
-                fig.add_trace(go.Bar(
-                    base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
-                    orientation='h', name=op, offsetgroup=op,
-                    marker=dict(color=color_map[op], cornerradius=10), width=0.4,
-                    customdata=df_op[['Commessa', 'Task', 'operatore', 'Inizio', 'Fine']],
-                    hovertemplate="<b>%{customdata[2]}</b><br>%{customdata[0]}<br>%{customdata[1]}<br>%{customdata[3]|%d/%m} - %{customdata[4]|%d/%m}<extra></extra>"
-                ))
-
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
                 margin=dict(l=10, r=20, t=110, b=50),
-                shapes=weekend_shapes, # Aggiunge i weekend grigi
+                shapes=shapes,
                 xaxis=dict(
                     type="date", side="top", range=x_range, dtick=x_dtick,
-                    tickformat="%d<br>S%V<br>%b %Y", tickangle=0,
-                    tickfont=dict(size=10), showgrid=True, gridcolor="#e0e0e0",
+                    # Se l'inglese persiste, usiamo un formato numerico che è universale
+                    tickformat="%d/%m<br>S%V", 
+                    tickangle=0, tickfont=dict(size=10), showgrid=True, gridcolor="#e0e0e0",
                 ),
                 yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
                 legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
@@ -133,26 +150,14 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            # --- TRADUZIONE MANUALE FORZATA ---
-            # Definiamo i nomi dei mesi in italiano per sovrascrivere l'inglese
+            # Configurazione finale per forzare l'italiano dove possibile
             st.plotly_chart(fig, use_container_width=True, config={
                 'scrollZoom': True, 'displaylogo': False,
-                'locale': 'it',
-                'locales': {
-                    'it': {
-                        'module': 'plotly_it',
-                        'dictionary': {
-                            'month_names': ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
-                            'month_names_short': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
-                            'day_names': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
-                            'day_names_short': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
-                        }
-                    }
-                }
+                'locale': 'it'
             })
 
         else:
-            st.info("Inserisci dati per visualizzare il planning.")
+            st.info("Configura i dati per visualizzare il planning.")
     except Exception as e:
         st.error(f"Errore: {e}")
         
