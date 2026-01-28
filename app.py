@@ -123,7 +123,19 @@ def modal_edit_log(log_id, data_corrente):
 
     # Pre-compilazione campi con i dati esistenti
     op = st.selectbox("Operatore", options=operatori, index=operatori.index(data_corrente['operatore']) if data_corrente['operatore'] in operatori else 0)
-    t_nome = st.selectbox("Task", options=list(tasks.keys()), index=list(tasks.values()).index(data_corrente['task_id']))
+    lista_id_task = list(tasks.values())
+    lista_nomi_task = list(tasks.keys())
+    
+    # Cerchiamo l'indice in modo sicuro
+    try:
+        # Forziamo entrambi i valori a stringa per il confronto, o entrambi a int
+        current_task_id = data_corrente['task_id']
+        idx_task = lista_id_task.index(current_task_id)
+    except (ValueError, KeyError):
+        # Se il task_id non esiste nella lista, usiamo il primo disponibile (indice 0)
+        idx_task = 0
+
+    t_nome = st.selectbox("Task", options=lista_nomi_task, index=idx_task)
     
     col1, col2 = st.columns(2)
     inizio = col1.date_input("Inizio", pd.to_datetime(data_corrente['inizio']))
