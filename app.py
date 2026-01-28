@@ -23,17 +23,17 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING PROGETTI ---
+# --- TAB 1: PLANNING PROGETTI CON WEEKEND E TRADUZIONE MANUALE ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
     try:
-        # 1. RECUPERO DATI
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
         
         if logs and res_tasks and res_commesse:
+            # Preparazione dati (Mappe e DataFrame)
             task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
             commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
             
@@ -43,123 +43,118 @@ with tabs[0]:
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
 
-            # --- 2. LOGICA DI FUSIONE (MERGING) ---
+            # Logica Fusione Log Sequenziali
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
             if not df_sorted.empty:
                 current_row = df_sorted.iloc[0].to_dict()
                 for i in range(1, len(df_sorted)):
                     next_row = df_sorted.iloc[i].to_dict()
-                    same_op_task = (next_row['operatore'] == current_row['operatore'] and 
-                                   next_row['task_id'] == current_row['task_id'])
-                    is_consecutive = (next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1))
-                    if same_op_task and is_consecutive:
+                    if (next_row['operatore'] == current_row['operatore'] and 
+                        next_row['task_id'] == current_row['task_id'] and 
+                        next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1)):
                         current_row['Fine'] = max(current_row['Fine'], next_row['Fine'])
                     else:
                         merged_data.append(current_row)
                         current_row = next_row
                 merged_data.append(current_row)
-            
             df = pd.DataFrame(merged_data)
-            df['Durata_Giorni'] = (df['Fine'] - df['Inizio']).dt.days + 1
-            df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
-            df['Durata_ms'] = (df['Fine_Visual'] - df['Inizio']).dt.total_seconds() * 1000
+            df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
-            # --- 3. FILTRI ---
+            # Filtri
             col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
             lista_op = sorted(df_raw['operatore'].unique().tolist())
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             scala = col_f3.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
-            
-            if col_f4.button("📍 Oggi", use_container_width=True):
-                st.rerun()
+            if col_f4.button("📍 Oggi", use_container_width=True): st.rerun()
 
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. CONFIGURAZIONE ASSE X (ITALIANO E GERARCHIA) ---
+            # --- CONFIGURAZIONE TEMPORALE E WEEKEND ---
             oggi = datetime.now()
+            x_min = df_plot['Inizio'].min() - timedelta(days=5) if not df_plot.empty else oggi - timedelta(days=30)
+            x_max = df_plot['Fine'].max() + timedelta(days=5) if not df_plot.empty else oggi + timedelta(days=30)
             
-            # Formato: Mese (Gen), Settimana (S05), Giorno (28)
-            # Usiamo tag HTML per forzare le dimensioni e rendere i giorni più visibili
-            formato_smart = "<span style='font-size:11px'>%b</span><br><span style='font-size:10px'>S%V</span><br><b>%d %a</b>"
+            # Creazione rettangoli per weekend
+            weekend_shapes = []
+            curr_d = x_min
+            while curr_d <= x_max:
+                if curr_d.weekday() >= 5: # 5=Sabato, 6=Domenica
+                    weekend_shapes.append(dict(
+                        type="rect", x0=curr_d, x1=curr_d + timedelta(days=1),
+                        y0=0, y1=1, yref="paper", fillcolor="rgba(200, 200, 200, 0.3)",
+                        layer="below", line_width=0,
+                    ))
+                curr_d += timedelta(days=1)
 
+            # Formato Scala
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
                 x_dtick = 86400000 
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-                x_dtick = 86400000 * 2 # Ogni 2 giorni
+                x_dtick = 86400000 * 2
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
                 x_dtick = 86400000 * 7
 
-            # --- 5. GRAFICO ---
+            # --- COSTRUZIONE GRAFICO ---
             fig = go.Figure()
             soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
             color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
 
             for op in df_plot['operatore'].unique():
                 df_op = df_plot[df_plot['operatore'] == op]
-                c_data = df_op[['Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'Durata_Giorni']]
-
                 fig.add_trace(go.Bar(
-                    base=df_op['Inizio'],
-                    x=df_op['Durata_ms'],
-                    y=[df_op['Commessa'], df_op['Task']],
-                    orientation='h',
-                    name=op,
-                    offsetgroup=op,
-                    marker=dict(color=color_map[op], cornerradius=10),
-                    width=0.4,
-                    customdata=c_data,
-                    hovertemplate=(
-                        "<b>Operatore:</b> %{customdata[2]}<br>" +
-                        "<b>Progetto:</b> %{customdata[0]}<br>" +
-                        "<b>Task:</b> %{customdata[1]}<br>" +
-                        "<b>Periodo:</b> %{customdata[3]|%d/%m} - %{customdata[4]|%d/%m}<br>" +
-                        "<b>Durata:</b> %{customdata[5]} giorni<extra></extra>"
-                    )
+                    base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
+                    orientation='h', name=op, offsetgroup=op,
+                    marker=dict(color=color_map[op], cornerradius=10), width=0.4,
+                    customdata=df_op[['Commessa', 'Task', 'operatore', 'Inizio', 'Fine']],
+                    hovertemplate="<b>%{customdata[2]}</b><br>%{customdata[0]}<br>%{customdata[1]}<br>%{customdata[3]|%d/%m} - %{customdata[4]|%d/%m}<extra></extra>"
                 ))
 
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
                 margin=dict(l=10, r=20, t=110, b=50),
+                shapes=weekend_shapes, # Aggiunge i weekend grigi
                 xaxis=dict(
-                    type="date", side="top", range=x_range,
-                    dtick=x_dtick,
-                    tickformat=formato_smart,
-                    tickangle=0,
-                    tickfont=dict(size=10, color="#333"),
-                    showgrid=True, gridcolor="#e0e0e0", gridwidth=1,
-                    # nticks forzato per non far sparire i giorni in vista mese
-                    nticks=30 if scala == "Mese" else 20,
-                    minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
-                    rangeslider=dict(visible=True, thickness=0.04)
+                    type="date", side="top", range=x_range, dtick=x_dtick,
+                    tickformat="%d<br>S%V<br>%b %Y", tickangle=0,
+                    tickfont=dict(size=10), showgrid=True, gridcolor="#e0e0e0",
                 ),
                 yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
                 legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
             )
 
-            # Linea oggi
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            # TRADUZIONE ITALIANA TRAMITE CONFIG
+            # --- TRADUZIONE MANUALE FORZATA ---
+            # Definiamo i nomi dei mesi in italiano per sovrascrivere l'inglese
             st.plotly_chart(fig, use_container_width=True, config={
-                'scrollZoom': True, 
-                'displaylogo': False,
-                'locale': 'it'
+                'scrollZoom': True, 'displaylogo': False,
+                'locale': 'it',
+                'locales': {
+                    'it': {
+                        'module': 'plotly_it',
+                        'dictionary': {
+                            'month_names': ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+                            'month_names_short': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
+                            'day_names': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
+                            'day_names_short': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
+                        }
+                    }
+                }
             })
 
         else:
-            st.info("Nessun log trovato. Inserisci i dati per attivare il planning.")
-
+            st.info("Inserisci dati per visualizzare il planning.")
     except Exception as e:
-        st.error(f"Errore tecnico: {e}")
+        st.error(f"Errore: {e}")
         
 # --- TAB 2: REGISTRA TEMPI (VERSIONE ANTI-ERRORE) ---
 with tabs[1]:
