@@ -177,6 +177,7 @@ def modal_edit_log(log_id, data_corrente):
                     "inizio": str(nuovo_inizio),
                     "fine": str(nuovo_fine)
                 }).eq("id", log_id).execute()
+                st.session_state.chart_key += 1
                 st.success("Log aggiornato!")
                 st.rerun()
             else:
@@ -184,6 +185,7 @@ def modal_edit_log(log_id, data_corrente):
         
         if c2.button("🗑️ Elimina", type="secondary", use_container_width=True):
             supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+            st.session_state.chart_key += 1
             st.warning("Log eliminato.")
             st.rerun()
 
@@ -349,6 +351,9 @@ with tabs[0]:
                     "fine": c_data[4]
                 }
                 modal_edit_log(log_id_scelto, data_info)
+                st.session_state.chart_key += 1
+                st.rerun()
+                
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
             if st.button("Aggiungi la prima Commessa"): modal_commessa()
