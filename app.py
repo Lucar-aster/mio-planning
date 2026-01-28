@@ -192,9 +192,9 @@ def modal_edit_log(log_id, data_corrente):
     except Exception as e:
         st.error(f"Errore nella modifica: {e}")
 
-# --- TAB 1: PLANNING (FIX ALLINEAMENTO WEEKEND) ---
+# --- TAB 1: PLANNING  ---
 with tabs[0]:
-    st.header("📊 Planning Progetti")
+    st.header("📊 Progetti Aster Contract")
     
     try:
         logs = get_data("Log_Tempi")
@@ -305,7 +305,7 @@ with tabs[0]:
                 ))
 
             fig.update_layout(
-                barmode='group', dragmode='pan', plot_bgcolor="white",
+                clickmode='event+select', selectionmode='single', barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
                 margin=dict(l=10, r=20, t=120, b=50),
                 shapes=shapes,
@@ -324,7 +324,7 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", config={
+            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun",on_select="rerun", key=f"gantt_chart_{st.session_state.chart_key}", config={
                 'scrollZoom': True, 'displaylogo': False,
                 'locale': 'it',
                 'locales': {
