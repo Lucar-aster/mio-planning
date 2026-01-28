@@ -22,6 +22,71 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+# --- FUNZIONI DI INSERIMENTO REALI SU SUPABASE ---
+
+@st.dialog("➕ Nuova Commessa")
+def modal_commessa():
+    nome = st.text_input("Nome Commessa")
+    cliente = st.text_input("Cliente (Opzionale)")
+    if st.button("Salva nel Database", type="primary"):
+        if nome:
+            try:
+                # Inserimento in Supabase
+                supabase.table("Commesse").insert({"nome_commessa": nome, "cliente": cliente}).execute()
+                st.success("Commessa salvata!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Errore: {e}")
+        else:
+            st.warning("Inserisci il nome della commessa.")
+
+@st.dialog("📑 Nuovo Task")
+def modal_task():
+    # Recuperiamo le commesse per il menu a tendina
+    res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
+    commesse = {c['nome_commessa']: c['id'] for c in res_c.data}
+    
+    nome_t = st.text_input("Nome del Task")
+    scelta_c = st.selectbox("Associa a Commessa", options=list(commesse.keys()))
+    
+    if st.button("Crea Task", type="primary"):
+        if nome_t:
+            try:
+                supabase.table("Task").insert({
+                    "nome_task": nome_t, 
+                    "commessa_id": commesse[scelta_c]
+                }).execute()
+                st.success("Task creato!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Errore: {e}")
+
+@st.dialog("⏱️ Nuovo Log Tempi")
+def modal_log():
+    # Recuperiamo i task esistenti
+    res_t = supabase.table("Task").select("id, nome_task").execute()
+    tasks = {t['nome_task']: t['id'] for t in res_t.data}
+    
+    operatore = st.text_input("Nome Operatore")
+    scelta_t = st.selectbox("Task eseguito", options=list(tasks.keys()))
+    col1, col2 = st.columns(2)
+    inizio = col1.date_input("Data Inizio", datetime.now())
+    fine = col2.date_input("Data Fine", datetime.now())
+    
+    if st.button("Registra Log", type="primary"):
+        if operatore:
+            try:
+                supabase.table("Log_Tempi").insert({
+                    "operatore": operatore,
+                    "task_id": tasks[scelta_t],
+                    "inizio": str(inizio),
+                    "fine": str(fine)
+                }).execute()
+                st.success("Log registrato!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Errore: {e}")
+                
 # --- TAB 1: PLANNING (FIX ALLINEAMENTO WEEKEND) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
@@ -74,7 +139,14 @@ with tabs[0]:
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
-
+            # 3.2 --- SEZIONE TASTI RAPIDI ---
+            st.write("") # Spazio
+            c1, c2, c3, _ = st.columns([1, 1, 1, 2])
+            if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
+            if c2.button("📑 Task", use_container_width=True): modal_task()
+            if c3.button("⏱️ Log", use_container_width=True): modal_log()
+            st.divider()
+            
             # --- 4. LOGICA WEEKEND E FESTIVITÀ (FIX ALLINEAMENTO) ---
             oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             x_min_sh = oggi - timedelta(days=100)
@@ -163,7 +235,8 @@ with tabs[0]:
                 }
             })
         else:
-            st.info("Dati insufficienti per il planning.")
+            st.info("Benvenuto! Inizia creando una commessa e un task.")
+            if st.button("Aggiungi la prima Commessa"): modal_commessa()
     except Exception as e:
         st.error(f"Errore: {e}")
         
