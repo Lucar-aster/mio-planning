@@ -110,7 +110,41 @@ def modal_log():
 
     except Exception as e:
         st.error(f"Errore nel caricamento dei dati: {e}")
-                
+
+@st.dialog("📝 Modifica Log")
+def modal_edit_log(log_id, data_corrente):
+    # Recupero dati per i menu
+    res_t = supabase.table("Task").select("id, nome_task").execute()
+    tasks = {t['nome_task']: t['id'] for t in res_t.data}
+    inv_tasks = {v: k for k, v in tasks.items()}
+    
+    res_o = supabase.table("Operatori").select("nome").execute()
+    operatori = [o['nome'] for o in res_o.data]
+
+    # Pre-compilazione campi con i dati esistenti
+    op = st.selectbox("Operatore", options=operatori, index=operatori.index(data_corrente['operatore']) if data_corrente['operatore'] in operatori else 0)
+    t_nome = st.selectbox("Task", options=list(tasks.keys()), index=list(tasks.values()).index(data_corrente['task_id']))
+    
+    col1, col2 = st.columns(2)
+    inizio = col1.date_input("Inizio", pd.to_datetime(data_corrente['inizio']))
+    fine = col2.date_input("Fine", pd.to_datetime(data_corrente['fine']))
+
+    col_btn1, col_btn2 = st.columns(2)
+    if col_btn1.button("Salva Modifiche", type="primary", use_container_width=True):
+        supabase.table("Log_Tempi").update({
+            "operatore": op,
+            "task_id": tasks[t_nome],
+            "inizio": str(inizio),
+            "fine": str(fine)
+        }).eq("id", log_id).execute()
+        st.success("Log aggiornato!")
+        st.rerun()
+    
+    if col_btn2.button("Elimina Log", type="secondary", use_container_width=True):
+        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+        st.warning("Log eliminato.")
+        st.rerun()
+
 # --- TAB 1: PLANNING (FIX ALLINEAMENTO WEEKEND) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
@@ -219,7 +253,7 @@ with tabs[0]:
                     base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
                     orientation='h', name=op, offsetgroup=op,
                     marker=dict(color=color_map[op], cornerradius=10), width=0.4,
-                    customdata=df_op[['Commessa', 'Task', 'operatore', 'Inizio_Str', 'Fine_Str']],
+                    customdata=df_op[['id', 'Commessa', 'Task', 'operatore', 'Inizio_Str', 'Fine_Str']],
                     hovertemplate="<b>%{customdata[2]}</b><br>%{customdata[0]}<br>%{customdata[1]}<br>Periodo: %{customdata[3]} - %{customdata[4]}<extra></extra>"
                 ))
 
@@ -243,7 +277,7 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            st.plotly_chart(fig, use_container_width=True, config={
+            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", config={
                 'scrollZoom': True, 'displaylogo': False,
                 'locale': 'it',
                 'locales': {
@@ -258,6 +292,18 @@ with tabs[0]:
                     }
                 }
             })
+            if event and "selection" in event and event["selection"]["points"]:
+    # Estraiamo i dati dal customdata del punto cliccato
+    c_data = event["selection"]["points"][0]["customdata"]
+    
+    log_id_scelto = c_data[0]
+    data_info = {
+        "operatore": c_data[1],
+        "task_id": c_data[2],
+        "inizio": c_data[3],
+        "fine": c_data[4]
+    }
+    modal_edit_log(log_id_scelto, data_info)
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
             if st.button("Aggiungi la prima Commessa"): modal_commessa()
