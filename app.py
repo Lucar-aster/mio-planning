@@ -82,9 +82,14 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. CONFIGURAZIONE SCALA E ASSE X DINAMICO ---
+# --- 4. CONFIGURAZIONE ASSE X (FORMATO FISSO A 3 LIVELLI) ---
             oggi = datetime.now()
             
+            # Formattazione per mostrare Mese e Settimana solo quando cambiano
+            # %b = Mese, %V = Settimana, %d = Giorno, %a = Nome Giorno
+            # Il trucco è usare il formato che Plotly usa per raggruppare i periodi
+            formato_smart = "%d %a<br>Sett %V<br>%b %Y"
+
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
                 x_dtick = 86400000 # 1 giorno
@@ -127,19 +132,24 @@ with tabs[0]:
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=500 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-                margin=dict(l=10, r=20, t=100, b=50),
+                margin=dict(l=10, r=20, t=110, b=50), # Spazio per le 3 righe in alto
                 xaxis=dict(
-                    type="date", side="top", range=x_range,
+                    type="date", 
+                    side="top", 
+                    range=x_range,
                     dtick=x_dtick,
-                    tickangle=0,
-                    tickfont=dict(size=10, color="#444"),
-                    # LOGICA SMART: Cambia formato in base allo zoom
+                    tickformat=formato_smart, # Applichiamo il formato a 3 livelli
+                    # Rimuove le ripetizioni: Plotly scriverà il Mese e la Settimana
+                    # solo sul primo tick del nuovo periodo!
                     tickformatstops=[
-                        dict(dtickrange=[None, 86400000], value="%d\n%a"), # Zoom su giorni
-                        dict(dtickrange=[86400001, 604800000], value="Sett %V\n%d %b"), # Zoom su settimane
-                        dict(dtickrange=[604800001, None], value="%b\n%Y") # Zoom su mesi
+                        dict(dtickrange=[None, 86400000], value="%d %a<br>Sett %V<br>%b %Y"),
+                        dict(dtickrange=[86400001, None], value="Sett %V<br>%b %Y")
                     ],
-                    showgrid=True, gridcolor="#e0e0e0", gridwidth=1,
+                    tickangle=0,
+                    tickfont=dict(size=10),
+                    showgrid=True, 
+                    gridcolor="#e0e0e0", 
+                    gridwidth=1,
                     minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
                     rangeslider=dict(visible=True, thickness=0.04)
                 ),
@@ -149,7 +159,6 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
-
         else:
             st.info("Nessun log trovato.")
 
