@@ -23,7 +23,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING CON TRADUZIONE MANUALE E FESTIVITÀ ---
+# --- TAB 1: PLANNING CON GIORNI SETTIMANA E FESTIVITÀ ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -74,43 +74,49 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. TRADUZIONE MANUALE MESI E GIORNI ---
+            # --- 4. TRADUZIONE MANUALE PER POPUP ---
             mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
-            giorni_it = {0:"Lun", 1:"Mar", 2:"Mer", 3:"Gio", 4:"Ven", 5:"Sab", 6:"Dom"}
 
             # --- 5. LOGICA WEEKEND E FESTIVITÀ ---
             oggi = datetime.now()
-            x_min = oggi - timedelta(days=60)
-            x_max = oggi + timedelta(days=60)
+            # Estendiamo il calcolo degli shapes per coprire un ampio range temporale
+            x_min_shapes = oggi - timedelta(days=180)
+            x_max_shapes = oggi + timedelta(days=180)
             
-            festivita_it = [
-                "01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"
-            ]
-            # Pasqua/Pasquetta 2026 (esempio): "05-04", "06-04"
+            festivita_it = ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"]
             
             shapes = []
-            curr = x_min
-            while curr <= x_max:
-                is_weekend = curr.weekday() >= 5
-                is_festivo = curr.strftime("%d-%m") in festivita_it
-                
-                if is_weekend or is_festivo:
+            curr = x_min_shapes
+            while curr <= x_max_shapes:
+                if curr.weekday() >= 5 or curr.strftime("%d-%m") in festivita_it:
                     shapes.append(dict(
                         type="rect", x0=curr, x1=curr + timedelta(days=1),
-                        y0=0, y1=1, yref="paper", fillcolor="rgba(180, 180, 180, 0.25)",
+                        y0=0, y1=1, yref="paper", fillcolor="rgba(210, 210, 210, 0.3)",
                         layer="below", line_width=0
                     ))
                 curr += timedelta(days=1)
 
-            # --- 6. COSTRUZIONE GRAFICO ---
+            # --- 6. CONFIGURAZIONE ASSE X ---
+            # %d/%m -> Data, Sett %V -> Settimana, %a -> Giorno (Lun, Mar...)
+            formato_it = "%d/%m<br>Sett %V<br>%a"
+
+            if scala == "Settimana":
+                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+                x_dtick = 86400000 
+            elif scala == "Mese":
+                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+                x_dtick = 86400000 * 2
+            else:
+                x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
+                x_dtick = 86400000 * 7
+
+            # --- 7. GRAFICO ---
             fig = go.Figure()
             soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
             color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
 
             for op in df_plot['operatore'].unique():
                 df_op = df_plot[df_plot['operatore'] == op]
-                
-                # Formattiamo le date per il popup in italiano manualmente
                 df_op['Inizio_Str'] = df_op['Inizio'].apply(lambda x: f"{x.day} {mesi_it[x.month]}")
                 df_op['Fine_Str'] = df_op['Fine'].apply(lambda x: f"{x.day} {mesi_it[x.month]}")
 
@@ -122,27 +128,17 @@ with tabs[0]:
                     hovertemplate="<b>%{customdata[2]}</b><br>%{customdata[0]}<br>%{customdata[1]}<br>Periodo: %{customdata[3]} - %{customdata[4]}<extra></extra>"
                 ))
 
-            # Configurazione Scala
-            if scala == "Settimana":
-                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-                x_dtick = 86400000
-            elif scala == "Mese":
-                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-                x_dtick = 86400000 * 2
-            else:
-                x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
-                x_dtick = 86400000 * 7
-
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=550 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-                margin=dict(l=10, r=20, t=110, b=50),
+                margin=dict(l=10, r=20, t=120, b=50), # t=120 per far stare 3 righe
                 shapes=shapes,
                 xaxis=dict(
                     type="date", side="top", range=x_range, dtick=x_dtick,
-                    # Se l'inglese persiste, usiamo un formato numerico che è universale
-                    tickformat="%d/%m<br>S%V", 
-                    tickangle=0, tickfont=dict(size=10), showgrid=True, gridcolor="#e0e0e0",
+                    tickformat=formato_it, tickangle=0,
+                    tickfont=dict(size=9, color="#444"), 
+                    showgrid=True, gridcolor="#e0e0e0",
+                    rangeslider=dict(visible=True, thickness=0.04)
                 ),
                 yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
                 legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
@@ -150,10 +146,20 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            # Configurazione finale per forzare l'italiano dove possibile
+            # Configurazione per forzare l'italiano e i nomi brevi dei giorni
             st.plotly_chart(fig, use_container_width=True, config={
                 'scrollZoom': True, 'displaylogo': False,
-                'locale': 'it'
+                'locale': 'it',
+                'locales': {
+                    'it': {
+                        'dictionary': {
+                            'month_names': ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+                            'month_names_short': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
+                            'day_names': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
+                            'day_names_short': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
+                        }
+                    }
+                }
             })
 
         else:
