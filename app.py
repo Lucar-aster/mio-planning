@@ -85,7 +85,7 @@ with tabs[0]:
             
             # Formato: Mese (Gen), Settimana (S05), Giorno (28)
             # Usiamo tag HTML per forzare le dimensioni e rendere i giorni più visibili
-            formato_smart = "<span style='font-size:11px'>%b</span><br><span style='font-size:10px'>S%V</span><br><b>%d</b>"
+            formato_smart = "<span style='font-size:11px'>%b</span><br><span style='font-size:10px'>S%V</span><br><b>%d %a</b>"
 
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
