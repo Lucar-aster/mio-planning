@@ -4,6 +4,18 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+st.set_page_config(page_title="Aster Contract", layout="wide")
+st.markdown(
+    """
+    <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
+        <img src="https://drive.google.com/file/d/1fBpKWVv5Yv6NeHzFcOCkLDFnECdz_rGk/view?usp=sharing" width="40"> 
+        <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
+    </div>
+    <hr style="margin-top: 5px; margin-bottom: 20px;">
+    """,
+    unsafe_allow_html=True
+)
+
 # --- CONNESSIONE A SUPABASE ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
@@ -195,8 +207,7 @@ tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
 
 # --- TAB 1: PLANNING ---
 with tabs[0]:
-    st.header("📊 Progetti Aster Contract")
-    
+
     try:
         # Recupero dati globale (fuori dal fragment per efficienza)
         logs = get_data("Log_Tempi")
