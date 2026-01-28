@@ -23,11 +23,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING (CON HOVER TOOLTIP PERSONALIZZATO) ---
+# --- TAB 1: PLANNING (LOGICA FUSIONE E ASSE X 3 LIVELLI) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
     try:
+        # 1. RECUPERO DATI
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
@@ -42,71 +43,72 @@ with tabs[0]:
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
 
-            # --- LOGICA FUSIONE E CALCOLO DURATA ---
+            # --- 2. LOGICA FUSIONE (MERGING) SEQUENZIALE ---
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
+            
             if not df_sorted.empty:
                 current_row = df_sorted.iloc[0].to_dict()
+                
                 for i in range(1, len(df_sorted)):
                     next_row = df_sorted.iloc[i].to_dict()
-                    if (next_row['operatore'] == current_row['operatore'] and 
-                        next_row['task_id'] == current_row['task_id'] and 
-                        next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1)):
+                    
+                    # Condizioni per unire: stesso operatore, stesso task, data consecutiva
+                    same_op_task = (next_row['operatore'] == current_row['operatore'] and 
+                                   next_row['task_id'] == current_row['task_id'])
+                    is_consecutive = (next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1))
+                    
+                    if same_op_task and is_consecutive:
                         current_row['Fine'] = max(current_row['Fine'], next_row['Fine'])
                     else:
                         merged_data.append(current_row)
                         current_row = next_row
+                
                 merged_data.append(current_row)
             
             df = pd.DataFrame(merged_data)
             
-            # Calcolo Durata in Giorni (Inclusivo)
+            # Calcolo durate e visualizzazione
             df['Durata_Giorni'] = (df['Fine'] - df['Inizio']).dt.days + 1
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             df['Durata_ms'] = (df['Fine_Visual'] - df['Inizio']).dt.total_seconds() * 1000
 
-            # --- FILTRI ---
+            # --- 3. FILTRI E SCALA ---
             col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
             lista_op = sorted(df_raw['operatore'].unique().tolist())
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             scala = col_f3.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
             
-            if col_f4.button("📍 Oggi", use_container_width=True): st.rerun()
+            if col_f4.button("📍 Oggi", use_container_width=True):
+                st.rerun()
 
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- CONFIGURAZIONE SCALA ---
+            # --- 4. CONFIGURAZIONE ASSE X 3 LIVELLI ---
             oggi = datetime.now()
-        # Definiamo il formato desiderato: 
-        # Riga 1: %b (Mese)
-        # Riga 2: Sett %V (Num. Settimana)
-        # Riga 3: %d %a (Giorno num e Giorno settimana abr.)
-        formato_multi_livello = "%b %Y<br>Sett %V<br>%d %a"
+            formato_multi = "%b %Y<br>Sett %V<br>%d %a"
+            
+            if scala == "Settimana":
+                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+                x_dtick = 86400000 
+            elif scala == "Mese":
+                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+                x_dtick = 86400000 
+            else:
+                x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
+                x_dtick = 86400000 * 7
 
-        if scala == "Settimana":
-            x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-            x_dtick = 86400000  # 1 giorno (mostra ogni colonna)
-        elif scala == "Mese":
-            x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-            x_dtick = 86400000  # Teniamo 1 giorno per vedere le settimane chiaramente
-        else: # Trimestre
-            x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
-            x_dtick = 86400000 * 7 # Tick settimanale per non affollare
-
-            # --- GRAFICO ---
+            # --- 5. GRAFICO ---
             fig = go.Figure()
             soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
             color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
 
             for op in df_plot['operatore'].unique():
                 df_op = df_plot[df_plot['operatore'] == op]
-                
-                # Passiamo tutte le info necessarie al tooltip tramite customdata
-                # customdata: [Commessa, Task, Operatore, Inizio, Fine, Durata_Giorni]
                 c_data = df_op[['Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'Durata_Giorni']]
 
                 fig.add_trace(go.Bar(
@@ -119,56 +121,40 @@ with tabs[0]:
                     marker=dict(color=color_map[op], cornerradius=10),
                     width=0.4,
                     customdata=c_data,
-                    # Configurazione Tooltip (Hover)
                     hovertemplate=(
                         "<b>Progetto:</b> %{customdata[0]}<br>" +
                         "<b>Task:</b> %{customdata[1]}<br>" +
                         "<b>Operatore:</b> %{customdata[2]}<br>" +
                         "<b>Inizio:</b> %{customdata[3]|%d/%m/%Y}<br>" +
                         "<b>Fine:</b> %{customdata[4]|%d/%m/%Y}<br>" +
-                        "<b>Durata:</b> %{customdata[5]} giorni" +
-                        "<extra></extra>"
+                        "<b>Durata:</b> %{customdata[5]} giorni<extra></extra>"
                     )
                 ))
 
             fig.update_layout(
-            barmode='group',
-            dragmode='pan',
-            bargap=0.3,
-            height=500 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-            plot_bgcolor="white",
-            margin=dict(l=10, r=20, t=100, b=50), # Aumentato margine superiore per le 3 righe
-            xaxis=dict(
-                type="date",
-                side="top",
-                range=x_range,
-                tickformat=formato_multi_livello, # Applica il formato a 3 righe
-                dtick=x_dtick,
-                showgrid=True,
-                gridcolor="#e0e0e0",
-                gridwidth=1.5,
-                # Linee dei giorni più sottili
-                minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
-                rangeslider=dict(visible=True, thickness=0.04),
-                tickangle=0, # Mantiene il testo orizzontale
-                tickfont=dict(size=10)
-            ),
-            yaxis=dict(
-                autorange="reversed",
-                gridcolor="#f5f5f5",
-                # Spazio extra per etichette lunghe
-                tickfont=dict(size=11)
-            ),
-            legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
-        )
+                barmode='group', dragmode='pan', plot_bgcolor="white",
+                height=500 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
+                margin=dict(l=10, r=20, t=110, b=50),
+                xaxis=dict(
+                    type="date", side="top", range=x_range,
+                    tickformat=formato_multi, dtick=x_dtick,
+                    showgrid=True, gridcolor="#e0e0e0", gridwidth=1.5,
+                    minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
+                    tickangle=0, tickfont=dict(size=10),
+                    rangeslider=dict(visible=True, thickness=0.04)
+                ),
+                yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
+                legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
+            )
+
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
 
         else:
-            st.info("Nessun log da mostrare.")
-            
+            st.info("Nessun log trovato. Inserisci dei dati per visualizzare il planning.")
+
     except Exception as e:
-        st.error(f"Errore: {e}")
+        st.error(f"Errore tecnico: {e}")
         
 # --- TAB 2: REGISTRA TEMPI (VERSIONE ANTI-ERRORE) ---
 with tabs[1]:
