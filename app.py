@@ -324,7 +324,7 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun",on_select="rerun", key=f"gantt_chart_{st.session_state.chart_key}", config={
+            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", key=f"gantt_chart_{st.session_state.chart_key}", config={
                 'scrollZoom': True, 'displaylogo': False,
                 'locale': 'it',
                 'locales': {
