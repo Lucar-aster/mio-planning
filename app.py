@@ -17,13 +17,12 @@ def get_data(table):
 
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING (SETTIMANA CON INIZIO LUNEDÌ) ---
+# --- TAB 1: PLANNING (FIX ALLINEAMENTO WEEKEND) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -43,7 +42,7 @@ with tabs[0]:
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
 
-            # 2. LOGICA DI FUSIONE LOG
+            # 2. FUSIONE LOG
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
             if not df_sorted.empty:
@@ -59,7 +58,8 @@ with tabs[0]:
                         current_row = next_row
                 merged_data.append(current_row)
             df = pd.DataFrame(merged_data)
-            # Durata per barre: calcoliamo fino alla fine del giorno
+            
+            # Calcolo durata precisa per allineamento barre
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
             # 3. FILTRI
@@ -75,43 +75,42 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. TRADUZIONE MANUALE ---
-            mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
-
-            # --- 5. LOGICA WEEKEND E FESTIVITÀ (LUNEDÌ=0) ---
-            oggi = datetime.now()
-            x_min_sh = oggi - timedelta(days=180)
-            x_max_sh = oggi + timedelta(days=180)
+            # --- 4. LOGICA WEEKEND E FESTIVITÀ (FIX ALLINEAMENTO) ---
+            oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            x_min_sh = oggi - timedelta(days=100)
+            x_max_sh = oggi + timedelta(days=100)
             festivita_it = ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"]
             
             shapes = []
             curr = x_min_sh
             while curr <= x_max_sh:
-                # In Python weekday() 0=Lunedì, 5=Sabato, 6=Domenica
                 if curr.weekday() >= 5 or curr.strftime("%d-%m") in festivita_it:
                     shapes.append(dict(
-                        type="rect", x0=curr, x1=curr + timedelta(days=1),
-                        y0=0, y1=1, yref="paper", fillcolor="rgba(210, 210, 210, 0.3)",
+                        type="rect",
+                        # Forza l'inizio e la fine al limite esatto del giorno
+                        x0=curr.strftime("%Y-%m-%d 00:00:00"),
+                        x1=(curr + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00"),
+                        y0=0, y1=1, yref="paper",
+                        fillcolor="rgba(180, 180, 180, 0.3)",
                         layer="below", line_width=0
                     ))
                 curr += timedelta(days=1)
 
-            # --- 6. CONFIGURAZIONE ASSE X ---
-            # %V garantisce che il numero di settimana cambi di Lunedì
+            # --- 5. CONFIGURAZIONE SCALA ---
             formato_it = "%d/%m<br>Sett %V<br>%a"
-
             if scala == "Settimana":
-                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]
                 x_dtick = 86400000 
             elif scala == "Mese":
-                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]
                 x_dtick = 86400000 * 2
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
                 x_dtick = 86400000 * 7
 
-            # --- 7. GRAFICO ---
+            # --- 6. GRAFICO ---
             fig = go.Figure()
+            mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
             soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
             color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
 
@@ -136,7 +135,9 @@ with tabs[0]:
                 xaxis=dict(
                     type="date", side="top", range=x_range, dtick=x_dtick,
                     tickformat=formato_it, tickangle=0,
-                    tickfont=dict(size=9, color="#444"), 
+                    tickfont=dict(size=9, color="#444"),
+                    # Rimuove lo spazio bianco iniziale/finale dell'asse per l'allineamento
+                    rangebreaks=[dict(values=[])], 
                     showgrid=True, gridcolor="#e0e0e0",
                     rangeslider=dict(visible=True, thickness=0.04)
                 ),
@@ -146,7 +147,6 @@ with tabs[0]:
 
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
 
-            # FORZATURA LUNEDÌ E ITALIANO
             st.plotly_chart(fig, use_container_width=True, config={
                 'scrollZoom': True, 'displaylogo': False,
                 'locale': 'it',
@@ -157,14 +157,13 @@ with tabs[0]:
                             'month_names_short': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
                             'day_names': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
                             'day_names_short': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'],
-                            'firstdayofweek': 1  # <--- Imposta Lunedì come primo giorno
+                            'firstdayofweek': 1
                         }
                     }
                 }
             })
-
         else:
-            st.info("Configura i dati per visualizzare il planning.")
+            st.info("Dati insufficienti per il planning.")
     except Exception as e:
         st.error(f"Errore: {e}")
         
