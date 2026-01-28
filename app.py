@@ -169,7 +169,7 @@ def modal_edit_log(log_id, data_corrente):
         st.divider()
         
         # 6. TASTI AZIONE
-        c1, c2 = st.columns(2)
+        c1, c2, c3 = st.columns(3)
         if c1.button("💾 Salva Modifiche", type="primary", use_container_width=True):
             if nuovo_t_id:
                 supabase.table("Log_Tempi").update({
@@ -190,7 +190,7 @@ def modal_edit_log(log_id, data_corrente):
             st.warning("Log eliminato.")
             st.rerun()
             
-        if btn_col3.button("✖️ Annulla", type="secondary", use_container_width=True):
+        if c3.button("✖️ Annulla", type="secondary", use_container_width=True):
             # Non facciamo nulla al database, resettiamo solo il grafico
             st.session_state.chart_key += 1 # Pulizia evidenziazione
             st.rerun()
