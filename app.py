@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-LOGO_URL = "https://drive.google.com/uc?export=view&id=1fBpKWVv5Yv6NeHzFcOCkLDFnECdz_rGk"
+LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown(
     """
