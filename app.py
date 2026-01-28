@@ -81,13 +81,21 @@ with tabs[0]:
 
             # --- CONFIGURAZIONE SCALA ---
             oggi = datetime.now()
-            settings = {
-                "Settimana": [3, 4, "%a %d %b", 86400000],
-                "Mese": [15, 15, "%d %b", 86400000 * 2],
-                "Trimestre": [45, 45, "%b %Y", "M1"]
-            }
-            s = settings[scala]
-            x_range = [oggi - timedelta(days=s[0]), oggi + timedelta(days=s[1])]
+        # Definiamo il formato desiderato: 
+        # Riga 1: %b (Mese)
+        # Riga 2: Sett %V (Num. Settimana)
+        # Riga 3: %d %a (Giorno num e Giorno settimana abr.)
+        formato_multi_livello = "%b %Y<br>Sett %V<br>%d %a"
+
+        if scala == "Settimana":
+            x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+            x_dtick = 86400000  # 1 giorno (mostra ogni colonna)
+        elif scala == "Mese":
+            x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+            x_dtick = 86400000  # Teniamo 1 giorno per vedere le settimane chiaramente
+        else: # Trimestre
+            x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
+            x_dtick = 86400000 * 7 # Tick settimanale per non affollare
 
             # --- GRAFICO ---
             fig = go.Figure()
@@ -123,15 +131,36 @@ with tabs[0]:
                     )
                 ))
 
-            fig.update_layout(
-                barmode='group', dragmode='pan', plot_bgcolor="white",
-                height=450 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-                xaxis=dict(type="date", side="top", range=x_range, tickformat=s[2], dtick=s[3],
-                           gridcolor="#e0e0e0", minor=dict(showgrid=True, gridcolor="#f5f5f5")),
-                yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
-                legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center")
-            )
-
+fig.update_layout(
+            barmode='group',
+            dragmode='pan',
+            bargap=0.3,
+            height=500 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
+            plot_bgcolor="white",
+            margin=dict(l=10, r=20, t=100, b=50), # Aumentato margine superiore per le 3 righe
+            xaxis=dict(
+                type="date",
+                side="top",
+                range=x_range,
+                tickformat=formato_multi_livello, # Applica il formato a 3 righe
+                dtick=x_dtick,
+                showgrid=True,
+                gridcolor="#e0e0e0",
+                gridwidth=1.5,
+                # Linee dei giorni più sottili
+                minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
+                rangeslider=dict(visible=True, thickness=0.04),
+                tickangle=0, # Mantiene il testo orizzontale
+                tickfont=dict(size=10)
+            ),
+            yaxis=dict(
+                autorange="reversed",
+                gridcolor="#f5f5f5",
+                # Spazio extra per etichette lunghe
+                tickfont=dict(size=11)
+            ),
+            legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
+        )
             fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
 
