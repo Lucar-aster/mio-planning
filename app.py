@@ -131,7 +131,7 @@ with tabs[0]:
                     )
                 ))
 
-fig.update_layout(
+            fig.update_layout(
             barmode='group',
             dragmode='pan',
             bargap=0.3,
