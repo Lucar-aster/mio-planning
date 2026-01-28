@@ -293,17 +293,17 @@ with tabs[0]:
                 }
             })
             if event and "selection" in event and event["selection"]["points"]:
-    # Estraiamo i dati dal customdata del punto cliccato
-    c_data = event["selection"]["points"][0]["customdata"]
+                # Estraiamo i dati dal customdata del punto cliccato
+                c_data = event["selection"]["points"][0]["customdata"]
     
-    log_id_scelto = c_data[0]
-    data_info = {
-        "operatore": c_data[1],
-        "task_id": c_data[2],
-        "inizio": c_data[3],
-        "fine": c_data[4]
-    }
-    modal_edit_log(log_id_scelto, data_info)
+                log_id_scelto = c_data[0]
+                data_info = {
+                    "operatore": c_data[1],
+                    "task_id": c_data[2],
+                    "inizio": c_data[3],
+                    "fine": c_data[4]
+                }
+                modal_edit_log(log_id_scelto, data_info)
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
             if st.button("Aggiungi la prima Commessa"): modal_commessa()
