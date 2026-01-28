@@ -23,7 +23,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# --- TAB 1: PLANNING (LOGICA FUSIONE E ASSE X 3 LIVELLI) ---
+# --- TAB 1: PLANNING (LOGICA SMART TICK E ASSE X DINAMICO) ---
 with tabs[0]:
     st.header("📊 Planning Progetti")
     
@@ -43,17 +43,14 @@ with tabs[0]:
             df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
             df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
 
-            # --- 2. LOGICA FUSIONE (MERGING) SEQUENZIALE ---
+            # --- 2. LOGICA DI FUSIONE (MERGING) ---
             df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
             merged_data = []
             
             if not df_sorted.empty:
                 current_row = df_sorted.iloc[0].to_dict()
-                
                 for i in range(1, len(df_sorted)):
                     next_row = df_sorted.iloc[i].to_dict()
-                    
-                    # Condizioni per unire: stesso operatore, stesso task, data consecutiva
                     same_op_task = (next_row['operatore'] == current_row['operatore'] and 
                                    next_row['task_id'] == current_row['task_id'])
                     is_consecutive = (next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1))
@@ -63,17 +60,14 @@ with tabs[0]:
                     else:
                         merged_data.append(current_row)
                         current_row = next_row
-                
                 merged_data.append(current_row)
             
             df = pd.DataFrame(merged_data)
-            
-            # Calcolo durate e visualizzazione
             df['Durata_Giorni'] = (df['Fine'] - df['Inizio']).dt.days + 1
             df['Fine_Visual'] = df['Fine'] + pd.Timedelta(hours=23, minutes=59)
             df['Durata_ms'] = (df['Fine_Visual'] - df['Inizio']).dt.total_seconds() * 1000
 
-            # --- 3. FILTRI E SCALA ---
+            # --- 3. FILTRI ---
             col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
             lista_op = sorted(df_raw['operatore'].unique().tolist())
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
@@ -88,19 +82,18 @@ with tabs[0]:
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            # --- 4. CONFIGURAZIONE ASSE X 3 LIVELLI ---
+            # --- 4. CONFIGURAZIONE SCALA E ASSE X DINAMICO ---
             oggi = datetime.now()
-            formato_multi = "%b %Y<br>Sett %V<br>%d %a"
             
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-                x_dtick = 86400000 
+                x_dtick = 86400000 # 1 giorno
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-                x_dtick = 86400000 
+                x_dtick = 86400000
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
-                x_dtick = 86400000 * 7
+                x_dtick = 86400000 * 7 # 1 settimana
 
             # --- 5. GRAFICO ---
             fig = go.Figure()
@@ -134,13 +127,20 @@ with tabs[0]:
             fig.update_layout(
                 barmode='group', dragmode='pan', plot_bgcolor="white",
                 height=500 + (len(df_plot.groupby(['Commessa', 'Task'])) * 40),
-                margin=dict(l=10, r=20, t=110, b=50),
+                margin=dict(l=10, r=20, t=100, b=50),
                 xaxis=dict(
                     type="date", side="top", range=x_range,
-                    tickformat=formato_multi, dtick=x_dtick,
-                    showgrid=True, gridcolor="#e0e0e0", gridwidth=1.5,
+                    dtick=x_dtick,
+                    tickangle=0,
+                    tickfont=dict(size=10, color="#444"),
+                    # LOGICA SMART: Cambia formato in base allo zoom
+                    tickformatstops=[
+                        dict(dtickrange=[None, 86400000], value="%d\n%a"), # Zoom su giorni
+                        dict(dtickrange=[86400001, 604800000], value="Sett %V\n%d %b"), # Zoom su settimane
+                        dict(dtickrange=[604800001, None], value="%b\n%Y") # Zoom su mesi
+                    ],
+                    showgrid=True, gridcolor="#e0e0e0", gridwidth=1,
                     minor=dict(showgrid=True, gridcolor="#f5f5f5", gridwidth=0.5),
-                    tickangle=0, tickfont=dict(size=10),
                     rangeslider=dict(visible=True, thickness=0.04)
                 ),
                 yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
@@ -151,7 +151,7 @@ with tabs[0]:
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True, 'displaylogo': False})
 
         else:
-            st.info("Nessun log trovato. Inserisci dei dati per visualizzare il planning.")
+            st.info("Nessun log trovato.")
 
     except Exception as e:
         st.error(f"Errore tecnico: {e}")
