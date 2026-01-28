@@ -21,6 +21,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+if 'chart_key' not in st.session_state:
+    st.session_state.chart_key = 0
 
 # --- FUNZIONI DI INSERIMENTO REALI SU SUPABASE ---
 
@@ -191,9 +193,6 @@ def modal_edit_log(log_id, data_corrente):
 
     except Exception as e:
         st.error(f"Errore nella modifica: {e}")
-        
-            if 'chart_key' not in st.session_state:
-                st.session_state.chart_key = 0
 
 # --- TAB 1: PLANNING  ---
 with tabs[0]:
