@@ -96,9 +96,11 @@ with tabs[0]:
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
                 x_dtick = 86400000 * 2
+                formato_smart = "%d<br>S%V<br>%b"
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
                 x_dtick = 86400000 * 7 # 1 settimana
+                formato_smart = "Sett %V<br>%b %Y"
 
             # --- 5. GRAFICO ---
             fig = go.Figure()
