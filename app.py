@@ -9,7 +9,7 @@ st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown(
     """
     <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
-        <img src="{LOGO_URL}" width="40"> 
+        <img src="LOGO_URL" width="40"> 
         <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
     </div>
     <hr style="margin-top: 5px; margin-bottom: 20px;">
