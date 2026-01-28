@@ -88,14 +88,14 @@ with tabs[0]:
             # Formattazione per mostrare Mese e Settimana solo quando cambiano
             # %b = Mese, %V = Settimana, %d = Giorno, %a = Nome Giorno
             # Il trucco è usare il formato che Plotly usa per raggruppare i periodi
-            formato_smart = "%d %a<br>Sett %V<br>%b %Y"
+            formato_smart = "%b %Y<br>Sett %V<br>%d %a"
 
             if scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
                 x_dtick = 86400000 # 1 giorno
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-                x_dtick = 86400000
+                x_dtick = 86400000 * 2
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
                 x_dtick = 86400000 * 7 # 1 settimana
