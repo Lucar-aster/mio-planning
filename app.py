@@ -8,7 +8,7 @@ st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown(
     """
     <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
-        <img src="https://drive.google.com/file/d/1fBpKWVv5Yv6NeHzFcOCkLDFnECdz_rGk/view?usp=sharing" width="40"> 
+        <img src="https://drive.google.com/uc?export=view&id=1fBpKWVv5Yv6NeHzFcOCkLDFnECdz_rGk" width="40"> 
         <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
     </div>
     <hr style="margin-top: 5px; margin-bottom: 20px;">
