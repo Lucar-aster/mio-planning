@@ -111,60 +111,84 @@ def modal_log():
     except Exception as e:
         st.error(f"Errore nel caricamento dei dati: {e}")
 
-@st.dialog("📝 Modifica Log")
+@st.dialog("📝 Modifica o Elimina Log")
 def modal_edit_log(log_id, data_corrente):
-    # Recupero dati per i menu
-    res_t = supabase.table("Task").select("id, nome_task").execute()
-    tasks = {t['nome_task']: t['id'] for t in res_t.data}
-    inv_tasks = {v: k for k, v in tasks.items()}
-    
-    res_o = supabase.table("Operatori").select("nome").execute()
-    operatori = [o['nome'] for o in res_o.data]
-
-    # Pre-compilazione campi con i dati esistenti
-    op = st.selectbox("Operatore", options=operatori, index=operatori.index(data_corrente['operatore']) if data_corrente['operatore'] in operatori else 0)
-    lista_id_task = list(tasks.values())
-    lista_nomi_task = list(tasks.keys())
-    
-    # Cerchiamo l'indice in modo sicuro
     try:
-        # Forziamo entrambi i valori a stringa per il confronto, o entrambi a int
-        current_task_id = data_corrente['task_id']
-        idx_task = lista_id_task.index(current_task_id)
-    except (ValueError, KeyError):
-        # Se il task_id non esiste nella lista, usiamo il primo disponibile (indice 0)
-        idx_task = 0
-
-    t_nome = st.selectbox("Task", options=lista_nomi_task, index=idx_task)
-    
-def safe_date(d):
-    try:
-        return pd.to_datetime(d).date()
-    except:
-        return datetime.now().date()
+        # 1. Recupero dati necessari da Supabase
+        res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
+        res_t = supabase.table("Task").select("id, nome_task, commessa_id").execute()
+        res_o = supabase.table("Operatori").select("nome").execute()
         
-    col1, col2 = st.columns(2)
-    data_inizio_pulita = safe_date(data_corrente['inizio'])
-    data_fine_pulita = safe_date(data_corrente['fine'])
+        commesse_dict = {c['nome_commessa']: c['id'] for c in res_c.data}
+        inv_commesse_dict = {v: k for k, v in commesse_dict.items()}
+        operatori_lista = [o['nome'] for o in res_o.data]
+        all_tasks = res_t.data
 
-    inizio = col1.date_input("Inizio", data_inizio_pulita)
-    fine = col2.date_input("Fine", data_fine_pulita)
-    
-    col_btn1, col_btn2 = st.columns(2)
-    if col_btn1.button("Salva Modifiche", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").update({
-            "operatore": op,
-            "task_id": tasks[t_nome],
-            "inizio": str(inizio),
-            "fine": str(fine)
-        }).eq("id", log_id).execute()
-        st.success("Log aggiornato!")
-        st.rerun()
-    
-    if col_btn2.button("Elimina Log", type="secondary", use_container_width=True):
-        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
-        st.warning("Log eliminato.")
-        st.rerun()
+        # 2. SELEZIONE OPERATORE
+        nuovo_op = st.selectbox("Operatore", options=operatori_lista, 
+                                index=operatori_lista.index(data_corrente['operatore']) if data_corrente['operatore'] in operatori_lista else 0)
+
+        # 3. SELEZIONE COMMESSA (Aggiunta)
+        # Recuperiamo la commessa attuale del task per pre-selezionarla
+        task_attuale = next((t for t in all_tasks if t['id'] == data_corrente['task_id']), None)
+        id_commessa_attuale = task_attuale['commessa_id'] if task_attuale else list(commesse_dict.values())[0]
+        nome_commessa_attuale = inv_commesse_dict.get(id_commessa_attuale, list(commesse_dict.keys())[0])
+
+        scelta_c_nome = st.selectbox("Commessa", options=list(commesse_dict.keys()), 
+                                     index=list(commesse_dict.keys()).index(nome_commessa_attuale))
+        id_commessa_scelta = commesse_dict[scelta_c_nome]
+
+        # 4. SELEZIONE TASK (Filtrato per Commessa)
+        tasks_filtrati = {t['nome_task']: t['id'] for t in all_tasks if t['commessa_id'] == id_commessa_scelta}
+        
+        if not tasks_filtrati:
+            st.warning("Nessun task trovato per questa commessa.")
+            nuovo_t_id = None
+        else:
+            # Pre-selezioniamo il task originale se appartiene alla commessa scelta, altrimenti il primo
+            lista_nomi_t = list(tasks_filtrati.keys())
+            idx_t = 0
+            if data_corrente['task_id'] in tasks_filtrati.values():
+                idx_t = list(tasks_filtrati.values()).index(data_corrente['task_id'])
+            
+            nuovo_t_nome = st.selectbox("Task", options=lista_nomi_t, index=idx_t)
+            nuovo_t_id = tasks_filtrati[nuovo_t_nome]
+
+        # 5. MODIFICA DATE (Inizio e Fine)
+        def safe_date(d):
+            try:
+                return pd.to_datetime(d).date()
+            except:
+                return datetime.now().date()
+
+        col1, col2 = st.columns(2)
+        nuovo_inizio = col1.date_input("Inizio", safe_date(data_corrente['inizio']))
+        nuovo_fine = col2.date_input("Fine", safe_date(data_corrente['fine']))
+
+        st.divider()
+        
+        # 6. TASTI AZIONE
+        c1, c2 = st.columns(2)
+        if c1.button("💾 Salva Modifiche", type="primary", use_container_width=True):
+            if nuovo_t_id:
+                supabase.table("Log_Tempi").update({
+                    "operatore": nuovo_op,
+                    "task_id": nuovo_t_id,
+                    "inizio": str(nuovo_inizio),
+                    "fine": str(nuovo_fine)
+                }).eq("id", log_id).execute()
+                st.success("Log aggiornato!")
+                st.rerun()
+            else:
+                st.error("Seleziona un task valido.")
+        
+        if c2.button("🗑️ Elimina", type="secondary", use_container_width=True):
+            supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+            st.warning("Log eliminato.")
+            st.rerun()
+
+    except Exception as e:
+        st.error(f"Errore nella modifica: {e}")
 
 # --- TAB 1: PLANNING (FIX ALLINEAMENTO WEEKEND) ---
 with tabs[0]:
