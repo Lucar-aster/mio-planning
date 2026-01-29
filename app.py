@@ -301,7 +301,10 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
     # MODIFICATO: render del grafico isolato nel fragment
     event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", 
                              key=f"gantt_chart_{st.session_state.chart_key}", 
-                             config={'displayModeBar': True,'scrollZoom': False, 'displaylogo': False,'toImageButtonOptions': {
+                             config={'displayModeBar': True,'modeBarButtonsToRemove': [    # ...ma togliamo TUTTO tranne il download
+                                        'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 
+                                        'zoomOut2d', 'autoScale2d', 'resetScale2d'
+                                     ],'scrollZoom': False, 'displaylogo': False,'toImageButtonOptions': {
                                 'format': 'png',
                                 'filename': 'Planning_Aster_Contract',
                                 'scale': 2 # Alta qualità
@@ -375,7 +378,11 @@ with tabs[0]:
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
             if c2.button("📑 Task", use_container_width=True): modal_task()
             if c3.button("⏱️ Log", use_container_width=True): modal_log()
-            with c5:
+            if c4.button("📍 Oggi", use_container_width=True):
+                # Forziamo il reset della scala e il refresh del grafico
+                st.session_state.chart_key += 1 
+                st.rerun()
+             with c5:
                 if st.button("📸 Cattura", use_container_width=True):
                     # Iniettiamo il JavaScript per attivare il download di Plotly
                     st.components.v1.html(
@@ -394,10 +401,6 @@ with tabs[0]:
                         """,
                         height=0,
                     )    
-            if c4.button("📍 Oggi", use_container_width=True):
-                # Forziamo il reset della scala e il refresh del grafico
-                st.session_state.chart_key += 1 
-                st.rerun()
             st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
             # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
