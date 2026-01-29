@@ -319,7 +319,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         })
 
 # --- NAVIGAZIONE ---
-tabs = st.tabs(["📊 Timeline", "➕ Registra Tempi", "⚙️ Configurazione"])
+tabs = st.tabs(["📊 Timeline", "⏱️ Gestione Log", "⚙️ Configurazione"])
 
 # --- TAB 1: PLANNING ---
 with tabs[0]:
