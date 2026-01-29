@@ -24,12 +24,12 @@ st.markdown("""
         display: flex; 
         align-items: center; 
         gap: 10px; 
-        margin-top: -20px;    /* Sposta il titolo verso l'alto */
-        margin-bottom: -15px;  /* Avvicina le Tab al titolo */
+        margin-top: 0px;    /* Sposta il titolo verso l'alto */
+        margin-bottom: -20px;  /* Avvicina le Tab al titolo */
     }
 
     .compact-title h2 {
-        font-size: 22px !important; /* Testo più piccolo */
+        font-size: 18px !important; /* Testo più piccolo */
         font-weight: 700;
         margin: 0 !important;
         padding: 0 !important;
