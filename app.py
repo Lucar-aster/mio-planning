@@ -165,16 +165,14 @@ def modal_edit_log(log_id, data_corrente):
 def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it, shapes):
     fig = go.Figure()
     mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
-    soft_colors = ["#8dbad2", "#a5d6a7", "#ffcc80", "#ce93d8", "#b0bec5", "#ffab91"]
-    color_map = {op: soft_colors[i % len(soft_colors)] for i, op in enumerate(lista_op)}
-
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
             orientation='h', name=op, offsetgroup=op,
-            marker=dict(color=color_map[op], cornerradius=10), width=0.4,
-            # MODIFICATO: customdata ora contiene esattamente i dati per modal_edit_log
+            # MODIFICATO: Prende il colore assegnato all'operatore dalla color_map
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
+            width=0.4,
             customdata=df_op[['id', 'operatore', 'task_id', 'inizio', 'fine']],
             hovertemplate="<b>%{y}</b><br>Operatore: %{name}<extra></extra>"
         ))
@@ -214,6 +212,8 @@ with tabs[0]:
         logs = get_data("Log_Tempi")
         res_tasks = get_data("Task")
         res_commesse = get_data("Commesse")
+        res_ops = get_data("Operatori")
+        color_map = {o['nome']: o.get('colore', '#8dbad2') for o in res_ops}
         
         if logs and res_tasks and res_commesse:
             # 1. PREPARAZIONE DATI
@@ -285,7 +285,7 @@ with tabs[0]:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
 
             # --- NEW: CHIAMATA AL FRAGMENT ---
-            render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it, shapes)
+            render_gantt_fragment(df_plot, color_map, oggi, x_range, x_dtick, formato_it, shapes)
 
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
@@ -433,6 +433,10 @@ with tabs[2]:
             df_o = pd.DataFrame(ops)
             col_o = next((c for c in ["nome_operatore", "nome"] if c in df_o.columns), df_o.columns[0])
             
+            cols_to_show = [col_o]
+            if "colore" in df_o.columns:
+                cols_to_show.append("colore")
+            
             # 1. Visualizzazione
             st.dataframe(df_o[[col_o]], use_container_width=True)
             st.divider()
@@ -441,10 +445,15 @@ with tabs[2]:
             with st.expander("📝 Modifica Operatore"):
                 o_edit = st.selectbox("Seleziona operatore", options=ops, format_func=lambda x: x[col_o], key="ed_o")
                 n_val_o = st.text_input("Nuovo nome", value=o_edit[col_o], key="txt_o")
+                colore_attuale = o_edit.get('colore', '#8dbad2')
+                n_val_c = st.color_picker("Nuovo colore", value=colore_attuale, key="clr_o")
                 if st.button("Aggiorna", key="btn_o"):
-                    supabase.table("Operatori").update({col_o: n_val_o}).eq("id", o_edit["id"]).execute()
+                    supabase.table("Operatori").update({
+                        col_o: n_val_o, 
+                        "colore": n_val_c
+                    }).eq("id", o_edit["id"]).execute()
                     st.rerun()
-
+                    
             with st.expander("🗑️ Elimina Operatore"):
                 o_del = st.selectbox("Elimina operatore", options=ops, format_func=lambda x: x[col_o], key="dl_o")
                 if st.button("Elimina Definitivamente", type="primary", key="btn_dl_o"):
@@ -452,9 +461,11 @@ with tabs[2]:
                     st.rerun()
         
         with st.form("new_op"):
-            n_o = st.text_input("➕ Aggiungi Nuovo Operatore")
+            st.write("➕ Aggiungi Nuovo Operatore")
+            n_o = st.text_input("Nome")
+            c_o = st.color_picker("Assegna Colore", "#8dbad2")
             if st.form_submit_button("Salva"):
-                supabase.table("Operatori").insert({"nome_operatore": n_o}).execute()
+                    supabase.table("Operatori").insert({col_o: n_o, "colore": c_o}).execute()
                 st.rerun()
 
     # --- SOTTO-TAB: TASK ---
