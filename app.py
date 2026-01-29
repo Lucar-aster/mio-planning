@@ -475,17 +475,20 @@ with tabs[1]:
 
         st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
 
-        # 3. IL DATA EDITOR
+        # 3. IL DATA EDITOR (CORRETTO)
         edited_df = st.data_editor(
             df_display,
             key="log_editor_v3",
             num_rows="dynamic",
-            disabled=["id", "commessa_nome"], # La commessa è legata al task, non si cambia a mano qui
+            disabled=["id", "commessa_nome"], 
             column_config={
                 "id": None, 
-                "commessa_nome": st.column_config.TextColumn("Commessa", help="Legata al Task"),
-                "task_nome": st.column_config.SelectboxColumn("Task", options=list(task_info.values())[0:0], # Dinamico sotto
-                    options=[t['nome_task'] for t in tasks], required=True),
+                "commessa_nome": st.column_config.TextColumn("Commessa"),
+                "task_nome": st.column_config.SelectboxColumn(
+                    "Task", 
+                    options=[t['nome_task'] for t in tasks], 
+                    required=True
+                ),
                 "operatore": st.column_config.TextColumn("Operatore", required=True),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
                 "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
