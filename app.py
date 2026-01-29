@@ -300,7 +300,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
             hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<br>%{customdata[3]|%d/%m/%Y} - %{customdata[4]|%d/%m/%Y}<br><extra></extra>"
         ))
         
-    frequenza = 'D' if delta_giorni <= 30 else 'W-MON'
+    frequenza = 'D' if delta_giorni <= 31 else 'W-MON'
     tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq=frequenza)
     tick_text = [get_it_date_label(d) for d in tick_vals]
     
