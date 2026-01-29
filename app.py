@@ -64,6 +64,7 @@ def modal_task():
 @st.dialog("⏱️ Nuovo Log Tempi")
 def modal_log():
     try:
+        # Recupero dati
         res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
         res_t = supabase.table("Task").select("id, nome_task, commessa_id").execute()
         res_o = supabase.table("Operatori").select("nome").execute()
@@ -72,31 +73,65 @@ def modal_log():
         operatori_lista = [o['nome'] for o in res_o.data]
         all_tasks = res_t.data
 
+        # 1. Selezione Operatore e Commessa
         operatore = st.selectbox("Seleziona Operatore", options=operatori_lista)
         scelta_c_nome = st.selectbox("Seleziona Commessa", options=list(commesse_dict.keys()))
         id_commessa_scelta = commesse_dict[scelta_c_nome]
 
+        # 2. Gestione Task (Esistenti + Opzione Nuovo)
         tasks_filtrati = {t['nome_task']: t['id'] for t in all_tasks if t['commessa_id'] == id_commessa_scelta}
-        if not tasks_filtrati:
-            st.warning("Nessun task trovato per questa commessa.")
-            scelta_t_nome = None
-        else:
-            scelta_t_nome = st.selectbox("Seleziona Task", options=list(tasks_filtrati.keys()))
+        opzioni_task = list(tasks_filtrati.keys())
+        opzione_crea_nuovo = "➕ Crea nuovo task..."
+        opzioni_task.append(opzione_crea_nuovo)
 
+        scelta_t_nome = st.selectbox("Seleziona Task", options=opzioni_task)
+
+        # Se l'utente sceglie di creare un nuovo task, mostra il campo di testo
+        nuovo_task_nome = None
+        if scelta_t_nome == opzione_crea_nuovo:
+            nuovo_task_nome = st.text_input("Inserisci il nome del nuovo task")
+
+        # 3. Date
         col1, col2 = st.columns(2)
         inizio = col1.date_input("Data Inizio", datetime.now())
         fine = col2.date_input("Data Fine", datetime.now())
         
+        # 4. Salvataggio
         if st.button("Registra Log", type="primary"):
-            if operatore and scelta_t_nome:
-                supabase.table("Log_Tempi").insert({
-                    "operatore": operatore, "task_id": tasks_filtrati[scelta_t_nome],
-                    "inizio": str(inizio), "fine": str(fine)
-                }).execute()
-                st.success("Log registrato!")
-                st.rerun()
-    except Exception as e: st.error(f"Errore: {e}")
+            id_task_finale = None
 
+            # CASO A: Nuovo Task da creare
+            if scelta_t_nome == opzione_crea_nuovo:
+                if nuovo_task_nome and nuovo_task_nome.strip() != "":
+                    # Inserisce il nuovo task nel database
+                    res_new_task = supabase.table("Task").insert({
+                        "nome_task": nuovo_task_nome, 
+                        "commessa_id": id_commessa_scelta
+                    }).execute()
+                    if res_new_task.data:
+                        id_task_finale = res_new_task.data[0]['id']
+                else:
+                    st.error("Per favore, inserisci un nome per il nuovo task.")
+                    return
+            
+            # CASO B: Task esistente selezionato
+            else:
+                id_task_finale = tasks_filtrati[scelta_t_nome]
+
+            # Registrazione finale del Log
+            if id_task_finale:
+                supabase.table("Log_Tempi").insert({
+                    "operatore": operatore, 
+                    "task_id": id_task_finale,
+                    "inizio": str(inizio), 
+                    "fine": str(fine)
+                }).execute()
+                st.success("Log registrato con successo!")
+                st.rerun()
+                
+    except Exception as e: 
+        st.error(f"Errore: {e}")
+        
 @st.dialog("📝 Modifica o Elimina Log")
 def modal_edit_log(log_id, data_corrente):
     try:
