@@ -466,7 +466,7 @@ with tabs[2]:
             c_o = st.color_picker("Assegna Colore", "#8dbad2")
             if st.form_submit_button("Salva"):
                     supabase.table("Operatori").insert({col_o: n_o, "colore": c_o}).execute()
-                st.rerun()
+                    st.rerun()
 
     # --- SOTTO-TAB: TASK ---
     with c_admin3:
