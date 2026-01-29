@@ -413,7 +413,9 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            if scala == "Settimana":
+            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+                x_range = [intervallo_date[0], intervallo_date[1]]
+            elif scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
             elif scala == "Mese":
                 x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
