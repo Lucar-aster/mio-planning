@@ -12,18 +12,18 @@ if "st_format" not in st.session_state:
     st.date_input = st.date_input
 
 # Prova a impostare il locale in italiano
-def set_italiano():
+def set_it_locale():
     try:
-        if platform.system() == 'Windows':
-            locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
+        # Su Windows (PC locale)
+        if platform.system() == "Windows":
+            locale.setlocale(locale.LC_ALL, 'ita_it' or 'it_IT')
+        # Su Linux (Streamlit Cloud)
         else:
-            locale.setlocale(locale.LC_ALL, 'it_IT.utf8')
-    except Exception:
-        # Se il server non ha il pacchetto lingua italiana installato, 
-        # fallirà silenziosamente senza rompere l'app
-        pass
+            locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
+    except Exception as e:
+        print(f"Impossibile impostare il locale: {e}")
 
-set_italiano()
+set_it_locale()
 
 def get_it_date_label(dt):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
