@@ -418,16 +418,17 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+            if attiva_filtro and isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
                 data_inizio, data_fine = intervallo_date
                 delta_giorni = (data_fine - data_inizio).days
                 x_range = [intervallo_date[0], intervallo_date[1]]
-            elif scala == "Settimana":
-                x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
-            elif scala == "Mese":
-                x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
             else:
-                x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
+                if scala == "Settimana":
+                    x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
+                elif scala == "Mese":
+                    x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
+                else:
+                    x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
 
             if delta_giorni <= 7:
                 x_dtick = 86400000          # Un tick ogni giorno
