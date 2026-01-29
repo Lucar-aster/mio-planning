@@ -385,7 +385,7 @@ with tabs[0]:
             with c5:
                 # Questo pulsante scarica il grafico direttamente
                 # Nota: funziona se il grafico ha un ID o tramite la funzione di salvataggio di Plotly
-            st.button("📸 Cattura", use_container_width=True, help="Scarica il grafico come immagine")
+                st.button("📸 Cattura", use_container_width=True, help="Scarica il grafico come immagine")
             st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
             # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
