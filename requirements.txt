@@ -3,4 +3,3 @@ supabase
 pandas
 plotly
 streamlit-plotly-events
-streamlit-datepicker
