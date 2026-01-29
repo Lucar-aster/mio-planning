@@ -323,7 +323,7 @@ with tabs[0]:
                 # Forziamo il reset della scala e il refresh del grafico
                 st.session_state.chart_key += 1 
                 st.rerun()
-            st.divider()
+            st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
             # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
             oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
