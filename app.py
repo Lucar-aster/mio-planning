@@ -25,13 +25,16 @@ st.markdown("""
     
     /* 1. Riduce lo spazio tra i vari elementi (div) di Streamlit */
     .block-container {
+        max-width: 100% !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
         padding-top: 2rem;    /* Spazio in alto alla pagina */
         padding-bottom: 1rem;
     }
     
     /* 2. Riduce lo spazio tra i singoli widget (bottoni, selectbox, ecc) */
     [data-testid="stVerticalBlock"] {
-        gap: 0.5rem;          /* Default è 1rem. Più abbassi, più sono vicini */
+        gap: 0.2rem;          /* Default è 1rem. Più abbassi, più sono vicini */
     }
 
     /* 3. Riduce lo spazio sopra i titoli */
