@@ -6,6 +6,17 @@ from datetime import datetime, timedelta
 import locale
 import platform
 
+import plotly.io as pio
+
+# Configura Plotly per usare l'italiano nelle date
+pio.templates.default = "plotly_white"
+config_it = dict({
+    'monthNames': ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+    'shortMonthNames': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
+    'dayNames': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
+    'shortDayNames': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
+})
+
 # Configurazione globale per i widget Streamlit
 # Questo forza il formato DD/MM/YYYY in tutti i date_input
 if "st_format" not in st.session_state:
