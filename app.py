@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 import locale
 import platform
 
+# Configurazione globale per i widget Streamlit
+# Questo forza il formato DD/MM/YYYY in tutti i date_input
+if "st_format" not in st.session_state:
+    st.date_input = st.date_input
+
 # Prova a impostare il locale in italiano
 def set_italiano():
     try:
@@ -19,6 +24,14 @@ def set_italiano():
         pass
 
 set_italiano()
+
+def get_it_date_label(dt):
+    mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
+    giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    
+    mese = mesi[dt.month - 1]
+    giorno_sett = giorni[dt.weekday()]
+    return f"{giorno_sett} {dt.day:02d}<br>{mese}<br>Sett. {dt.isocalendar()[1]}"
 
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", layout="wide")
@@ -286,13 +299,20 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
             customdata=df_op[['id', 'operatore', 'task_id', 'inizio', 'fine']],
             hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<br>%{customdata[3]|%d/%m/%Y} - %{customdata[4]|%d/%m/%Y}<br><extra></extra>"
         ))
-
+        
+    frequenza = 'D' if delta_giorni <= 30 else 'W-MON'
+    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq=frequenza)
+    tick_text = [get_it_date_label(d) for d in tick_vals]
+    
     fig.update_layout(
         clickmode='event+select', barmode='group', dragmode='pan', plot_bgcolor="white",
         height=400 + (len(df_plot.groupby(['Commessa', 'Task'])) * 30),
         margin=dict(l=10, r=20, t=10, b=10),
         shapes=shapes,
-        xaxis=dict(type="date", side="top", range=x_range, dtick=x_dtick, tickformat="%b<br>%d %a<br>Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
+        xaxis=dict(type="date", side="top", tickmode="array",       # Forza l'uso dei nostri valori
+        tickvals=tick_vals,    # Le posizioni dei giorni
+        ticktext=tick_text,    # Le etichette tradotte in italiano
+        tickfont=dict(size=10, color="#1E3A8A"),range=x_range, dtick=x_dtick, tickformat="%b<br>%d %a<br>Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
     )
