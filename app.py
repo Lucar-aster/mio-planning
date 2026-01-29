@@ -333,7 +333,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
     )
-    fig.add_vline(x=oggi.timestamp() * 1000, line_width=2, line_color="#ff5252")
+    fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
     # MODIFICATO: render del grafico isolato nel fragment
     event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", 
