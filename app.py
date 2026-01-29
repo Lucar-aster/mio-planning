@@ -36,7 +36,7 @@ def get_it_date_label(dt):
         return f"{giorno_sett} {dt.day:02d}<br>{mese}<br>Sett. {dt.isocalendar()[1]}"
     
     # Vista MESE o TRIMESTRE (Compatta)
-       else:
+    else:
         return f"{dt.day:02d} {mese}<br>Sett. {dt.isocalendar()[1]}"
         
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
