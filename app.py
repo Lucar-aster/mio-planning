@@ -284,7 +284,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
     # MODIFICATO: render del grafico isolato nel fragment
     event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", 
                              key=f"gantt_chart_{st.session_state.chart_key}", 
-                             config={'scrollZoom': True, 'displaylogo': False})
+                             config={'displayModeBar': False,'scrollZoom': False, 'displaylogo': False})
 
     # MODIFICATO: Gestione Clic spostata dentro il fragment
     if event and "selection" in event and event["selection"]["points"]:
