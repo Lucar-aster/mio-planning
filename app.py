@@ -369,16 +369,16 @@ with tabs[0]:
             with col_f3:
                 attiva_filtro = st.checkbox("Filtra per data", value=False)
                 if attiva_filtro:
-                # Filtro Intervallo Date
-                oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                data_min_default = oggi - timedelta(days=30)
-                data_max_default = oggi + timedelta(days=30)
+                    # Filtro Intervallo Date
+                    oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                    data_min_default = oggi - timedelta(days=30)
+                    data_max_default = oggi + timedelta(days=30)
     
-                intervallo_date = st.date_input(
-                    "Intervallo temporale",
-                    value=(data_min_default, data_max_default),
-                    format="DD/MM/YYYY"
-                )
+                    intervallo_date = st.date_input(
+                        "Intervallo temporale",
+                        value=(data_min_default, data_max_default),
+                        format="DD/MM/YYYY"
+                    )
                 else:
                     intervallo_date = None # Disattivato
                     
