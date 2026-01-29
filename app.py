@@ -367,17 +367,17 @@ with tabs[0]:
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             with col_f3:
-                attiva_filtro = st.checkbox("Filtra per data", value=False)
-                if attiva_filtro:
-                    # Filtro Intervallo Date
-                    oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                    data_min_default = oggi - timedelta(days=30)
-                    data_max_default = oggi + timedelta(days=30)
+                oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                intervallo_date = st.date_input(
+                    "Periodo Visibile",
+                    value=( oggi - timedelta(days=30), oggi + timedelta(days=30)),
+                    format="DD/MM/YYYY",
     
                     intervallo_date = st.date_input(
                         "Intervallo temporale",
                         value=(data_min_default, data_max_default),
                         format="DD/MM/YYYY"
+                        label_visibility="visible"
                     )
                 else:
                     intervallo_date = None # Disattivato
@@ -418,10 +418,8 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            if attiva_filtro and isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
-                data_inizio, data_fine = intervallo_date
-                delta_giorni = (data_fine - data_inizio).days
-                x_range = [intervallo_date[0], intervallo_date[1]]
+            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+                x_range = [pd.to_datetime(intervallo_date[0]), pd.to_datetime(intervallo_date[1])]
             else:
                 if scala == "Settimana":
                     x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
