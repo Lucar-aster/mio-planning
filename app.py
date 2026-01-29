@@ -8,6 +8,21 @@ LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/ic
 st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown("""
     <style>
+    /* Nasconde la barra superiore di Streamlit (Toolbar) */
+    header[data-testid="stHeader"] {
+        visibility: hidden;
+        height: 0%;
+    }
+
+    /* Rimuove lo spazio bianco lasciato dalla barra */
+    .block-container {
+        padding-top: 0rem;
+    }
+
+    /* Opzionale: Nasconde il menu "hamburger" in alto a destra e il footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
     /* 1. Riduce lo spazio tra i vari elementi (div) di Streamlit */
     .block-container {
         padding-top: 2rem;    /* Spazio in alto alla pagina */
