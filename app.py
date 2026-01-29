@@ -6,8 +6,7 @@ from datetime import datetime, timedelta
 
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", layout="wide")
-st.markdown(
-    """
+st.markdown("""
     <style>
     /* 1. Riduce lo spazio tra i vari elementi (div) di Streamlit */
     .block-container {
@@ -32,7 +31,6 @@ st.markdown(
         padding-bottom: 0px !important;
     }
     </style>
-""", unsafe_allow_html=True)
     <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
         <img src="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" width="40"> 
         <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
