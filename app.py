@@ -81,10 +81,7 @@ st.markdown("""
         padding-top: 0px !important;
         padding-bottom: 0px !important;
     }
-    /* Nasconde la barra di Plotly ma la mantiene funzionale nel codice */
-    .modebar {
-        display: none !important;
-    }
+    
     </style>
     <div class="compact-title">
         <img src="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" width="40"> 
