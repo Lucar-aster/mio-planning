@@ -372,16 +372,8 @@ with tabs[0]:
                     "Periodo Visibile",
                     value=( oggi - timedelta(days=30), oggi + timedelta(days=30)),
                     format="DD/MM/YYYY",
-    
-                    intervallo_date = st.date_input(
-                        "Intervallo temporale",
-                        value=(data_min_default, data_max_default),
-                        format="DD/MM/YYYY"
-                        label_visibility="visible"
                     )
-                else:
-                    intervallo_date = None # Disattivato
-                    
+                
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
 
             df_plot = df.copy()
