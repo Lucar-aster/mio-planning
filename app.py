@@ -443,9 +443,9 @@ with tabs[0]:
             if st.button("Aggiungi la prima Commessa"): modal_commessa()
     except Exception as e: st.error(f"Errore: {e}")
         
-# --- TAB 2: REGISTRA TEMPI (VERSIONE ANTI-ERRORE) ---
+# --- TAB 2: REGISTRA TEMPI (VERSIONE CORRETTA) ---
 with tabs[1]:
-    st.header("📝 Registrazione Attività")
+    st.header("📝 Gestione Attività")
     
     logs = get_data("Log_Tempi")
     cms = get_data("Commesse")
@@ -453,97 +453,103 @@ with tabs[1]:
     ops = get_data("Operatori")
 
     if logs and cms and tasks and ops:
+        # 1. PREPARAZIONE DATAFRAME
         df_edit = pd.DataFrame(logs)
         
-      # Mappature per rendere i log leggibili (ID -> Nome)
+        # --- FIX FONDAMENTALE: Conversione date ---
+        # Trasformiamo le stringhe del DB in oggetti data per l'editor
+        df_edit['inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
+        df_edit['fine'] = pd.to_datetime(df_edit['fine']).dt.date
+        
+        # Mappature
         task_map = {t['id']: t['nome_task'] for t in tasks}
         df_edit['task_nome'] = df_edit['task_id'].map(task_map)
         
-        # Riordiniamo le colonne per l'utente
+        # Selezione colonne per la visualizzazione
         cols = ['id', 'operatore', 'task_nome', 'inizio', 'fine']
         df_display = df_edit[cols].copy()
 
-        st.write("💡 *Modifica le celle e clicca 'Salva Modifiche' in basso a destra nella tabella.*")
+        st.info("💡 Modifica le celle qui sotto e clicca il tasto 'Salva' per aggiornare il database.")
 
-        # 2. IL DATA EDITOR
+        # 2. DATA EDITOR (Corretto)
         edited_df = st.data_editor(
             df_display,
-            key="log_editor",
-            num_rows="dynamic", # Permette anche di eliminare righe
-            disabled=["id"],    # L'ID non deve essere toccato
+            key="log_editor_unique",
+            num_rows="dynamic",
+            disabled=["id"],
             column_config={
-                "inizio": st.column_config.DateColumn("Data Inizio"),
-                "fine": st.column_config.DateColumn("Data Fine"),
-                "task_nome": st.column_config.SelectboxColumn("Task", options=list(task_map.values())),
-                "operatore": st.column_config.TextColumn("Operatore")
+                "id": None, # Nascondiamo l'ID ma lo teniamo per il DB
+                "inizio": st.column_config.DateColumn("Inizio", required=True, format="DD/MM/YYYY"),
+                "fine": st.column_config.DateColumn("Fine", required=True, format="DD/MM/YYYY"),
+                "task_nome": st.column_config.SelectboxColumn("Task", options=list(task_map.values()), required=True),
+                "operatore": st.column_config.TextColumn("Operatore", required=True)
             },
             hide_index=True,
             use_container_width=True
         )
 
-        # 3. LOGICA DI SALVATAGGIO
-        # st.data_editor rileva automaticamente cosa è cambiato
-        if st.button("💾 Salva modifiche nel Database"):
+        # 3. SALVATAGGIO MODIFICHE
+        if st.button("💾 Salva modifiche tabella", type="primary"):
             try:
-                # Recuperiamo l'ID inverso per i Task (Nome -> ID)
                 inv_task_map = {v: k for k, v in task_map.items()}
-                
                 for index, row in edited_df.iterrows():
-                    # Prepariamo i dati per Supabase
-                    update_data = {
+                    update_payload = {
                         "operatore": row['operatore'],
                         "task_id": inv_task_map.get(row['task_nome']),
                         "inizio": str(row['inizio']),
                         "fine": str(row['fine'])
                     }
-                    
-                    # Eseguiamo l'update per ogni riga tramite l'ID
-                    supabase.table("Log_Tempi").update(update_data).eq("id", row['id']).execute()
-                
-                st.success("Database aggiornato con successo!")
+                    supabase.table("Log_Tempi").update(update_payload).eq("id", row['id']).execute()
+                st.success("Modifiche salvate!")
                 st.rerun()
             except Exception as e:
-                st.error(f"Errore durante il salvataggio: {e}")
+                st.error(f"Errore nel salvataggio: {e}")
+
+        st.divider()
+
+        # --- GESTIONE ELIMINAZIONE (Pulita) ---
+        with st.expander("🗑️ Elimina un Log manualmente"):
+            # Creiamo una lista leggibile per la selectbox
+            log_options = {l['id']: f"{l['operatore']} - {task_map.get(l['task_id'], 'N/A')} ({l['inizio']})" for l in logs}
+            log_id_to_del = st.selectbox("Seleziona log da rimuovere", 
+                                       options=list(log_options.keys()), 
+                                       format_func=lambda x: log_options[x])
+            
+            if st.button("Elimina definitivamente", type="secondary"):
+                supabase.table("Log_Tempi").delete().eq("id", log_id_to_del).execute()
+                st.success("Log eliminato!")
+                st.rerun()
+
     else:
-        st.info("Nessun log trovato.")
+        st.info("Inizia a registrare attività per vederle qui.")
 
-        # --- GESTIONE IN FONDO ---
-        c1, c2 = st.columns(2)
-        with c1:
-            with st.expander("🗑️ Elimina Log"):
-                log_to_del = st.selectbox("Seleziona log da rimuovere", options=logs, 
-                                          format_func=lambda x: f"{o_map.get(x[col_log_op])} - {t_map.get(x[col_log_tk])}", key="del_l")
-                if st.button("Elimina ora", type="primary"):
-                    supabase.table("Log_Tempi").delete().eq("id", log_to_del["id"]).execute()
-                    st.rerun()
-        
-        with c2:
-            with st.expander("📝 Modifica Log"):
-                st.info("Seleziona un log per modificarne i dettagli.")
-                # Qui si può implementare la logica di update simile a quella del Tab 3
-
-    # --- AGGIUNGI NUOVO ---
+    # --- AGGIUNGI NUOVO (Semplificato e coerente) ---
     with st.expander("➕ Registra Nuova Attività"):
-        with st.form("new_log_form"):
-            sel_op = st.selectbox("Operatore", ops, format_func=lambda x: x[col_op_name])
-            sel_tk = st.selectbox("Task", tasks, format_func=lambda x: f"{x[col_tk_name]} ({comm_id_to_name.get(x[col_tk_link])})")
+        with st.form("new_log_form_v2"):
+            # Prepariamo le liste nomi per le selectbox
+            op_list = [o['nome'] for o in ops]
+            t_dict = {t['nome_task']: t['id'] for t in tasks}
+            
+            sel_op = st.selectbox("Operatore", op_list)
+            sel_tk_nome = st.selectbox("Task", list(t_dict.keys()))
             
             d1, d2 = st.columns(2)
-            data_i = d1.date_input("Inizio")
-            ora_i = d1.time_input("Ora", value=None, key="time_i")
-            data_f = d2.date_input("Fine")
-            ora_f = d2.time_input("Ora", value=None, key="time_f")
+            data_i = d1.date_input("Data Inizio", value=datetime.now())
+            data_f = d2.date_input("Data Fine", value=datetime.now())
             
-            if st.form_submit_button("Salva Log"):
-                # Inserimento usando le colonne trovate dal detective
-                payload = {
-                    col_log_op: sel_op['id'],
-                    col_log_tk: sel_tk['id'],
-                    col_inizio: f"{data_i} {ora_i}",
-                    col_fine: f"{data_f} {ora_f}"
-                }
-                supabase.table("Log_Tempi").insert(payload).execute()
-                st.rerun()
+            if st.form_submit_button("Inserisci Log"):
+                try:
+                    new_payload = {
+                        "operatore": sel_op,
+                        "task_id": t_dict[sel_tk_nome],
+                        "inizio": str(data_i),
+                        "fine": str(data_f)
+                    }
+                    supabase.table("Log_Tempi").insert(new_payload).execute()
+                    st.success("Nuovo log registrato!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Errore nell'inserimento: {e}")
         
 # --- TAB 3: CONFIGURAZIONE (GESTIONE IN FONDO) ---
 with tabs[2]:
