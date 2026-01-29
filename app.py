@@ -362,16 +362,31 @@ with tabs[0]:
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
             # 3. FILTRI UI
-            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 1])
+            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
             lista_op = sorted(df_raw['operatore'].unique().tolist())
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
-            scala = col_f3.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
+            with col_f3:
+                # Filtro Intervallo Date
+                data_min_default = oggi - timedelta(days=30)
+                data_max_default = oggi + timedelta(days=30)
+    
+                intervallo_date = st.date_input(
+                    "Intervallo temporale",
+                    value=(data_min_default, data_max_default),
+                    format="DD/MM/YYYY"
+                )
+            scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
 
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
+            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+                data_inizio, data_fine = intervallo_date
+                # Convertiamo in datetime per il confronto
+                mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
+                df_plot = df_plot[mask]
 
             # 4. BOTTONI RAPIDI
             c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
