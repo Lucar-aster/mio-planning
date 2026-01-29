@@ -292,7 +292,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         height=400 + (len(df_plot.groupby(['Commessa', 'Task'])) * 30),
         margin=dict(l=10, r=20, t=10, b=10),
         shapes=shapes,
-        xaxis=dict(type="date", side="top", range=x_range, dtick=x_dtick, tickformat="%b\n%d %a\n Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
+        xaxis=dict(type="date", side="top", range=x_range, dtick=x_dtick, tickformat="%b<br>%d %a<br>Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
     )
