@@ -432,6 +432,19 @@ with tabs[2]:
         if ops:
             df_o = pd.DataFrame(ops)
             col_o = next((c for c in ["nome_operatore", "nome"] if c in df_o.columns), df_o.columns[0])
+
+            df_display = df_o[[col_o, "colore"]].copy() if "colore" in df_o.columns else df_o[[col_o]].copy()
+
+            def style_colore(v):
+                # Colora lo sfondo della cella con il suo stesso valore HEX
+                return f'background-color: {v}; color: white; font-weight: bold; border-radius: 5px;' if v else ''
+
+            st.write("Lista operatori attivi:")
+            st.dataframe(
+                df_display.style.applymap(style_colore, subset=['colore']) if "colore" in df_display.columns else df_display,
+                use_container_width=True,
+                hide_index=True
+            )
             
             cols_to_show = [col_o]
             if "colore" in df_o.columns:
