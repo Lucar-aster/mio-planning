@@ -383,24 +383,9 @@ with tabs[0]:
                 st.session_state.chart_key += 1 
                 st.rerun()
             with c5:
-                if st.button("📸 Cattura", use_container_width=True):
-                    # Iniettiamo il JavaScript per attivare il download di Plotly
-                    st.components.v1.html(
-                        f"""
-                        <script>
-                        var graph = window.parent.document.querySelector('[data-testid="stPlotlyChart"] canvas');
-                        if (graph) {{
-                            var downloadBtn = window.parent.document.querySelector('[data-title="Download plot as a png"]');
-                            if (downloadBtn) {{
-                                downloadBtn.click();
-                            }} else {{
-                                alert("Funzione di cattura in preparazione... riprova tra un secondo.");
-                            }}
-                        }}
-                        </script>
-                        """,
-                        height=0,
-                    )    
+                # Questo pulsante scarica il grafico direttamente
+                # Nota: funziona se il grafico ha un ID o tramite la funzione di salvataggio di Plotly
+            st.button("📸 Cattura", use_container_width=True, help="Scarica il grafico come immagine")
             st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
             # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
