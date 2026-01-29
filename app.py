@@ -368,6 +368,7 @@ with tabs[0]:
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             with col_f3:
                 # Filtro Intervallo Date
+                oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 data_min_default = oggi - timedelta(days=30)
                 data_max_default = oggi + timedelta(days=30)
     
