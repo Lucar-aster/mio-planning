@@ -382,7 +382,7 @@ with tabs[0]:
                 # Forziamo il reset della scala e il refresh del grafico
                 st.session_state.chart_key += 1 
                 st.rerun()
-             with c5:
+            with c5:
                 if st.button("📸 Cattura", use_container_width=True):
                     # Iniettiamo il JavaScript per attivare il download di Plotly
                     st.components.v1.html(
