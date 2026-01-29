@@ -35,8 +35,7 @@ st.markdown("""
         padding: 0 !important;
         color: #1E3A8A;
     }
-    
-    </style>    
+      
     /* Opzionale: Nasconde il menu "hamburger" in alto a destra e il footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
