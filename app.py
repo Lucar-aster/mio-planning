@@ -453,49 +453,59 @@ with tabs[1]:
     ops = get_data("Operatori")
 
     if logs and cms and tasks and ops:
-        df_logs = pd.DataFrame(logs)
+        df_edit = pd.DataFrame(logs)
         
-        # --- FUNZIONE DETECTIVE PER COLONNE ---
-        def get_col(df, possibili_nomi):
-            for nome in possibili_nomi:
-                if nome in df.columns:
-                    return nome
-            return df.columns[0] # Fallback sulla prima colonna se non trova nulla
+      # Mappature per rendere i log leggibili (ID -> Nome)
+        task_map = {t['id']: t['nome_task'] for t in tasks}
+        df_edit['task_nome'] = df_edit['task_id'].map(task_map)
+        
+        # Riordiniamo le colonne per l'utente
+        cols = ['id', 'operatore', 'task_nome', 'inizio', 'fine']
+        df_display = df_edit[cols].copy()
 
-        # Identifichiamo le colonne corrette nelle tabelle
-        col_log_op = get_col(df_logs, ["operatore_id", "id_operatore", "operatore"])
-        col_log_tk = get_col(df_logs, ["task_id", "id_task", "task"])
-        
-        col_op_name = get_col(pd.DataFrame(ops), ["nome_operatore", "nome", "operatore"])
-        col_tk_name = get_col(pd.DataFrame(tasks), ["nome_task", "nome", "task"])
-        col_tk_link = get_col(pd.DataFrame(tasks), ["commessa_id", "id_commessa", "progetto_id"])
-        col_cm_name = get_col(pd.DataFrame(cms), ["nome_commessa", "nome", "commessa"])
+        st.write("💡 *Modifica le celle e clicca 'Salva Modifiche' in basso a destra nella tabella.*")
 
-        # --- MAPPATURE ---
-        o_map = {o['id']: o.get(col_op_name, 'N/A') for o in ops}
-        t_map = {t['id']: t.get(col_tk_name, 'N/A') for t in tasks}
-        
-        # Mappa Task -> Nome Commessa
-        task_to_comm_id = {t['id']: t.get(col_tk_link) for t in tasks}
-        comm_id_to_name = {c['id']: c.get(col_cm_name, 'N/A') for c in cms}
+        # 2. IL DATA EDITOR
+        edited_df = st.data_editor(
+            df_display,
+            key="log_editor",
+            num_rows="dynamic", # Permette anche di eliminare righe
+            disabled=["id"],    # L'ID non deve essere toccato
+            column_config={
+                "inizio": st.column_config.DateColumn("Data Inizio"),
+                "fine": st.column_config.DateColumn("Data Fine"),
+                "task_nome": st.column_config.SelectboxColumn("Task", options=list(task_map.values())),
+                "operatore": st.column_config.TextColumn("Operatore")
+            },
+            hide_index=True,
+            use_container_width=True
+        )
 
-        # --- CREAZIONE COLONNE VISUALIZZAZIONE ---
-        df_logs['Operatore'] = df_logs[col_log_op].map(o_map)
-        df_logs['Task'] = df_logs[col_log_tk].map(t_map)
-        df_logs['Commessa'] = df_logs[col_log_tk].map(task_to_comm_id).map(comm_id_to_name)
-        
-        # Gestione date (cerchiamo 'inizio' o 'data')
-        col_inizio = get_col(df_logs, ["inizio", "data_inizio", "start"])
-        col_fine = get_col(df_logs, ["fine", "data_fine", "end"])
-        
-        df_logs['Inizio'] = pd.to_datetime(df_logs[col_inizio]).dt.strftime('%d/%m/%Y %H:%M')
-        df_logs['Fine'] = pd.to_datetime(df_logs[col_fine]).dt.strftime('%d/%m/%Y %H:%M')
-
-        # --- VISUALIZZAZIONE ---
-        st.subheader("📋 Storico Log")
-        st.dataframe(df_logs[["Commessa", "Task", "Operatore", "Inizio", "Fine"]], use_container_width=True)
-        
-        st.divider()
+        # 3. LOGICA DI SALVATAGGIO
+        # st.data_editor rileva automaticamente cosa è cambiato
+        if st.button("💾 Salva modifiche nel Database"):
+            try:
+                # Recuperiamo l'ID inverso per i Task (Nome -> ID)
+                inv_task_map = {v: k for k, v in task_map.items()}
+                
+                for index, row in edited_df.iterrows():
+                    # Prepariamo i dati per Supabase
+                    update_data = {
+                        "operatore": row['operatore'],
+                        "task_id": inv_task_map.get(row['task_nome']),
+                        "inizio": str(row['inizio']),
+                        "fine": str(row['fine'])
+                    }
+                    
+                    # Eseguiamo l'update per ogni riga tramite l'ID
+                    supabase.table("Log_Tempi").update(update_data).eq("id", row['id']).execute()
+                
+                st.success("Database aggiornato con successo!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Errore durante il salvataggio: {e}")
+    else:
+        st.info("Nessun log trovato.")
 
         # --- GESTIONE IN FONDO ---
         c1, c2 = st.columns(2)
