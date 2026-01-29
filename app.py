@@ -422,6 +422,19 @@ with tabs[0]:
             else:
                 x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
 
+            if delta_giorni <= 7:
+                x_dtick = 86400000          # Un tick ogni giorno
+                formato_it = "%b<br>%d %a<br>Sett. %V"
+            elif delta_giorni <= 31:
+                x_dtick = 86400000 * 2      # Ogni 2 giorni
+                formato_it = "%b<br>%d %a<br>Sett. %V"
+            elif delta_giorni <= 90:
+                x_dtick = 86400000 * 7      # Ogni settimana (Lunedì)
+                formato_it = "%b<br>Sett. %V"
+            else:
+                x_dtick = 86400000 * 14     # Ogni 2 settimane
+                formato_it = "%b<br>Sett. %V"
+
             # --- NEW: CHIAMATA AL FRAGMENT ---
             render_gantt_fragment(df_plot, color_map, oggi, x_range, x_dtick, formato_it, shapes)
 
