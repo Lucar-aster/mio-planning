@@ -4,15 +4,21 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import locale
+import platform
 
 # Prova a impostare il locale in italiano
-try:
-    locale.setlocale(locale.LC_TIME, "it_IT.UTF-8")
-except:
+def set_italiano():
     try:
-        locale.setlocale(locale.LC_TIME, "it_IT") # Per sistemi Windows
-    except:
-        pass # Se il sistema non ha il pacchetto lingua, ignora
+        if platform.system() == 'Windows':
+            locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
+        else:
+            locale.setlocale(locale.LC_ALL, 'it_IT.utf8')
+    except Exception:
+        # Se il server non ha il pacchetto lingua italiana installato, 
+        # fallirà silenziosamente senza rompere l'app
+        pass
+
+set_italiano()
 
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", layout="wide")
