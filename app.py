@@ -522,9 +522,6 @@ with tabs[1]:
                 st.info("Seleziona un log per modificarne i dettagli.")
                 # Qui si può implementare la logica di update simile a quella del Tab 3
 
-    else:
-        st.warning("Dati insufficienti per mostrare lo storico. Controlla le configurazioni.")
-
     # --- AGGIUNGI NUOVO ---
     with st.expander("➕ Registra Nuova Attività"):
         with st.form("new_log_form"):
