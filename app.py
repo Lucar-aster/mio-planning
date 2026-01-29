@@ -285,7 +285,6 @@ with tabs[0]:
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             scala = col_f3.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
-            if col_f4.button("📍 Oggi", use_container_width=True): st.rerun()
 
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
@@ -297,6 +296,10 @@ with tabs[0]:
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
             if c2.button("📑 Task", use_container_width=True): modal_task()
             if c3.button("⏱️ Log", use_container_width=True): modal_log()
+            if c4.button("📍 Oggi", use_container_width=True):
+                # Forziamo il reset della scala e il refresh del grafico
+                st.session_state.chart_key += 1 
+                st.rerun()
             st.divider()
 
             # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
