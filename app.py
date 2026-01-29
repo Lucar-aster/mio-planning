@@ -81,6 +81,10 @@ st.markdown("""
         padding-top: 0px !important;
         padding-bottom: 0px !important;
     }
+    /* Nasconde la barra di Plotly ma la mantiene funzionale nel codice */
+    .modebar {
+        display: none !important;
+    }
     </style>
     <div class="compact-title">
         <img src="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" width="40"> 
@@ -300,7 +304,11 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
     # MODIFICATO: render del grafico isolato nel fragment
     event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", 
                              key=f"gantt_chart_{st.session_state.chart_key}", 
-                             config={'displayModeBar': False,'scrollZoom': False, 'displaylogo': False})
+                             config={'displayModeBar': True,'scrollZoom': False, 'displaylogo': False,'toImageButtonOptions': {
+                                'format': 'png',
+                                'filename': 'Planning_Aster_Contract',
+                                'scale': 2 # Alta qualità
+                            }})
 
     # MODIFICATO: Gestione Clic spostata dentro il fragment
     if event and "selection" in event and event["selection"]["points"]:
@@ -366,10 +374,29 @@ with tabs[0]:
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
             # 4. BOTTONI RAPIDI
-            c1, c2, c3, c4, _ = st.columns([1, 1, 1, 1, 1])
+            c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
             if c2.button("📑 Task", use_container_width=True): modal_task()
             if c3.button("⏱️ Log", use_container_width=True): modal_log()
+            with c5:
+                if st.button("📸 Cattura", use_container_width=True):
+                    # Iniettiamo il JavaScript per attivare il download di Plotly
+                    st.components.v1.html(
+                        f"""
+                        <script>
+                        var graph = window.parent.document.querySelector('[data-testid="stPlotlyChart"] canvas');
+                        if (graph) {{
+                            var downloadBtn = window.parent.document.querySelector('[data-title="Download plot as a png"]');
+                            if (downloadBtn) {{
+                                downloadBtn.click();
+                            }} else {{
+                                alert("Funzione di cattura in preparazione... riprova tra un secondo.");
+                            }}
+                        }}
+                        </script>
+                        """,
+                        height=0,
+                    )    
             if c4.button("📍 Oggi", use_container_width=True):
                 # Forziamo il reset della scala e il refresh del grafico
                 st.session_state.chart_key += 1 
