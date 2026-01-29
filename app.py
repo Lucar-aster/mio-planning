@@ -8,6 +8,31 @@ LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/ic
 st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown(
     """
+    <style>
+    /* 1. Riduce lo spazio tra i vari elementi (div) di Streamlit */
+    .block-container {
+        padding-top: 2rem;    /* Spazio in alto alla pagina */
+        padding-bottom: 1rem;
+    }
+    
+    /* 2. Riduce lo spazio tra i singoli widget (bottoni, selectbox, ecc) */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.5rem;          /* Default è 1rem. Più abbassi, più sono vicini */
+    }
+
+    /* 3. Riduce lo spazio sopra i titoli */
+    h1, h2, h3 {
+        margin-top: -10px !important;
+        padding-top: 10px !important;
+    }
+
+    /* 4. Rende i Tab più compatti */
+    button[data-baseweb="tab"] {
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
     <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
         <img src="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" width="40"> 
         <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
