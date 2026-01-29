@@ -292,7 +292,7 @@ with tabs[0]:
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
             # 4. BOTTONI RAPIDI
-            c1, c2, c3, _ = st.columns([1, 1, 1, 2])
+            c1, c2, c3, c4, _ = st.columns([1, 1, 1, 2])
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
             if c2.button("📑 Task", use_container_width=True): modal_task()
             if c3.button("⏱️ Log", use_container_width=True): modal_log()
