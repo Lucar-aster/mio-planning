@@ -414,6 +414,8 @@ with tabs[0]:
 
             formato_it = "%d/%m<br>%a"
             if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+                data_inizio, data_fine = intervallo_date
+                delta_giorni = (data_fine - data_inizio).days
                 x_range = [intervallo_date[0], intervallo_date[1]]
             elif scala == "Settimana":
                 x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
