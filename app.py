@@ -31,8 +31,14 @@ def get_it_date_label(dt):
     
     mese = mesi[dt.month - 1]
     giorno_sett = giorni[dt.weekday()]
-    return f"{giorno_sett} {dt.day:02d}<br>{mese}<br>Sett. {dt.isocalendar()[1]}"
-
+    if delta_giorni <= 15:
+        giorno_sett = giorni[dt.weekday()]
+        return f"{giorno_sett} {dt.day:02d}<br>{mese}<br>Sett. {dt.isocalendar()[1]}"
+    
+    # Vista MESE o TRIMESTRE (Compatta)
+       else:
+        return f"{dt.day:02d} {mese}<br>Sett. {dt.isocalendar()[1]}"
+        
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", layout="wide")
 st.markdown("""
