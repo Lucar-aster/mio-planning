@@ -283,7 +283,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
             width=0.4,
             customdata=df_op[['id', 'operatore', 'task_id', 'inizio', 'fine']],
-            hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[2]}<br>%{customdata[4]} - %{customdata[5]}<br><extra></extra>"
+            hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<br>%{customdata[3]} - %{customdata[4]}<br><extra></extra>"
         ))
 
     fig.update_layout(
