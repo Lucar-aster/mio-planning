@@ -16,9 +16,27 @@ st.markdown("""
 
     /* Rimuove lo spazio bianco lasciato dalla barra */
     .block-container {
-        padding-top: 0rem;
+        padding-top: 0rem!important;
+    }
+    
+    /* Contenitore titolo con margini azzerati */
+    .compact-title {
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        margin-top: -20px;    /* Sposta il titolo verso l'alto */
+        margin-bottom: -15px;  /* Avvicina le Tab al titolo */
     }
 
+    .compact-title h2 {
+        font-size: 22px !important; /* Testo più piccolo */
+        font-weight: 700;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #1E3A8A;
+    }
+    
+    </style>    
     /* Opzionale: Nasconde il menu "hamburger" in alto a destra e il footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -49,7 +67,7 @@ st.markdown("""
         padding-bottom: 0px !important;
     }
     </style>
-    <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0px;">
+    <div class="compact-title">
         <img src="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" width="40"> 
         <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
     </div>
