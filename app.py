@@ -427,9 +427,11 @@ with tabs[0]:
                     x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
                 elif scala == "Mese":
                     x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
-                else:
+                else scala == "Trimestre"::
                     x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
-
+                
+            delta_giorni = (x_range[1] - x_range[0]).days
+            
             if delta_giorni <= 7:
                 x_dtick = 86400000          # Un tick ogni giorno
                 formato_it = "%b<br>%d %a<br>Sett. %V"
