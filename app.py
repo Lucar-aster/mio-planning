@@ -367,6 +367,8 @@ with tabs[0]:
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             with col_f3:
+                attiva_filtro = st.checkbox("Filtra per data", value=False)
+                if attiva_filtro:
                 # Filtro Intervallo Date
                 oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 data_min_default = oggi - timedelta(days=30)
@@ -377,6 +379,9 @@ with tabs[0]:
                     value=(data_min_default, data_max_default),
                     format="DD/MM/YYYY"
                 )
+                else:
+                    intervallo_date = None # Disattivato
+                    
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
 
             df_plot = df.copy()
