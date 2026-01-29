@@ -3,6 +3,16 @@ from supabase import create_client
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import locale
+
+# Prova a impostare il locale in italiano
+try:
+    locale.setlocale(locale.LC_TIME, "it_IT.UTF-8")
+except:
+    try:
+        locale.setlocale(locale.LC_TIME, "it_IT") # Per sistemi Windows
+    except:
+        pass # Se il sistema non ha il pacchetto lingua, ignora
 
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", layout="wide")
