@@ -355,7 +355,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         automargin=True,
         # Impedisce a Plotly di raggruppare troppo se ci sono <br>
         showdividers=True, 
-        dividercolor="grey"
+        dividercolor="grey")
     
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
