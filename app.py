@@ -431,7 +431,6 @@ with tabs[0]:
                 oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 intervallo_date = st.date_input(
                     "Periodo Visibile",
-                    value=( oggi - timedelta(days=30), oggi + timedelta(days=30)),
                     format="DD/MM/YYYY",
                     )
                 
