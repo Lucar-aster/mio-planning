@@ -142,7 +142,7 @@ with tabs[0]:
                 shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.2)", layer="below", line_width=0))
             curr += timedelta(days=1)
 
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_data}, oggi_dt, x_range, delta_val, shapes)
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
