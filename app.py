@@ -441,14 +441,12 @@ with tabs[0]:
             
             # --- 3. WIDGET DATE_INPUT (Senza valori di default) ---
             with col_f3:
-                # Usiamo value=None per tenerlo vuoto. 
-                # La KEY dinamica basata su 'scala' resetta il widget quando cambi visualizzazione.
-                filtro_utente = st.date_input(
+                intervallo_manuale = st.date_input(
                     "Periodo Visibile",
-                    value=[],
+                    value=[],  # Forza il valore vuoto
                     format="DD/MM/YYYY",
-                    key=f"date_picker_{scala}", 
-                    placeholder="Seleziona date..."
+                    key=f"picker_{scala}", # Cambiando la scala, il widget si resetta
+                    placeholder="📅 Seleziona date..."
                 )
 
             df_plot = df.copy()
