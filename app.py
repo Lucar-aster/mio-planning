@@ -8,6 +8,10 @@ import platform
 import textwrap
 import plotly.io as pio
 
+
+st.write("--- TEST VISIBILITÀ ---")
+st.write(f"La scala selezionata è: {scala}")
+
 # Configura Plotly per usare l'italiano nelle date
 pio.templates.default = "plotly_white"
 config_it = dict({
