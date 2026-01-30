@@ -9,14 +9,13 @@ import textwrap
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
-# --- 2. CSS (COMPATTO MA CON SPAZIATURE MIRATE) ---
+# --- 2. CSS: ZERO PADDING SUPERIORE E SPAZIATURE MIRATE ---
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
     .block-container {{ padding-top: 0rem !important; }}
     .compact-title {{ display: flex; align-items: center; gap: 12px; padding-top: 10px; }}
     .compact-title h1 {{ font-size: 26px !important; color: #1E3A8A; margin: 0; }}
-    /* Spazio tra i filtri e i pulsanti */
     .spacer-btns {{ margin-top: 15px; margin-bottom: 10px; }}
     </style>
     <div class="compact-title">
@@ -45,45 +44,70 @@ def get_it_date_label(dt, delta):
         return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
     return f"{dt.day:02d} {mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
-# --- GANTT FRAGMENT (LOGICA RAGGRUPPAMENTO RIPRISTINATA) ---
+# --- MODALI (DIALOGS) ---
+@st.dialog("➕ Nuova Commessa")
+def modal_commessa():
+    n = st.text_input("Nome Commessa")
+    if st.button("Salva"):
+        supabase.table("Commesse").insert({"nome_commessa": n}).execute()
+        st.rerun()
+
+@st.dialog("📑 Nuovo Task")
+def modal_task():
+    cms = {c['nome_commessa']: c['id'] for c in get_data("Commesse")}
+    n = st.text_input("Nome Task")
+    c = st.selectbox("Commessa", options=list(cms.keys()))
+    if st.button("Crea"):
+        supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c]}).execute()
+        st.rerun()
+
+@st.dialog("⏱️ Nuovo Log")
+def modal_log():
+    ops_list = [o['nome'] for o in get_data("Operatori")]
+    tk_data = get_data("Task")
+    cm_data = {c['id']: c['nome_commessa'] for c in get_data("Commesse")}
+    op = st.selectbox("Operatore", ops_list)
+    t_opts = {f"{cm_data.get(t['commessa_id'])} - {t['nome_task']}": t['id'] for t in tk_data}
+    scelta = st.selectbox("Task", list(t_opts.keys()))
+    c1, c2 = st.columns(2)
+    i = c1.date_input("Inizio")
+    f = c2.date_input("Fine")
+    if st.button("Registra"):
+        supabase.table("Log_Tempi").insert({"operatore": op, "task_id": t_opts[scelta], "inizio": str(i), "fine": str(f)}).execute()
+        st.rerun()
+
+# --- 4. GANTT FRAGMENT (LOGICA RAGGRUPPAMENTO RIPRISTINATA) ---
 @st.fragment(run_every=60)
-def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick, delta_giorni, shapes):
+def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     fig = go.Figure()
     
-    # RAGGRUPPAMENTO: Uniamo i log per evitare duplicati visivi nella stessa riga
-    # Sommiamo la durata se lo stesso operatore ha più log nello stesso periodo/task
-    df_grouped = df_plot.groupby(['operatore', 'Commessa', 'Task', 'task_id'], as_index=False).agg({
+    # RAGGRUPPAMENTO ORIGINALE: Uniamo i log per operatore/task
+    df_grouped = df_plot.groupby(['operatore', 'Commessa', 'Task'], as_index=False).agg({
         'Inizio': 'min',
-        'Fine': 'max',
-        'Durata_ms': 'sum',
-        'id': 'first' # Teniamo un ID di riferimento per il click
+        'Durata_ms': 'sum'
     })
 
     for op in df_grouped['operatore'].unique():
         df_op = df_grouped[df_grouped['operatore'] == op]
-        c_wrap = [ "<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
-        t_wrap = [ "<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
-    
-        fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_wrap, t_wrap],
-            orientation='h', name=op, offsetgroup=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=15),
-            width=0.4,
-            customdata=df_op[['id', 'operatore', 'task_id', 'Inizio', 'Fine']],
-            hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<extra></extra>"
-        ))
+        c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
+        t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
         
+        fig.add_trace(go.Bar(
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w],
+            orientation='h', name=op, offsetgroup=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
+            width=0.4, hovertemplate="<b>%{y}</b><br>Operatore: %{name}<extra></extra>"
+        ))
+    
     tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D' if delta_giorni <= 31 else 'W-MON')
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
     fig.update_layout(
-        height=400 + (len(df_plot) * 18),
+        height=400 + (len(df_grouped) * 20),
         margin=dict(l=10, r=10, t=40, b=0),
         shapes=shapes, barmode='group',
-        # RIPRISTINO GRIGLIA X
         xaxis=dict(type="date", side="top", tickmode="array", tickvals=tick_vals, ticktext=tick_text, 
-                   range=x_range, showgrid=True, gridcolor="#e0e0e0", gridwidth=1),
-        # RIPRISTINO LINEE Y E DIVISORI
+                   range=x_range, showgrid=True, gridcolor="#e0e0e0"),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", 
                    showdividers=True, dividercolor="grey", dividerwidth=1),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10))
@@ -95,7 +119,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick, delta_g
 tabs = st.tabs(["📊 Timeline", "⏱️ Log", "⚙️ Setup"])
 
 with tabs[0]:
-    l, tk, cm, ops = get_data("Log_Tempi"), get_data("Task"), get_data("Commesse"), get_data("Operatori")
+    l, tk, cm, ops_list = get_data("Log_Tempi"), get_data("Task"), get_data("Commesse"), get_data("Operatori")
     if l and tk and cm:
         tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
         cm_m = {c['id']: c['nome_commessa'] for c in cm}
@@ -119,11 +143,14 @@ with tabs[0]:
         # SPAZIO E PULSANTI
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b4 = st.columns(4)
+        if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
+        if b2.button("📑 Task", use_container_width=True): modal_task()
+        if b3.button("⏱️ Log", use_container_width=True): modal_log()
         if b4.button("📍 Oggi", use_container_width=True): 
             st.session_state.chart_key += 1
             st.rerun()
 
-        # RANGE E SHAPES (WEEKEND)
+        # RANGE E SHAPES
         oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_p = df.copy()
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
@@ -135,6 +162,7 @@ with tabs[0]:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
 
+        delta_val = (x_range[1] - x_range[0]).days
         shapes = []
         curr = x_range[0] - timedelta(days=2)
         while curr <= x_range[1] + timedelta(days=2):
@@ -142,7 +170,7 @@ with tabs[0]:
                 shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.2)", layer="below", line_width=0))
             curr += timedelta(days=1)
 
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_data}, oggi_dt, x_range, delta_val, shapes)
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, delta_val, shapes)
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
