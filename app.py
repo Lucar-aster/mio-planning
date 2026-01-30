@@ -434,6 +434,7 @@ with tabs[0]:
                     "Periodo Visibile",
                     value=none,
                     format="DD/MM/YYYY",
+                    placeholder="Seleziona date..."
                     )
                 
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
