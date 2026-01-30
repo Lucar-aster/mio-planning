@@ -331,7 +331,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         ticktext=tick_text,    # Le etichette tradotte in italiano
         tickfont=dict(size=10, color="#1E3A8A"),range=x_range, dtick=x_dtick, tickformat="%b<br>%d %a<br>Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
-        legend=dict(orientation="h", y=-0.5, x=0.5, xanchor="center")
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center")
     )
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
