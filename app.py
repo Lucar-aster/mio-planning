@@ -86,30 +86,29 @@ def modal_log():
     
     sel_task = st.selectbox("Task", task_list)
     
-    new_task_id = None
+    new_task_name = ""
     if sel_task == "➕ Aggiungi nuovo task...":
-        nt_name = st.text_input("Nome nuovo task")
-        if nt_name:
-            if st.button("Crea Task"):
-                res = supabase.table("Task").insert({"nome_task": nt_name, "commessa_id": sel_cm_id}).execute()
-                if res.data:
-                    st.success(f"Task '{nt_name}' creato!")
-                    st.rerun()
-    else:
-        new_task_id = task_opts[sel_task]
+        new_task_name = st.text_input("Inserisci nome nuovo task")
 
     c1, c2 = st.columns(2)
     i = c1.date_input("Inizio")
     f = c2.date_input("Fine")
     
-    if st.button("Registra Log", use_container_width=True, disabled=(new_task_id is None)):
-        supabase.table("Log_Tempi").insert({
-            "operatore": op, 
-            "task_id": new_task_id, 
-            "inizio": str(i), 
-            "fine": str(f)
-        }).execute()
-        st.rerun()
+    if st.button("Registra Log", use_container_width=True):
+        target_task_id = None
+        if sel_task == "➕ Aggiungi nuovo task...":
+            if new_task_name.strip():
+                res = supabase.table("Task").insert({"nome_task": new_task_name, "commessa_id": sel_cm_id}).execute()
+                if res.data: target_task_id = res.data[0]['id']
+            else:
+                st.error("Inserisci un nome per il nuovo task")
+                return
+        else:
+            target_task_id = task_opts[sel_task]
+        
+        if target_task_id:
+            supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f)}).execute()
+            st.rerun()
 
 # --- 4. LOGICA MERGE E ETICHETTE ---
 def merge_consecutive_logs(df):
@@ -166,23 +165,16 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         ))
     
     grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    if 15 < delta_giorni <= 40:
-        tick_vals = grid_vals[::2]
-    elif delta_giorni > 40:
-        tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
-    else:
-        tick_vals = grid_vals
+    if 15 < delta_giorni <= 40: tick_vals = grid_vals[::2]
+    elif delta_giorni > 40: tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
+    else: tick_vals = grid_vals
 
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
-        xaxis=dict(
-            type="date", side="top", range=x_range, fixedrange=False,
-            tickmode="array", tickvals=tick_vals, ticktext=tick_text,
-            showgrid=True, gridcolor="#e0e0e0", dtick=86400000.0
-        ),
+        xaxis=dict(type="date", side="top", range=x_range, fixedrange=False, tickmode="array", tickvals=tick_vals, ticktext=tick_text, showgrid=True, gridcolor="#e0e0e0", dtick=86400000.0),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
         clickmode='event+select'
