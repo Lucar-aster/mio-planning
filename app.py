@@ -180,7 +180,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             ticktext=tick_text,
             showgrid=True, 
             gridcolor="#e0e0e0", 
-            dtick=86400000.0
+            dtick=86400000.0 if delta_giorni <= 20 else None
         ),
         yaxis=dict(
             autorange="reversed", 
