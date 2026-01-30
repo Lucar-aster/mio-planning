@@ -161,7 +161,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             showgrid=True, 
             gridcolor="#e0e0e0",
             # Rimosso tickvals e ticktext statici per permettere il refresh al pan
-            tickformat="%a %d\n%b"),
+            tickformat="%a %d %b\nSett. %V",
+            dtick=86400000.0 if delta_giorni <= 40 else "M1"),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
         clickmode='event+select'
