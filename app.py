@@ -360,7 +360,7 @@ tabs = st.tabs(["📊 Timeline", "⏱️ Gestione Log", "⚙️ Configurazione"]
 
 # --- TAB 1: PLANNING ---
 with tabs[0]:
-
+st.error("⚠️ SE VEDI QUESTO MESSAGGIO, IL CODICE È AGGIORNATO!")
     try:
         # Recupero dati globale (fuori dal fragment per efficienza)
         logs = get_data("Log_Tempi")
