@@ -423,57 +423,48 @@ with tabs[0]:
 
             # 3. FILTRI UI
             col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
-            lista_op = sorted(df_raw['operatore'].unique().tolist())
-            f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
-            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
-            
-           # La scala deve essere definita prima perché serve alla KEY del widget date_input
+            # 1. Definiamo la scala PRIMA di tutto
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
-            
-            # --- 2. LOGICA DEL RANGE AUTOMATICO ---
-            formato_it = "%d/%m<br>%a"
-            # Reset del filtro data se si cambia scala (Opzionale, ma aiuta)
-            if f"last_scala" not in st.session_state:
-                st.session_state.last_scala = scala
-            if st.session_state.last_scala != scala:
-                st.session_state.last_scala = scala
-                # Non resettiamo qui per ora, lasciamo che la KEY faccia il lavoro
-            
-            # --- 3. WIDGET DATE_INPUT (Senza valori di default) ---
+
+            # 2. CALCOLO RANGE AUTOMATICO (Variabile interna, NON passata al widget)
+            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            if scala == "Settimana":
+                range_automatico = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
+            elif scala == "Mese":
+                range_automatico = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
+            else: # Trimestre
+                range_automatico = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
+
+            # 3. IL WIDGET (Deve avere value=None o [] per essere vuoto)
             with col_f3:
-                intervallo_manuale = st.date_input(
+                scelta_date = st.date_input(
                     "Periodo Visibile",
-                    value=[],  # Forza il valore vuoto
+                    value=None,            # <--- FORZA IL VUOTO
                     format="DD/MM/YYYY",
-                    key=f"picker_{scala}", # Cambiando la scala, il widget si resetta
-                    placeholder="📅 Seleziona date..."
+                    key=f"p_{scala}",      # <--- RESETTA SE CAMBI SCALA
+                    placeholder="Seleziona date..."
                 )
 
+            # 4. ALTRI FILTRI
+            lista_op = sorted(df['operatore'].unique().tolist())
+            f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
+            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
+
+            # 5. LOGICA DI DECISIONE: Chi comanda il grafico?
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
-            df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
 
-            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        
-            # Controlliamo se l'utente ha selezionato un range VALIDO (2 date)
-            if isinstance(intervallo_manuale, (list, tuple)) and len(intervallo_manuale) == 2:
-                # Comanda l'utente: il widget è popolato
-                x_range = [pd.to_datetime(intervallo_manuale[0]), pd.to_datetime(intervallo_manuale[1])]
-            else:
-                # Il widget è VUOTO: il grafico segue la scala impostata
-                if scala == "Settimana":
-                    x_range = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
-                elif scala == "Mese":
-                    x_range = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
-                else: # Trimestre
-                    x_range = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
-
-            # Se l'utente ha scelto le date, tagliamo il DF per quel periodo
-            if isinstance(intervallo_manuale, (list, tuple)) and len(intervallo_manuale) == 2:
-                mask = (df_plot['Inizio'].dt.date >= intervallo_manuale[0]) & (df_plot['Fine'].dt.date <= intervallo_manuale[1])
+            # CONTROLLO SE IL WIDGET HA DATE
+            if scelta_date and len(scelta_date) == 2:
+                # Se l'utente ha scelto date, usiamo quelle
+                x_range = [pd.to_datetime(scelta_date[0]), pd.to_datetime(scelta_date[1])]
+                mask = (df_plot['Inizio'].dt.date >= scelta_date[0]) & (df_plot['Fine'].dt.date <= scelta_date[1])
                 df_plot = df_plot[mask]
-                
+            else:
+                # Se il widget è vuoto, usiamo la scala automatica
+                x_range = range_automatico
+
             delta_giorni = (x_range[1] - x_range[0]).days
             
             # 4. BOTTONI RAPIDI
