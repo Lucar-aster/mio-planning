@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import locale
 import platform
-
+import textwrap
 import plotly.io as pio
 
 # Configura Plotly per usare l'italiano nelle date
