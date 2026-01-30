@@ -3,482 +3,137 @@ from supabase import create_client
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import locale
 import platform
-
 import plotly.io as pio
 
-# Configura Plotly per usare l'italiano nelle date
-pio.templates.default = "plotly_white"
-config_it = dict({
-    'monthNames': ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
-    'shortMonthNames': ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
-    'dayNames': ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'],
-    'shortDayNames': ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
-})
-
-# Configurazione globale per i widget Streamlit
-# Questo forza il formato DD/MM/YYYY in tutti i date_input
-if "st_format" not in st.session_state:
-    st.date_input = st.date_input
-
-# Prova a impostare il locale in italiano
-def set_it_locale():
-    try:
-        # Su Windows (PC locale)
-        if platform.system() == "Windows":
-            locale.setlocale(locale.LC_ALL, 'ita_it' or 'it_IT')
-        # Su Linux (Streamlit Cloud)
-        else:
-            locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
-    except Exception as e:
-        print(f"Impossibile impostare il locale: {e}")
-
-set_it_locale()
-
-def get_it_date_label(dt):
-    mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
-    giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-    
-    mese = mesi[dt.month - 1]
-    giorno_sett = giorni[dt.weekday()]
-    if delta_giorni <= 15:
-        giorno_sett = giorni[dt.weekday()]
-        return f"{giorno_sett} {dt.day:02d}<br>{mese}<br>Sett. {dt.isocalendar()[1]}"
-    
-    # Vista MESE o TRIMESTRE (Compatta)
-    else:
-        return f"{dt.day:02d} {mese}<br>Sett. {dt.isocalendar()[1]}"
-        
+# 1. CONFIGURAZIONE (DEVE ESSERE LA PRIMA ISTRUZIONE STREAMLIT)
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
-st.set_page_config(page_title="Aster Contract", layout="wide")
+st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
+
+# 2. CSS CUSTOM
 st.markdown("""
     <style>
-    /* Nasconde la barra superiore di Streamlit (Toolbar) */
-    header[data-testid="stHeader"] {
-        visibility: hidden;
-        height: 0%;
-    }
-
-    /* Rimuove lo spazio bianco lasciato dalla barra */
-    .block-container {
-        padding-top: 0rem!important;
-    }
-    
-    /* Contenitore titolo con margini azzerati */
-    .compact-title {
-        display: flex; 
-        align-items: center; 
-        gap: 10px; 
-        margin-top: 0px;    /* Sposta il titolo verso l'alto */
-        margin-bottom: -20px;  /* Avvicina le Tab al titolo */
-    }
-
-    .compact-title h2 {
-        font-size: 18px !important; /* Testo più piccolo */
-        font-weight: 700;
-        margin: 0 !important;
-        padding: 0 !important;
-        color: #1E3A8A;
-    }
-      
-    /* Opzionale: Nasconde il menu "hamburger" in alto a destra e il footer */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* 1. Riduce lo spazio tra i vari elementi (div) di Streamlit */
-    .block-container {
-        max-width: 100% !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        padding-top: 2rem;    /* Spazio in alto alla pagina */
-        padding-bottom: 1rem;
-    }
-    
-    /* 2. Riduce lo spazio tra i singoli widget (bottoni, selectbox, ecc) */
-    [data-testid="stVerticalBlock"] {
-        gap: 0.2rem;          /* Default è 1rem. Più abbassi, più sono vicini */
-    }
-
-    /* 3. Riduce lo spazio sopra i titoli */
-    h1, h2, h3 {
-        margin-top: -10px !important;
-        padding-top: 10px !important;
-    }
-
-    /* 4. Rende i Tab più compatti */
-    button[data-baseweb="tab"] {
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
-    }
-    
+    header[data-testid="stHeader"] { visibility: hidden; height: 0%; }
+    .block-container { padding-top: 1rem!important; }
+    [data-testid="stVerticalBlock"] { gap: 0.5rem; }
     </style>
-    <div class="compact-title">
-        <img src="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" width="40"> 
-        <h1 style="margin: 0; font-family: sans-serif; color: #1E3A8A;">Progetti Aster Contract</h1>
+    <div style='display: flex; align-items: center; gap: 10px;'>
+        <img src='""" + LOGO_URL + """' width='40'>
+        <h1 style='margin: 0; color: #1E3A8A; font-size: 24px;'>Progetti Aster Contract</h1>
     </div>
-    <hr style="margin-top: 5px; margin-bottom: 20px;">
-    """,
-    unsafe_allow_html=True
-)
+    <hr style='margin: 10px 0;'>
+""", unsafe_allow_html=True)
 
-# --- CONNESSIONE A SUPABASE ---
+# 3. CONNESSIONE SUPABASE
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
-st.set_page_config(page_title="Project Planner", page_icon=LOGO_URL, layout="wide")
-
-# --- FUNZIONE RECUPERO DATI ---
-def get_data(table):
-    return supabase.table(table).select("*").execute().data
-
-# --- INIZIALIZZAZIONE SESSION STATE (MODIFICATO: Spostato in alto per sicurezza) ---
+# 4. SESSION STATE
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
-# --- FUNZIONI DI INSERIMENTO (MODALS) ---
-
-@st.dialog("➕ Nuova Commessa")
-def modal_commessa():
-    nome = st.text_input("Nome Commessa")
-    cliente = st.text_input("Cliente (Opzionale)")
-    if st.button("Salva nel Database", type="primary"):
-        if nome:
-            try:
-                supabase.table("Commesse").insert({"nome_commessa": nome, "cliente": cliente}).execute()
-                st.success("Commessa salvata!")
-                st.rerun()
-            except Exception as e: st.error(f"Errore: {e}")
-        else: st.warning("Inserisci il nome della commessa.")
-
-@st.dialog("📑 Nuovo Task")
-def modal_task():
-    res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
-    commesse = {c['nome_commessa']: c['id'] for c in res_c.data}
-    nome_t = st.text_input("Nome del Task")
-    scelta_c = st.selectbox("Associa a Commessa", options=list(commesse.keys()))
-    if st.button("Crea Task", type="primary"):
-        if nome_t:
-            try:
-                supabase.table("Task").insert({"nome_task": nome_t, "commessa_id": commesse[scelta_c]}).execute()
-                st.success("Task creato!")
-                st.rerun()
-            except Exception as e: st.error(f"Errore: {e}")
-
-@st.dialog("⏱️ Nuovo Log Tempi")
-def modal_log():
+# --- FUNZIONI RECUPERO DATI ---
+def get_data(table):
     try:
-        # Recupero dati
-        res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
-        res_t = supabase.table("Task").select("id, nome_task, commessa_id").execute()
-        res_o = supabase.table("Operatori").select("nome").execute()
-        
-        commesse_dict = {c['nome_commessa']: c['id'] for c in res_c.data}
-        operatori_lista = [o['nome'] for o in res_o.data]
-        all_tasks = res_t.data
+        res = supabase.table(table).select("*").execute()
+        return res.data
+    except:
+        return []
 
-        # 1. Selezione Operatore e Commessa
-        operatore = st.selectbox("Seleziona Operatore", options=operatori_lista)
-        scelta_c_nome = st.selectbox("Seleziona Commessa", options=list(commesse_dict.keys()))
-        id_commessa_scelta = commesse_dict[scelta_c_nome]
-
-        # 2. Gestione Task (Esistenti + Opzione Nuovo)
-        tasks_filtrati = {t['nome_task']: t['id'] for t in all_tasks if t['commessa_id'] == id_commessa_scelta}
-        opzioni_task = list(tasks_filtrati.keys())
-        opzione_crea_nuovo = "➕ Crea nuovo task..."
-        opzioni_task.append(opzione_crea_nuovo)
-
-        scelta_t_nome = st.selectbox("Seleziona Task", options=opzioni_task)
-
-        # Se l'utente sceglie di creare un nuovo task, mostra il campo di testo
-        nuovo_task_nome = None
-        if scelta_t_nome == opzione_crea_nuovo:
-            nuovo_task_nome = st.text_input("Inserisci il nome del nuovo task")
-
-        # 3. Date
-        col1, col2 = st.columns(2)
-        inizio = col1.date_input("Data Inizio", datetime.now())
-        fine = col2.date_input("Data Fine", datetime.now())
-        
-        # 4. Salvataggio
-        if st.button("Registra Log", type="primary"):
-            id_task_finale = None
-
-            # CASO A: Nuovo Task da creare
-            if scelta_t_nome == opzione_crea_nuovo:
-                if nuovo_task_nome and nuovo_task_nome.strip() != "":
-                    # Inserisce il nuovo task nel database
-                    res_new_task = supabase.table("Task").insert({
-                        "nome_task": nuovo_task_nome, 
-                        "commessa_id": id_commessa_scelta
-                    }).execute()
-                    if res_new_task.data:
-                        id_task_finale = res_new_task.data[0]['id']
-                else:
-                    st.error("Per favore, inserisci un nome per il nuovo task.")
-                    return
-            
-            # CASO B: Task esistente selezionato
-            else:
-                id_task_finale = tasks_filtrati[scelta_t_nome]
-
-            # Registrazione finale del Log
-            if id_task_finale:
-                supabase.table("Log_Tempi").insert({
-                    "operatore": operatore, 
-                    "task_id": id_task_finale,
-                    "inizio": str(inizio), 
-                    "fine": str(fine)
-                }).execute()
-                st.success("Log registrato con successo!")
-                st.rerun()
-                
-    except Exception as e: 
-        st.error(f"Errore: {e}")
-        
-@st.dialog("📝 Modifica o Elimina Log")
-def modal_edit_log(log_id, data_corrente):
-    try:
-        res_c = supabase.table("Commesse").select("id, nome_commessa").execute()
-        res_t = supabase.table("Task").select("id, nome_task, commessa_id").execute()
-        res_o = supabase.table("Operatori").select("nome").execute()
-        
-        commesse_dict = {c['nome_commessa']: c['id'] for c in res_c.data}
-        inv_commesse_dict = {v: k for k, v in commesse_dict.items()}
-        operatori_lista = [o['nome'] for o in res_o.data]
-        all_tasks = res_t.data
-
-        nuovo_op = st.selectbox("Operatore", options=operatori_lista, 
-                                index=operatori_lista.index(data_corrente['operatore']) if data_corrente['operatore'] in operatori_lista else 0)
-
-        task_attuale = next((t for t in all_tasks if t['id'] == data_corrente['task_id']), None)
-        id_commessa_attuale = task_attuale['commessa_id'] if task_attuale else list(commesse_dict.values())[0]
-        nome_commessa_attuale = inv_commesse_dict.get(id_commessa_attuale, list(commesse_dict.keys())[0])
-
-        scelta_c_nome = st.selectbox("Commessa", options=list(commesse_dict.keys()), 
-                                     index=list(commesse_dict.keys()).index(nome_commessa_attuale))
-        id_commessa_scelta = commesse_dict[scelta_c_nome]
-
-        tasks_filtrati = {t['nome_task']: t['id'] for t in all_tasks if t['commessa_id'] == id_commessa_scelta}
-        if not tasks_filtrati:
-            st.warning("Nessun task trovato per questa commessa.")
-            nuovo_t_id = None
-        else:
-            lista_nomi_t = list(tasks_filtrati.keys())
-            idx_t = list(tasks_filtrati.values()).index(data_corrente['task_id']) if data_corrente['task_id'] in tasks_filtrati.values() else 0
-            nuovo_t_nome = st.selectbox("Task", options=lista_nomi_t, index=idx_t)
-            nuovo_t_id = tasks_filtrati[nuovo_t_nome]
-
-        def safe_date(d):
-            try: return pd.to_datetime(d).date()
-            except: return datetime.now().date()
-
-        col1, col2 = st.columns(2)
-        nuovo_inizio = col1.date_input("Inizio", safe_date(data_corrente['inizio']))
-        nuovo_fine = col2.date_input("Fine", safe_date(data_corrente['fine']))
-
-        st.divider()
-        c1, c2, c3 = st.columns(3)
-        if c1.button("💾 Salva", type="primary", use_container_width=True):
-            if nuovo_t_id:
-                supabase.table("Log_Tempi").update({
-                    "operatore": nuovo_op, "task_id": nuovo_t_id,
-                    "inizio": str(nuovo_inizio), "fine": str(nuovo_fine)
-                }).eq("id", log_id).execute()
-                st.session_state.chart_key += 1
-                st.rerun()
-
-        if c2.button("🗑️ Elimina", type="secondary", use_container_width=True):
-            supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
-            st.session_state.chart_key += 1
-            st.rerun()
-            
-        if c3.button("✖️ Annulla", type="secondary", use_container_width=True):
-            st.session_state.chart_key += 1
-            st.rerun()
-
-    except Exception as e: st.error(f"Errore: {e}")
-
-# --- NEW: FRAGMENT FUNZIONE PER IL GRAFICO (Real-Time 60s) ---
+# --- FRAGMENT GRAFICO ---
 @st.fragment(run_every=60)
-def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it, shapes):
+def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick):
     fig = go.Figure()
-    mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
+    
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
-            orientation='h', name=op, offsetgroup=op,
-            # MODIFICATO: Prende il colore assegnato all'operatore dalla color_map
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
-            width=0.4,
+            base=df_op['Inizio'], 
+            x=df_op['Durata_ms'], 
+            y=[df_op['Commessa'], df_op['Task']],
+            orientation='h', name=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10),
             customdata=df_op[['id', 'operatore', 'task_id', 'inizio', 'fine']],
-            hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<br>%{customdata[3]|%d/%m/%Y} - %{customdata[4]|%d/%m/%Y}<br><extra></extra>"
+            hovertemplate="<b>%{y}</b><br>%{customdata[3]} al %{customdata[4]}<extra></extra>"
         ))
-        
-    frequenza = 'D' if delta_giorni <= 31 else 'W-MON'
-    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq=frequenza)
-    tick_text = [get_it_date_label(d) for d in tick_vals]
-    
+
     fig.update_layout(
-        clickmode='event+select', barmode='group', dragmode='pan', plot_bgcolor="white",
-        height=400 + (len(df_plot.groupby(['Commessa', 'Task'])) * 30),
-        margin=dict(l=10, r=20, t=10, b=10),
-        shapes=shapes,
-        xaxis=dict(type="date", side="top", tickmode="array",       # Forza l'uso dei nostri valori
-        tickvals=tick_vals,    # Le posizioni dei giorni
-        ticktext=tick_text,    # Le etichette tradotte in italiano
-        tickfont=dict(size=10, color="#1E3A8A"),range=x_range, dtick=x_dtick, tickformat="%b<br>%d %a<br>Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
-        yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
-        legend=dict(orientation="h", y=-0.01, x=0.5, xanchor="center")
+        height=450 + (len(df_plot) * 5),
+        margin=dict(l=10, r=10, t=30, b=10),
+        xaxis=dict(type="date", range=x_range, dtick=x_dtick, side="top", gridcolor="#f0f0f0"),
+        yaxis=dict(autorange="reversed", showdividers=True),
+        plot_bgcolor="white",
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.1)
     )
-    fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
+    
+    fig.add_vline(x=oggi_dt.timestamp() * 1000, line_width=2, line_color="red")
+    st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}")
 
-    # MODIFICATO: render del grafico isolato nel fragment
-    event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", 
-                             key=f"gantt_chart_{st.session_state.chart_key}", 
-                             config={'displayModeBar': True,'modeBarButtonsToRemove': [    # ...ma togliamo TUTTO tranne il download
-                                        'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 
-                                        'zoomOut2d', 'autoScale2d', 'resetScale2d'
-                                     ],'scrollZoom': False, 'displaylogo': False,'toImageButtonOptions': {
-                                'format': 'png',
-                                'filename': 'Planning_Aster_Contract',
-                                'scale': 2 # Alta qualità
-                            }})
+# --- INTERFACCIA PRINCIPALE ---
+tabs = st.tabs(["📊 Timeline", "⚙️ Configurazione"])
 
-    # MODIFICATO: Gestione Clic spostata dentro il fragment
-    if event and "selection" in event and event["selection"]["points"]:
-        point = event["selection"]["points"][0]
-        c_data = point["customdata"]
-        modal_edit_log(c_data[0], {
-            "operatore": c_data[1], "task_id": c_data[2], "inizio": c_data[3], "fine": c_data[4]
-        })
-
-# --- NAVIGAZIONE ---
-tabs = st.tabs(["📊 Timeline", "⏱️ Gestione Log", "⚙️ Configurazione"])
-
-# --- TAB 1: PLANNING ---
 with tabs[0]:
-st.error("⚠️ SE VEDI QUESTO MESSAGGIO, IL CODICE È AGGIORNATO!")
-    try:
-        # Recupero dati globale (fuori dal fragment per efficienza)
-        logs = get_data("Log_Tempi")
-        res_tasks = get_data("Task")
-        res_commesse = get_data("Commesse")
-        res_ops = get_data("Operatori")
+    # Caricamento dati
+    logs = get_data("Log_Tempi")
+    res_tasks = get_data("Task")
+    res_commesse = get_data("Commesse")
+    res_ops = get_data("Operatori")
+
+    if logs and res_tasks and res_commesse:
+        # Preparazione DataFrame
+        task_map = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in res_tasks}
+        comm_map = {c['id']: c['nome_commessa'] for c in res_commesse}
         color_map = {o['nome']: o.get('colore', '#8dbad2') for o in res_ops}
+
+        df = pd.DataFrame(logs)
+        df['Inizio'] = pd.to_datetime(df['inizio']).dt.normalize()
+        df['Fine'] = pd.to_datetime(df['fine']).dt.normalize()
+        df['Commessa'] = df['task_id'].apply(lambda x: comm_map.get(task_map.get(x, {}).get('c'), "N/A"))
+        df['Task'] = df['task_id'].apply(lambda x: task_map.get(x, {}).get('n', "N/A"))
+        df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
+
+        # FILTRI UI
+        c1, c2, c3 = st.columns([2, 2, 4])
+        with c1: f_p = st.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
+        with c2: f_o = st.multiselect("Operatori", options=sorted(df['operatore'].unique()))
         
-        if logs and res_tasks and res_commesse:
-            # 1. PREPARAZIONE DATI
-            task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in res_tasks}
-            commessa_map = {c['id']: c['nome_commessa'] for c in res_commesse}
+        with c3:
+            ci1, ci2 = st.columns([1, 1])
+            with ci1:
+                scala = st.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
             
-            df_raw = pd.DataFrame(logs)
-            df_raw['Inizio'] = pd.to_datetime(df_raw['inizio']).dt.normalize()
-            df_raw['Fine'] = pd.to_datetime(df_raw['fine']).dt.normalize()
-            df_raw['Commessa'] = df_raw['task_id'].apply(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
-            df_raw['Task'] = df_raw['task_id'].apply(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
+            filtro_custom = None
+            if scala == "Personalizzato":
+                with ci2:
+                    filtro_custom = st.date_input("Periodo", value=None, format="DD/MM/YYYY")
 
-            # 2. FUSIONE LOG (Logica temporale)
-            df_sorted = df_raw.sort_values(['operatore', 'task_id', 'Inizio'])
-            merged_data = []
-            if not df_sorted.empty:
-                current_row = df_sorted.iloc[0].to_dict()
-                for i in range(1, len(df_sorted)):
-                    next_row = df_sorted.iloc[i].to_dict()
-                    if (next_row['operatore'] == current_row['operatore'] and 
-                        next_row['task_id'] == current_row['task_id'] and 
-                        next_row['Inizio'] <= current_row['Fine'] + timedelta(days=1)):
-                        current_row['Fine'] = max(current_row['Fine'], next_row['Fine'])
-                    else:
-                        merged_data.append(current_row)
-                        current_row = next_row
-                merged_data.append(current_row)
-            df = pd.DataFrame(merged_data)
-            df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
+        # LOGICA RANGE
+        oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        df_plot = df.copy()
+        if f_p: df_plot = df_plot[df_plot['Commessa'].isin(f_p)]
+        if f_o: df_plot = df_plot[df_plot['operatore'].isin(f_o)]
 
-            # 3. FILTRI UI
-            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
-            lista_op = sorted(df_raw['operatore'].unique().tolist())
-            f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
-            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
-            with col_f3:
-                oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                intervallo_date = st.date_input(
-                    "Periodo Visibile",
-                    value=( oggi - timedelta(days=30), oggi + timedelta(days=30)),
-                    format="DD/MM/YYYY",
-                    )
-                
-            scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
-
-            df_plot = df.copy()
-            if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
-            if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
-            df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
-            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
-                data_inizio, data_fine = intervallo_date
-                # Convertiamo in datetime per il confronto
-                mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
-                df_plot = df_plot[mask]
-
-            # 4. BOTTONI RAPIDI
-            c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
-            if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
-            if c2.button("📑 Task", use_container_width=True): modal_task()
-            if c3.button("⏱️ Log", use_container_width=True): modal_log()
-            if c4.button("📍 Oggi", use_container_width=True):
-                # Forziamo il reset della scala e il refresh del grafico
-                st.session_state.chart_key += 1 
-                st.rerun()
-            st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-            # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
-            oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            x_min_sh = oggi - timedelta(days=100); x_max_sh = oggi + timedelta(days=100)
-            festivita_it = ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"]
-            shapes = []
-            curr = x_min_sh
-            while curr <= x_max_sh:
-                if curr.weekday() >= 5 or curr.strftime("%d-%m") in festivita_it:
-                    shapes.append(dict(type="rect", x0=curr.strftime("%Y-%m-%d 00:00:00"), x1=(curr + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00"),
-                                       y0=0, y1=1, yref="paper", fillcolor="rgba(180, 180, 180, 0.3)", layer="below", line_width=0))
-                curr += timedelta(days=1)
-
-            formato_it = "%d/%m<br>%a"
-            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
-                x_range = [pd.to_datetime(intervallo_date[0]), pd.to_datetime(intervallo_date[1])]
-            else:
-                if scala == "Settimana":
-                    x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
-                elif scala == "Mese":
-                    x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
-                else:
-                    x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
-                
-            delta_giorni = (x_range[1] - x_range[0]).days
-            
-            if delta_giorni <= 7:
-                x_dtick = 86400000          # Un tick ogni giorno
-                formato_it = "%b<br>%d %a<br>Sett. %V"
-            elif delta_giorni <= 31:
-                x_dtick = 86400000 * 2      # Ogni 2 giorni
-                formato_it = "%b<br>%d %a<br>Sett. %V"
-            elif delta_giorni <= 90:
-                x_dtick = 86400000 * 7      # Ogni settimana (Lunedì)
-                formato_it = "%b<br>Sett. %V"
-            else:
-                x_dtick = 86400000 * 14     # Ogni 2 settimane
-                formato_it = "%b<br>Sett. %V"
-
-            # --- NEW: CHIAMATA AL FRAGMENT ---
-            render_gantt_fragment(df_plot, color_map, oggi, x_range, x_dtick, formato_it, shapes)
-
+        if scala == "Personalizzato" and filtro_custom and len(filtro_custom) == 2:
+            x_range = [pd.to_datetime(filtro_custom[0]), pd.to_datetime(filtro_custom[1])]
         else:
-            st.info("Benvenuto! Inizia creando una commessa e un task.")
-            if st.button("Aggiungi la prima Commessa"): modal_commessa()
-    except Exception as e: st.error(f"Errore: {e}")
+            days = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
+            x_range = [oggi_dt - timedelta(days=days), oggi_dt + timedelta(days=days)]
+
+        delta = (x_range[1] - x_range[0]).days
+        x_dtick = 86400000 if delta <= 7 else 86400000 * 7
+
+        # BOTTONI
+        bc1, bc2, bc3 = st.columns([1,1,1])
+        if bc1.button("📍 Oggi"): 
+            st.session_state.chart_key += 1
+            st.rerun()
+
+        # RENDER
+        render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick)
+    else:
+        st.info("Nessun dato disponibile.")
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
