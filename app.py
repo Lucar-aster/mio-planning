@@ -432,7 +432,7 @@ with tabs[0]:
                 oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 intervallo_date = st.date_input(
                     "Periodo Visibile",
-                    value=[],
+                    value=none,
                     format="DD/MM/YYYY",
                     )
                 
@@ -477,12 +477,13 @@ with tabs[0]:
                 delta_giorni = (x_range[1] - x_range[0]).days
             else:
                 if scala == "Settimana":
-                    x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
+                    offset = 4; x_dtick = 86400000 
                 elif scala == "Mese":
-                    x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
+                    offset = 15; x_dtick = 86400000 * 2
                 else:
-                    x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
-                
+                    offset = 45; x_dtick = 86400000 * 7
+
+            x_range = [oggi - timedelta(days=offset), oggi + timedelta(days=offset)]
             delta_giorni = (x_range[1] - x_range[0]).days
             
             if delta_giorni <= 7:
