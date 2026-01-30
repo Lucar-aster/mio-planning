@@ -161,6 +161,29 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<extra></extra>"
         ))
+    # --- GENERAZIONE DINAMICA WEEKEND E GRIGLIA ---
+    all_shapes = []
+    # Estendiamo il range di 6 mesi per coprire il PAN
+    start_pan = x_range[0] - timedelta(days=180)
+    end_pan = x_range[1] + timedelta(days=180)
+    
+    curr = start_pan
+    while curr <= end_pan:
+        # 1. Linea giornaliera (Griglia)
+        all_shapes.append(dict(
+            type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper",
+            line=dict(color="#e0e0e0", width=1), layer="below"
+        ))
+        
+        # 2. Rettangolo Weekend (Sabato e Domenica)
+        if curr.weekday() >= 5:  # 5=Sabato, 6=Domenica
+            all_shapes.append(dict(
+                type="rect",
+                x0=curr, x1=curr + timedelta(days=1),
+                y0=0, y1=1, yref="paper",
+                fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"
+            ))
+        curr += timedelta(days=1)
     
     # --- Gestione Asse X Dinamica ---
     # Definiamo i confini dell'area "cuscinetto" per il PAN
@@ -195,15 +218,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             showgrid=False, 
             zeroline=False,
             anchor="y"
-        ),
-        # ASSE SECONDARIO: Gestisce solo la GRIGLIA GIORNALIERA
-        xaxis2=dict(
-            type="date", range=x_range, fixedrange=False,
-            overlaying="x", side="top", showticklabels=False,
-            tickmode="linear", dtick=86400000.0, # Un segno ogni giorno
-            showgrid=True, gridcolor="#e0e0e0", 
-            zeroline=False, anchor="y",
-            layer="below traces"
         ),
         yaxis=dict(
             autorange="reversed", 
