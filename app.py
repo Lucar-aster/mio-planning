@@ -364,16 +364,16 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
 
     # TESTO A CAPO
     def a_capo_testo(testo, max_len=15):
-    if isinstance(testo, str) and len(testo) > max_len:
-        # Trova uno spazio vicino alla metà per non tagliare le parole
-        meta = len(testo) // 2
-        spazio_vicino = testo.find(' ', meta - 5, meta + 5)
-        if spazio_vicino != -1:
-            return testo[:spazio_vicino] + '<br>' + testo[spazio_vicino+1:]
-        else:
-            # Se non ci sono spazi, taglia brutalmente a metà
-            return testo[:meta] + '<br>' + testo[meta:]
-    return testo
+        if isinstance(testo, str) and len(testo) > max_len:
+            # Trova uno spazio vicino alla metà per non tagliare le parole
+            meta = len(testo) // 2
+            spazio_vicino = testo.find(' ', meta - 5, meta + 5)
+            if spazio_vicino != -1:
+                return testo[:spazio_vicino] + '<br>' + testo[spazio_vicino+1:]
+            else:
+                # Se non ci sono spazi, taglia brutalmente a metà
+                return testo[:meta] + '<br>' + testo[meta:]
+        return testo
 
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "⏱️ Gestione Log", "⚙️ Configurazione"])
