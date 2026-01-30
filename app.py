@@ -5,12 +5,8 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import locale
 import platform
-import textwrap
+
 import plotly.io as pio
-
-
-st.write("--- TEST VISIBILITÀ ---")
-st.write(f"La scala selezionata è: {scala}")
 
 # Configura Plotly per usare l'italiano nelle date
 pio.templates.default = "plotly_white"
@@ -22,7 +18,9 @@ config_it = dict({
 })
 
 # Configurazione globale per i widget Streamlit
-
+# Questo forza il formato DD/MM/YYYY in tutti i date_input
+if "st_format" not in st.session_state:
+    st.date_input = st.date_input
 
 # Prova a impostare il locale in italiano
 def set_it_locale():
@@ -129,6 +127,8 @@ URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
+st.set_page_config(page_title="Project Planner", page_icon=LOGO_URL, layout="wide")
+
 # --- FUNZIONE RECUPERO DATI ---
 def get_data(table):
     return supabase.table(table).select("*").execute().data
@@ -136,8 +136,7 @@ def get_data(table):
 # --- INIZIALIZZAZIONE SESSION STATE (MODIFICATO: Spostato in alto per sicurezza) ---
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
-if "intervallo_filtro" not in st.session_state:
-    st.session_state.intervallo_filtro = [] # Vuoto al primo avvio
+
 # --- FUNZIONI DI INSERIMENTO (MODALS) ---
 
 @st.dialog("➕ Nuova Commessa")
@@ -304,28 +303,15 @@ def modal_edit_log(log_id, data_corrente):
 # --- NEW: FRAGMENT FUNZIONE PER IL GRAFICO (Real-Time 60s) ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it, shapes):
-    import textwrap
     fig = go.Figure()
     mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
-    
-    def apply_wrap(val, width):
-        if not val or val == "N/A": return ""
-        # textwrap crea una lista di righe, <br> le unisce per l'HTML di Plotly
-        lines = textwrap.wrap(str(val), width=width, break_long_words=False)
-        return "<br>".join(lines)
-    
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
-        commesse_wrapped = [apply_wrap(c, 15) for c in df_op['Commessa']]
-        tasks_wrapped = [apply_wrap(t, 20) for t in df_op['Task']]
-    
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], 
-            x=df_op['Durata_ms'], 
-            y=[commesse_wrapped, tasks_wrapped],
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
             orientation='h', name=op, offsetgroup=op,
             # MODIFICATO: Prende il colore assegnato all'operatore dalla color_map
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=15), 
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
             width=0.4,
             customdata=df_op[['id', 'operatore', 'task_id', 'inizio', 'fine']],
             hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<br>%{customdata[3]|%d/%m/%Y} - %{customdata[4]|%d/%m/%Y}<br><extra></extra>"
@@ -340,7 +326,6 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         height=400 + (len(df_plot.groupby(['Commessa', 'Task'])) * 30),
         margin=dict(l=10, r=20, t=10, b=10),
         shapes=shapes,
-        automargin=True,
         xaxis=dict(type="date", side="top", tickmode="array",       # Forza l'uso dei nostri valori
         tickvals=tick_vals,    # Le posizioni dei giorni
         ticktext=tick_text,    # Le etichette tradotte in italiano
@@ -348,16 +333,6 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.01, x=0.5, xanchor="center")
     )
-
-    fig.update_yaxes(
-        type='category',
-        # Questa impostazione forza Plotly a mostrare tutte le etichette
-        tickmode='linear', 
-        automargin=True,
-        # Impedisce a Plotly di raggruppare troppo se ci sono <br>
-        showdividers=True, 
-        dividercolor="grey")
-    
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
     # MODIFICATO: render del grafico isolato nel fragment
@@ -423,94 +398,82 @@ with tabs[0]:
             df = pd.DataFrame(merged_data)
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
-            # --- 3. FILTRI UI (SISTEMATI) ---
-            col_f1, col_f2, col_f3 = st.columns([2, 2, 4])
-
-            with col_f1:
-                f_commessa = st.multiselect("Progetti", options=sorted(df['Commessa'].unique()), key="filter_commessa")
-
-            with col_f2:
-                f_operatore = st.multiselect("Operatori", options=sorted(df['operatore'].unique()), key="filter_op")
-
+            # 3. FILTRI UI
+            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
+            lista_op = sorted(df_raw['operatore'].unique().tolist())
+            f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
+            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             with col_f3:
-                # Creiamo due sotto-colonne INTERNE a col_f3
-                c_scala, c_date = st.columns([1, 1])
-
-                with c_scala:
-                    scala = st.selectbox(
-                        "Visualizzazione", 
-                        ["Settimana", "Mese", "Trimestre", "Personalizzato"], 
-                        index=1,
-                        key="select_scala"
+                oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                intervallo_date = st.date_input(
+                    "Periodo Visibile",
+                    value=( oggi - timedelta(days=30), oggi + timedelta(days=30)),
+                    format="DD/MM/YYYY",
                     )
+                
+            scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
 
-                # Il widget appare SOLO se la scala è "Personalizzato" ed è DENTRO col_f3
-                filtro_custom = None
-                if scala == "Personalizzato":
-                    with c_date:
-                        filtro_custom = st.date_input(
-                            "Scegli Periodo",
-                            value=None,
-                            format="DD/MM/YYYY",
-                            placeholder="Inizio - Fine",
-                            key="date_picker_custom"
-                        )
-
-            # --- 4. LOGICA DI CALCOLO DEL RANGE ---
-            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             df_plot = df.copy()
-
-            # Applicazione filtri Progetti/Operatori
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
-
-            if scala == "Personalizzato" and filtro_custom and len(filtro_custom) == 2:
-                # Comanda l'utente
-                x_range = [pd.to_datetime(filtro_custom[0]), pd.to_datetime(filtro_custom[1])]
-                mask = (df_plot['Inizio'].dt.date >= filtro_custom[0]) & (df_plot['Fine'].dt.date <= filtro_custom[1])
+            df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
+            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+                data_inizio, data_fine = intervallo_date
+                # Convertiamo in datetime per il confronto
+                mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
                 df_plot = df_plot[mask]
-            else:
-                # Comandano le scale predefinite
-                if scala == "Settimana":
-                    x_range = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
-                elif scala == "Mese":
-                    x_range = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
-                else: 
-                    x_range = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
 
-            delta_giorni = (x_range[1] - x_range[0]).days
-            
-            # --- 5. BOTTONI RAPIDI ---
-            # (Ho rimosso c5 perché ne usavi solo 4, riducendo lo spreco di spazio)
-            c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
+            # 4. BOTTONI RAPIDI
+            c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
             if c2.button("📑 Task", use_container_width=True): modal_task()
             if c3.button("⏱️ Log", use_container_width=True): modal_log()
             if c4.button("📍 Oggi", use_container_width=True):
+                # Forziamo il reset della scala e il refresh del grafico
                 st.session_state.chart_key += 1 
                 st.rerun()
-            
             st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-            # --- 6. LOGICA WEEKEND / TICK ---
+            # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
+            oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            x_min_sh = oggi - timedelta(days=100); x_max_sh = oggi + timedelta(days=100)
             festivita_it = ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"]
             shapes = []
-            curr = x_range[0] - timedelta(days=10) # Ottimizzato il calcolo shapes sul range visibile
-            end_sh = x_range[1] + timedelta(days=10)
-            while curr <= end_sh:
+            curr = x_min_sh
+            while curr <= x_max_sh:
                 if curr.weekday() >= 5 or curr.strftime("%d-%m") in festivita_it:
                     shapes.append(dict(type="rect", x0=curr.strftime("%Y-%m-%d 00:00:00"), x1=(curr + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00"),
                                        y0=0, y1=1, yref="paper", fillcolor="rgba(180, 180, 180, 0.3)", layer="below", line_width=0))
                 curr += timedelta(days=1)
 
-            # Definizione x_dtick in base ai giorni
-            if delta_giorni <= 7: x_dtick = 86400000 
-            elif delta_giorni <= 31: x_dtick = 86400000 * 2
-            elif delta_giorni <= 90: x_dtick = 86400000 * 7
-            else: x_dtick = 86400000 * 14
+            formato_it = "%d/%m<br>%a"
+            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+                x_range = [pd.to_datetime(intervallo_date[0]), pd.to_datetime(intervallo_date[1])]
+            else:
+                if scala == "Settimana":
+                    x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
+                elif scala == "Mese":
+                    x_range = [oggi - timedelta(days=15), oggi + timedelta(days=16)]; x_dtick = 86400000 * 2
+                else:
+                    x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]; x_dtick = 86400000 * 7
+                
+            delta_giorni = (x_range[1] - x_range[0]).days
+            
+            if delta_giorni <= 7:
+                x_dtick = 86400000          # Un tick ogni giorno
+                formato_it = "%b<br>%d %a<br>Sett. %V"
+            elif delta_giorni <= 31:
+                x_dtick = 86400000 * 2      # Ogni 2 giorni
+                formato_it = "%b<br>%d %a<br>Sett. %V"
+            elif delta_giorni <= 90:
+                x_dtick = 86400000 * 7      # Ogni settimana (Lunedì)
+                formato_it = "%b<br>Sett. %V"
+            else:
+                x_dtick = 86400000 * 14     # Ogni 2 settimane
+                formato_it = "%b<br>Sett. %V"
 
-            # --- 7. RENDER ---
-            render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick, "%d/%m", shapes)
+            # --- NEW: CHIAMATA AL FRAGMENT ---
+            render_gantt_fragment(df_plot, color_map, oggi, x_range, x_dtick, formato_it, shapes)
 
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
