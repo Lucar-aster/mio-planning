@@ -472,8 +472,9 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
+            if isinstance(intervallo_date, (list, tuple)) and len(intervallo_date) == 2:
                 x_range = [pd.to_datetime(intervallo_date[0]), pd.to_datetime(intervallo_date[1])]
+                delta_giorni = (x_range[1] - x_range[0]).days
             else:
                 if scala == "Settimana":
                     x_range = [oggi - timedelta(days=3), oggi + timedelta(days=5)]; x_dtick = 86400000 
