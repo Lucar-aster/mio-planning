@@ -162,18 +162,18 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<extra></extra>"
         ))
     
-    # --- Gestione Asse X per PAN fluido in Italiano ---
-    # Generiamo un range di etichette molto ampio (6 mesi prima e dopo) 
-    # così il PAN non fa sparire i testi.
-    tick_range = pd.date_range(start=x_range[0] - timedelta(days=180), 
-                               end=x_range[1] + timedelta(days=180), freq='D')
-    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
-
-   # 2. FILTRIAMO: Se delta_giorni > 20, prendiamo solo 1 giorno ogni 7 (freq='W-MON')
+    # --- Gestione Asse X Dinamica ---
+    # Definiamo i confini dell'area "cuscinetto" per il PAN
+    start_buffer = x_range[0] - timedelta(days=180)
+    end_buffer = x_range[1] + timedelta(days=180)
+    
+    # Scegliamo la frequenza in base alla scala
     if delta_giorni > 20:
-        tick_range = pd.date_range(start=full_range[0], end=full_range[-1], freq='W-MON')
+        # Vista ampia: un tick ogni Lunedì
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
     else:
-        tick_range = full_range
+        # Vista stretta: un tick ogni giorno
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
 
     # 3. Generiamo i testi solo per i giorni filtrati
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
