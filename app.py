@@ -333,6 +333,13 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.01, x=0.5, xanchor="center")
     )
+    
+    fig.update_yaxes(
+    tickmode='linear',
+    automargin=True,  # Fondamentale per far spazio al testo su più righe
+    tickfont=dict(size=10) # Se il testo è su due righe, un font leggermente più piccolo aiuta
+    )
+    
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
     # MODIFICATO: render del grafico isolato nel fragment
@@ -354,6 +361,19 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         modal_edit_log(c_data[0], {
             "operatore": c_data[1], "task_id": c_data[2], "inizio": c_data[3], "fine": c_data[4]
         })
+
+    # TESTO A CAPO
+    def a_capo_testo(testo, max_len=15):
+    if isinstance(testo, str) and len(testo) > max_len:
+        # Trova uno spazio vicino alla metà per non tagliare le parole
+        meta = len(testo) // 2
+        spazio_vicino = testo.find(' ', meta - 5, meta + 5)
+        if spazio_vicino != -1:
+            return testo[:spazio_vicino] + '<br>' + testo[spazio_vicino+1:]
+        else:
+            # Se non ci sono spazi, taglia brutalmente a metà
+            return testo[:meta] + '<br>' + testo[meta:]
+    return testo
 
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "⏱️ Gestione Log", "⚙️ Configurazione"])
