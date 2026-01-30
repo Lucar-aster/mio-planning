@@ -431,7 +431,8 @@ with tabs[0]:
                     "Periodo Visibile",
                     value=None,
                     format="DD/MM/YYYY",
-                    key="filtro_date_manuale"
+                    key=f"date_picker_{scala}", 
+                    placeholder="Seleziona date..."
                     )
                 
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
