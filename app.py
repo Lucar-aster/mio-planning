@@ -130,65 +130,86 @@ def get_it_date_label(dt, delta):
 # --- 5. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    if df_plot.empty: st.info("Nessun dato trovato."); return
+    if df_plot.empty: 
+        st.info("Nessun dato trovato.")
+        return
+        
     df_merged = merge_consecutive_logs(df_plot)
-    # Configurazione lingua italiana per Plotly
-    import plotly.io as pio
-    pio.templates.default = "plotly_white"
-    
-    # Definisco la configurazione italiana
-    config_it = dict(
-        name="it",
-        periods=["AM", "PM"],
-        days=["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
-        shortDays=["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"],
-        months=["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"],
-        shortMonths=["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"],
-        date="%d/%m/%Y"
-    )
-    
     fig = go.Figure()
-    fig.update_layout(separators=",.", font=dict(family="Arial"))
+    
+    # --- Rendering Barre ---
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
+        
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w],
-            orientation='h', name=op, alignmentgroup="g1", offsetgroup=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4, 
+            base=df_op['Inizio'], 
+            x=df_op['Durata_ms'], 
+            y=[c_w, t_w],
+            orientation='h', 
+            name=op, 
+            alignmentgroup="g1", 
+            offsetgroup=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), 
+            width=0.4, 
             customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<extra></extra>"
         ))
     
-    grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    if 15 < delta_giorni <= 40: tick_vals = grid_vals[::2]
-    elif delta_giorni > 40: tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
-    else: tick_vals = grid_vals
+    # --- Gestione Asse X per PAN fluido in Italiano ---
+    # Generiamo un range di etichette molto ampio (6 mesi prima e dopo) 
+    # così il PAN non fa sparire i testi.
+    tick_range = pd.date_range(start=x_range[0] - timedelta(days=180), 
+                               end=x_range[1] + timedelta(days=180), freq='D')
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
     
-    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     fig.update_layout(
-        height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
-        margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
-        xaxis=dict(type="date", 
+        height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35), # Altezza dinamica OK
+        margin=dict(l=10, r=10, t=40, b=0), 
+        shapes=shapes, 
+        barmode='overlay', 
+        dragmode='pan',
+        xaxis=dict(
+            type="date", 
             side="top", 
             range=x_range, 
             fixedrange=False, 
+            tickmode="array",
+            tickvals=tick_range,
+            ticktext=tick_text,
             showgrid=True, 
-            gridcolor="#e0e0e0",
-            # Rimosso tickvals e ticktext statici per permettere il refresh al pan
-            tickformat="%a %d %b\nSett. %V",
-            hoverformat="%d %b %Y",
-            dtick=86400000.0 if delta_giorni <= 40 else "M1"),
-        yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
+            gridcolor="#e0e0e0", 
+            dtick=86400000.0
+        ),
+        yaxis=dict(
+            autorange="reversed", 
+            showgrid=True, 
+            gridcolor="#f0f0f0", 
+            showdividers=True, 
+            dividercolor="grey", 
+            fixedrange=True
+        ),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
-        clickmode='event+select'
+        clickmode='event+select' # Click per modale OK
     )
+    
     fig.add_vline(x=oggi_dt.timestamp() * 1000, line_width=2, line_color="red")
-    selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'scrollZoom': False, 'displayModeBar': False})
+    
+    # --- Plotly Chart ---
+    selected = st.plotly_chart(
+        fig, 
+        use_container_width=True, 
+        key=f"gantt_{st.session_state.chart_key}", 
+        on_select="rerun", 
+        config={'scrollZoom': False, 'displayModeBar': False}
+    )
+    
+    # --- Logica di selezione per Modifica ---
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
-        if p and "customdata" in p[0]: modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
+        if p and "customdata" in p[0]:
+            modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
 # --- 6. MAIN UI ---
 tabs = st.tabs(["📊 Timeline", "📋 Dati", "⚙️ Setup"])
