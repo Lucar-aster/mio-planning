@@ -121,17 +121,7 @@ st.markdown("""
     """,
     unsafe_allow_html=True
 )
-    # TESTO A CAPO
-def formatta_colonne_y(row):
-    import textwrap
-    c = "<br>".join(textwrap.wrap(str(row['commessa']), width=15))
-    t = "<br>".join(textwrap.wrap(str(row['task_nome']), width=15))
-    return f"<b>{c}</b> │ {t}"
 
-if not df_gantt.empty:
-    df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
-    
-df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
 
 # --- CONNESSIONE A SUPABASE ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -310,6 +300,18 @@ def modal_edit_log(log_id, data_corrente):
             st.rerun()
 
     except Exception as e: st.error(f"Errore: {e}")
+
+    # TESTO A CAPO
+def formatta_colonne_y(row):
+    import textwrap
+    c = "<br>".join(textwrap.wrap(str(row['commessa']), width=15))
+    t = "<br>".join(textwrap.wrap(str(row['task_nome']), width=15))
+    return f"<b>{c}</b> │ {t}"
+
+if not df_gantt.empty:
+    df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
+    
+df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
 
 # --- NEW: FRAGMENT FUNZIONE PER IL GRAFICO (Real-Time 60s) ---
 @st.fragment(run_every=60)
