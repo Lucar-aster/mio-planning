@@ -128,15 +128,18 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w],
             orientation='h', name=op, alignmentgroup="g1", offsetgroup=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
-            width=0.4, customdata=df_op[['id', 'operatore', 'Inizio', 'Fine']],
-            hovertemplate="<b>%{name}</b><br>Inizio: %{customdata[2]|%d/%m/%Y}<br>Fine: %{customdata[3]|%d/%m/%Y}<extra></extra>"
+            width=0.4, 
+            customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
+            # NUOVO HOVERTEMPLTE RICHIESTO
+            hovertemplate=(
+                "<b>%{customdata[4]} - %{customdata[5]}</b><br>" +
+                "%{customdata[1]}<br>" +
+                "%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}" +
+                "<extra></extra>"
+            )
         ))
     
-    # --- LOGICA ASSE X RICHIESTA ---
-    # Linee della griglia per ogni giorno
     grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    
-    # Etichette dinamiche: 1 ogni 2 giorni se scala Mese (delta > 15), altrimenti tutti i giorni
     if 15 < delta_giorni <= 40:
         tick_vals = grid_vals[::2]
     elif delta_giorni > 40:
@@ -152,8 +155,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         xaxis=dict(
             type="date", side="top", range=x_range, fixedrange=False,
             tickmode="array", tickvals=tick_vals, ticktext=tick_text,
-            showgrid=True, gridcolor="#e0e0e0", 
-            dtick=86400000.0 # Forza una linea della griglia ogni giorno (ms in un giorno)
+            showgrid=True, gridcolor="#e0e0e0", dtick=86400000.0
         ),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
@@ -220,7 +222,6 @@ with tabs[0]:
             curr += timedelta(days=1)
         
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
-
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
