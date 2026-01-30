@@ -193,7 +193,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             tickvals=tick_range,
             ticktext=tick_text,
             showgrid=True, 
-            gridcolor="#e0e0e0", 
+            gridcolor="#e0e0e0",
+            dtick=86400000.0
         ),
         yaxis=dict(
             autorange="reversed", 
