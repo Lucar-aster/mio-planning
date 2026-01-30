@@ -274,7 +274,9 @@ with tabs[2]:
         st.subheader("Elenco Operatori")
         if ops_list:
             df_o = pd.DataFrame(ops_list)
-            st.dataframe(df_o[["nome", "colore"]], use_container_width=True, hide_index=True)
+            st.dataframe(df_o[["nome", "colore"]].style.apply(lambda x: [f"background-color: {val}" for val in df_o['colore']], subset=['colore']), 
+                use_container_width=True, 
+                hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
                 o_sel = st.selectbox("Seleziona operatore", ops_list, format_func=lambda x: x["nome"])
                 n_o = st.text_input("Nome", value=o_sel["nome"])
@@ -298,8 +300,9 @@ with tabs[2]:
         if tk and cm:
             df_t = pd.DataFrame(tk)
             c_map = {c['id']: c['nome_commessa'] for c in cm}
-            df_t['Progetto'] = df_t['commessa_id'].map(c_map)
-            st.dataframe(df_t[["nome_task", "Progetto"]], use_container_width=True, hide_index=True)
+            df_t['Commessa'] = df_t['commessa_id'].map(c_map)
+            df_t = df_t[["Commessa", "Task"]]
+            st.dataframe(df_t, use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
                 t_sel = st.selectbox("Seleziona task", tk, format_func=lambda x: x["nome_task"])
                 n_t = st.text_input("Rinomina", value=t_sel["nome_task"])
