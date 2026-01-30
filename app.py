@@ -421,21 +421,28 @@ with tabs[0]:
             df = pd.DataFrame(merged_data)
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
-            # 3. FILTRI UI
+            # --- 3. FILTRI UI (SISTEMATI) ---
             col_f1, col_f2, col_f3 = st.columns([2, 2, 4])
 
+            with col_f1:
+                f_commessa = st.multiselect("Progetti", options=sorted(df['Commessa'].unique()), key="filter_commessa")
+
+            with col_f2:
+                f_operatore = st.multiselect("Operatori", options=sorted(df['operatore'].unique()), key="filter_op")
+
             with col_f3:
-                # Creiamo due sotto-colonne per mettere selectbox e date_input affiancati
+                # Creiamo due sotto-colonne INTERNE a col_f3
                 c_scala, c_date = st.columns([1, 1])
 
                 with c_scala:
                     scala = st.selectbox(
                         "Visualizzazione", 
                         ["Settimana", "Mese", "Trimestre", "Personalizzato"], 
-                        index=1
+                        index=1,
+                        key="select_scala"
                     )
 
-            # Il widget delle date appare SOLO se la scala è "Personalizzato"
+                # Il widget appare SOLO se la scala è "Personalizzato" ed è DENTRO col_f3
                 filtro_custom = None
                 if scala == "Personalizzato":
                     with c_date:
@@ -443,24 +450,21 @@ with tabs[0]:
                             "Scegli Periodo",
                             value=None,
                             format="DD/MM/YYYY",
-                            placeholder="Inizio - Fine"
+                            placeholder="Inizio - Fine",
+                            key="date_picker_custom"
                         )
-            # --- 2. ALTRI FILTRI (Operatori e Progetti) ---
-            f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
-            f_operatore = col_f2.multiselect("Operatori", options=sorted(df['operatore'].unique()))
 
-            # --- 3. LOGICA DI CALCOLO DEL RANGE ---
+            # --- 4. LOGICA DI CALCOLO DEL RANGE ---
             oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             df_plot = df.copy()
 
-            # Applichiamo filtri multiselect
+            # Applicazione filtri Progetti/Operatori
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
 
             if scala == "Personalizzato" and filtro_custom and len(filtro_custom) == 2:
-                # Comanda l'utente con le date scelte
+                # Comanda l'utente
                 x_range = [pd.to_datetime(filtro_custom[0]), pd.to_datetime(filtro_custom[1])]
-                # Filtriamo il dataframe per mostrare solo i task nel range scelto
                 mask = (df_plot['Inizio'].dt.date >= filtro_custom[0]) & (df_plot['Fine'].dt.date <= filtro_custom[1])
                 df_plot = df_plot[mask]
             else:
@@ -469,52 +473,41 @@ with tabs[0]:
                     x_range = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
                 elif scala == "Mese":
                     x_range = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
-                else: # Trimestre (anche se l'utente seleziona Custom ma non sceglie le date, diamo il trimestre di default)
+                else: 
                     x_range = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
 
-            # Calcolo delta per i tick del grafico
             delta_giorni = (x_range[1] - x_range[0]).days
             
-            # 4. BOTTONI RAPIDI
-            c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
+            # --- 5. BOTTONI RAPIDI ---
+            # (Ho rimosso c5 perché ne usavi solo 4, riducendo lo spreco di spazio)
+            c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
             if c2.button("📑 Task", use_container_width=True): modal_task()
             if c3.button("⏱️ Log", use_container_width=True): modal_log()
             if c4.button("📍 Oggi", use_container_width=True):
-                # Forziamo il reset della scala e il refresh del grafico
                 st.session_state.chart_key += 1 
                 st.rerun()
+            
             st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-            # 5. LOGICA WEEKEND / SCALA (Costanti per il fragment)
-            oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            x_min_sh = oggi - timedelta(days=100); x_max_sh = oggi + timedelta(days=100)
+            # --- 6. LOGICA WEEKEND / TICK ---
             festivita_it = ["01-01", "06-01", "25-04", "01-05", "02-06", "15-08", "01-11", "08-12", "25-12", "26-12"]
             shapes = []
-            curr = x_min_sh
-            while curr <= x_max_sh:
+            curr = x_range[0] - timedelta(days=10) # Ottimizzato il calcolo shapes sul range visibile
+            end_sh = x_range[1] + timedelta(days=10)
+            while curr <= end_sh:
                 if curr.weekday() >= 5 or curr.strftime("%d-%m") in festivita_it:
                     shapes.append(dict(type="rect", x0=curr.strftime("%Y-%m-%d 00:00:00"), x1=(curr + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00"),
                                        y0=0, y1=1, yref="paper", fillcolor="rgba(180, 180, 180, 0.3)", layer="below", line_width=0))
                 curr += timedelta(days=1)
 
-            formato_it = "%d/%m<br>%a"
-           delta_giorni = (x_range[1] - x_range[0]).days
-            
-            if delta_giorni <= 7:
-                x_dtick = 86400000          # Un tick ogni giorno
-                formato_it = "%b<br>%d %a<br>Sett. %V"
-            elif delta_giorni <= 31:
-                x_dtick = 86400000 * 2      # Ogni 2 giorni
-                formato_it = "%b<br>%d %a<br>Sett. %V"
-            elif delta_giorni <= 90:
-                x_dtick = 86400000 * 7      # Ogni settimana (Lunedì)
-                formato_it = "%b<br>Sett. %V"
-            else:
-                x_dtick = 86400000 * 14     # Ogni 2 settimane
-                formato_it = "%b<br>Sett. %V"
+            # Definizione x_dtick in base ai giorni
+            if delta_giorni <= 7: x_dtick = 86400000 
+            elif delta_giorni <= 31: x_dtick = 86400000 * 2
+            elif delta_giorni <= 90: x_dtick = 86400000 * 7
+            else: x_dtick = 86400000 * 14
 
-            # --- NEW: CHIAMATA AL FRAGMENT ---
+            # --- 7. RENDER ---
             render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick, "%d/%m", shapes)
 
         else:
