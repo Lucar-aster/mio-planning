@@ -38,7 +38,42 @@ def get_cached_data(table):
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
-# --- MODALI (TIMELINE) ---
+# --- MODALI ---
+@st.dialog("📝 Modifica Log")
+def modal_edit_log(log_id, current_op, current_start, current_end):
+    st.write(f"Modifica Log ID: {log_id}")
+    new_op = st.text_input("Operatore", value=current_op)
+    c1, c2 = st.columns(2)
+    new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start))
+    new_end = c2.date_input("Fine", value=pd.to_datetime(current_end))
+    col1, col2 = st.columns(2)
+    if col1.button("Aggiorna", type="primary", use_container_width=True):
+        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
+        st.cache_data.clear()
+        st.rerun()
+    if col2.button("Elimina", use_container_width=True):
+        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+        st.cache_data.clear()
+        st.rerun()
+
+@st.dialog("➕ Nuova Commessa")
+def modal_commessa():
+    n = st.text_input("Nome Commessa")
+    if st.button("Salva", use_container_width=True):
+        supabase.table("Commesse").insert({"nome_commessa": n}).execute()
+        st.cache_data.clear()
+        st.rerun()
+
+@st.dialog("📑 Nuovo Task")
+def modal_task():
+    cms = {c['nome_commessa']: c['id'] for c in get_cached_data("Commesse")}
+    n = st.text_input("Nome Task")
+    c = st.selectbox("Commessa", options=list(cms.keys()))
+    if st.button("Crea", use_container_width=True):
+        supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c]}).execute()
+        st.cache_data.clear()
+        st.rerun()
+
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
@@ -68,7 +103,7 @@ def modal_log():
             st.cache_data.clear()
             st.rerun()
 
-# --- 4. LOGICA GANTT ---
+# --- 4. LOGICA MERGE E ETICHETTE ---
 def merge_consecutive_logs(df):
     if df.empty: return df
     df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
@@ -92,6 +127,7 @@ def get_it_date_label(dt, delta):
     if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
+# --- 5. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
@@ -108,63 +144,67 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<extra></extra>"
         ))
+    
     grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    tick_vals = grid_vals[::2] if 15 < delta_giorni <= 40 else (pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON') if delta_giorni > 40 else grid_vals)
+    if 15 < delta_giorni <= 40: tick_vals = grid_vals[::2]
+    elif delta_giorni > 40: tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
+    else: tick_vals = grid_vals
+    
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
         xaxis=dict(type="date", side="top", range=x_range, fixedrange=False, tickmode="array", tickvals=tick_vals, ticktext=tick_text, showgrid=True, gridcolor="#e0e0e0", dtick=86400000.0),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
-        legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10))
+        legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
+        clickmode='event+select'
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000, line_width=2, line_color="red")
-    st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", config={'scrollZoom': False, 'displayModeBar': False})
+    selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'scrollZoom': False, 'displayModeBar': False})
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        p = selected["selection"]["points"]
+        if p and "customdata" in p[0]: modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
-# --- 5. MAIN UI ---
-tabs = st.tabs(["📊 Timeline", "📋 Gestione Attività", "⚙️ Configurazione"])
-l_data, tk_data, cm_data, ops_data = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
+# --- 6. MAIN UI ---
+tabs = st.tabs(["📊 Timeline", "📋 Dati", "⚙️ Setup"])
+l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 
-# --- TAB 1: TIMELINE ---
 with tabs[0]:
-    if l_data and tk_data and cm_data:
-        tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk_data}
-        cm_m = {c['id']: c['nome_commessa'] for c in cm_data}
-        df = pd.DataFrame(l_data)
+    if l and tk and cm:
+        tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
+        cm_m = {c['id']: c['nome_commessa'] for c in cm}
+        df = pd.DataFrame(l)
         df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
         df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
         df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
         df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
-        
         c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
         with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
-        
         f_c, f_o = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique())), c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
-        
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        col_btn1, col_btn2, col_btn3 = st.columns([1,1,6])
-        if col_btn1.button("⏱️ Nuovo Log", use_container_width=True): modal_log()
-        if col_btn2.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
-
+        b1, b2, b3, b4 = st.columns(4)
+        if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
+        if b2.button("📑 Task", use_container_width=True): modal_task()
+        if b3.button("⏱️ Log", use_container_width=True): modal_log()
+        if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
         oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_p = df.copy()
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
-        
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
+        elif scala == "Personalizzato": st.warning("Seleziona data inizio e fine."); st.stop()
         else:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-
         shapes = []
         curr = x_range[0] - timedelta(days=2)
         while curr <= x_range[1] + timedelta(days=32):
             if curr.weekday() >= 5: shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.15)", layer="below", line_width=0))
             curr += timedelta(days=1)
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_data}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
 
 # --- TAB 2: GESTIONE ATTIVITÀ (DATA EDITOR) ---
 with tabs[1]:
