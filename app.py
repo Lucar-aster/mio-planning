@@ -169,10 +169,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
                                end=x_range[1] + timedelta(days=180), freq='D')
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
 
-    # Definizione dinamica del passo (dtick)
-    # Sotto i 20 giorni: un segno ogni giorno (86400000 ms)
-    # Sopra i 20 giorni: None (lascia che Plotly scelga la densità migliore per non sovrapporre i testi)
-    dynamic_dtick = 86400000.0 if delta_giorni <= 20 else None
+   # 2. FILTRIAMO: Se delta_giorni > 20, prendiamo solo 1 giorno ogni 7 (freq='W-MON')
+    if delta_giorni > 20:
+        tick_range = pd.date_range(start=full_range[0], end=full_range[-1], freq='W-MON')
+    else:
+        tick_range = full_range
+
+    # 3. Generiamo i testi solo per i giorni filtrati
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
     
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35), # Altezza dinamica OK
@@ -190,7 +194,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             ticktext=tick_text,
             showgrid=True, 
             gridcolor="#e0e0e0", 
-            dtick=dynamic_dtick
         ),
         yaxis=dict(
             autorange="reversed", 
