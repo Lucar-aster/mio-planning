@@ -427,8 +427,7 @@ with tabs[0]:
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
             with col_f3:
-                oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                intervallo_date = st.date_input(
+                filtro_manuale = st.date_input(
                     "Periodo Visibile",
                     value=None,
                     format="DD/MM/YYYY",
@@ -484,15 +483,15 @@ with tabs[0]:
 
             # --- 2. LOGICA DI FILTRO E RANGE FINALE ---
             # Se l'utente ha selezionato un range nel widget, vince il widget
-            if intervallo_date and len(intervallo_date) == 2:
+            if filtro_manueale and len(intervallo_date) == 2:
                 d_inizio, d_fine = intervallo_date
-                x_range = [pd.to_datetime(d_inizio), pd.to_datetime(d_fine)]
+                x_range = [pd.to_datetime(filtro_manuale[0]), pd.to_datetime(filtro_manuale[1])]
                 # Filtra i dati del grafico
-                mask = (df_plot['Inizio'].dt.date >= d_inizio) & (df_plot['Fine'].dt.date <= d_fine)
+                mask = (df_plot['Inizio'].dt.date >= filtro_manuale[0]) & (df_plot['Fine'].dt.date <= filtro_manuale[1])
                 df_plot = df_plot[mask]
             else:
                 # Se il widget è vuoto, usa il range della SCALA e NON filtrare il DataFrame
-                x_range = x_range_default
+                x_range = range_scala
                 # NON applichiamo filtri a df_plot qui, così vedi tutto il periodo della scala
 
                delta_giorni = (x_range[1] - x_range[0]).days
