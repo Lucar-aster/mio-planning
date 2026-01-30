@@ -429,8 +429,11 @@ with tabs[0]:
                 c_scala, c_date = st.columns([1, 1])
 
                 with c_scala:
-                    opzioni_scala = ["Settimana", "Mese", "Trimestre", "Personalizzato"]
-                    scala = st.selectbox("Scala Temporale", opzioni_scala, index=1)
+                    scala = st.selectbox(
+                        "Visualizzazione", 
+                        ["Settimana", "Mese", "Trimestre", "Personalizzato"], 
+                        index=1
+                    )
 
             # Il widget delle date appare SOLO se la scala è "Personalizzato"
                 filtro_custom = None
