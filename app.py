@@ -125,8 +125,6 @@ URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
-st.set_page_config(page_title="Project Planner", page_icon=LOGO_URL, layout="wide")
-
 # --- FUNZIONE RECUPERO DATI ---
 def get_data(table):
     return supabase.table(table).select("*").execute().data
