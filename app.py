@@ -473,25 +473,31 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            filtro_attivo = isinstance(intervallo_date, (list, tuple)) and len(intervallo_date) == 2
+            # --- 1. DEFINIZIONE DEL RANGE VISIVO (SCALA) ---
+            # Questo decide cosa vedi sul grafico, indipendentemente dal widget
+            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
-            if filtro_attivo:
-                # Se l'utente ha usato il filtro, il grafico segue il filtro
-                data_inizio, data_fine = intervallo_date
-                x_range = [pd.to_datetime(data_inizio), pd.to_datetime(data_fine)]
-                # Applichiamo il filtro anche al DataFrame
-                mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
+            if scala == "Settimana":
+                x_range_default = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
+            elif scala == "Mese":
+                x_range_default = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
+            else: # Trimestre
+                x_range_default = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
+
+            # --- 2. LOGICA DI FILTRO E RANGE FINALE ---
+            # Se l'utente ha selezionato un range nel widget, vince il widget
+            if intervallo_date and len(intervallo_date) == 2:
+                d_inizio, d_fine = intervallo_date
+                x_range = [pd.to_datetime(d_inizio), pd.to_datetime(d_fine)]
+                # Filtra i dati del grafico
+                mask = (df_plot['Inizio'].dt.date >= d_inizio) & (df_plot['Fine'].dt.date <= d_fine)
                 df_plot = df_plot[mask]
             else:
-                # Se il filtro è vuoto, il grafico segue la SCALA (Settimana, Mese, Trimestre)
-                if scala == "Settimana":
-                    x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-                elif scala == "Mese":
-                    x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-                else: # Trimestre
-                    x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
+                # Se il widget è vuoto, usa il range della SCALA e NON filtrare il DataFrame
+                x_range = x_range_default
+                # NON applichiamo filtri a df_plot qui, così vedi tutto il periodo della scala
 
-            delta_giorni = (x_range[1] - x_range[0]).days
+               delta_giorni = (x_range[1] - x_range[0]).days
             
             if delta_giorni <= 7:
                 x_dtick = 86400000          # Un tick ogni giorno
