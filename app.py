@@ -9,7 +9,7 @@ import textwrap
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
-# --- 2. CSS: SPAZI RIDOTTI ---
+# --- 2. CSS ---
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
@@ -37,7 +37,7 @@ def get_data(table):
     try: return supabase.table(table).select("*").execute().data
     except: return []
 
-# --- MODALI (Tutte preservate) ---
+# --- MODALI ---
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_id, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
@@ -92,8 +92,7 @@ def merge_consecutive_logs(df):
     for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
         current_row = None
         for _, row in group.iterrows():
-            if current_row is None:
-                current_row = row.to_dict()
+            if current_row is None: current_row = row.to_dict()
             else:
                 if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
                     current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
@@ -101,16 +100,13 @@ def merge_consecutive_logs(df):
                 else:
                     merged.append(current_row)
                     current_row = row.to_dict()
-        if current_row:
-            merged.append(current_row)
+        if current_row: merged.append(current_row)
     return pd.DataFrame(merged)
 
 def get_it_date_label(dt, delta):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-    # Logica asse X: se periodo lungo (es trimestre) mostra meno dettagli per leggibilità
-    if delta > 40:
-        return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
+    if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
 # --- 5. GANTT FRAGMENT ---
@@ -133,24 +129,32 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             orientation='h', name=op, alignmentgroup="g1", offsetgroup=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
             width=0.4, customdata=df_op[['id', 'operatore', 'Inizio', 'Fine']],
-            # Hovertemplate con date accorciate (es. 01/01/2026)
-            hovertemplate=(
-                "<b>%{name}</b><br>" +
-                "Inizio: %{customdata[2]|%d/%m/%Y}<br>" +
-                "Fine: %{customdata[3]|%d/%m/%Y}<br>" +
-                "<extra></extra>"
-            )
+            hovertemplate="<b>%{name}</b><br>Inizio: %{customdata[2]|%d/%m/%Y}<br>Fine: %{customdata[3]|%d/%m/%Y}<extra></extra>"
         ))
     
-    # Tick frequenza dinamica
-    freq = 'D' if delta_giorni <= 32 else 'W-MON'
-    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq=freq)
+    # --- LOGICA ASSE X RICHIESTA ---
+    # Linee della griglia per ogni giorno
+    grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
+    
+    # Etichette dinamiche: 1 ogni 2 giorni se scala Mese (delta > 15), altrimenti tutti i giorni
+    if 15 < delta_giorni <= 40:
+        tick_vals = grid_vals[::2]
+    elif delta_giorni > 40:
+        tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
+    else:
+        tick_vals = grid_vals
+
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
-        xaxis=dict(type="date", side="top", tickmode="array", tickvals=tick_vals, ticktext=tick_text, range=x_range, showgrid=True, gridcolor="#e0e0e0", fixedrange=False),
+        xaxis=dict(
+            type="date", side="top", range=x_range, fixedrange=False,
+            tickmode="array", tickvals=tick_vals, ticktext=tick_text,
+            showgrid=True, gridcolor="#e0e0e0", 
+            dtick=86400000.0 # Forza una linea della griglia ogni giorno (ms in un giorno)
+        ),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
         clickmode='event+select'
@@ -202,14 +206,12 @@ with tabs[0]:
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
 
-        # Calcolo range temporale
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
             x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         else:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
 
-        # Weekend
         shapes = []
         curr = x_range[0] - timedelta(days=2)
         while curr <= x_range[1] + timedelta(days=32):
