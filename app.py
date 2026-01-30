@@ -130,7 +130,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
             width=0.4, 
             customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
-            # NUOVO HOVERTEMPLTE RICHIESTO
             hovertemplate=(
                 "<b>%{customdata[4]} - %{customdata[5]}</b><br>" +
                 "%{customdata[1]}<br>" +
@@ -189,7 +188,8 @@ with tabs[0]:
         with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
-            f_custom = cd.date_input("Periodo", value=None) if scala == "Personalizzato" else None
+            # FIX: Inserito valore di default [inizio, fine] per abilitare la selezione del range
+            f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
 
         f_c = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique()))
         f_o = c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
@@ -208,8 +208,12 @@ with tabs[0]:
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
 
+        # Gestione Range Temporale
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
             x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
+        elif scala == "Personalizzato":
+            st.warning("Seleziona data inizio e fine nel calendario.")
+            st.stop()
         else:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
