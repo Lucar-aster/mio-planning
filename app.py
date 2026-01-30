@@ -122,7 +122,6 @@ st.markdown("""
     unsafe_allow_html=True
 )
 
-
 # --- CONNESSIONE A SUPABASE ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
@@ -301,22 +300,6 @@ def modal_edit_log(log_id, data_corrente):
 
     except Exception as e: st.error(f"Errore: {e}")
 
-    # TESTO A CAPO
-
-def formatta_colonne_y(row):
-    import textwrap
-    c = "<br>".join(textwrap.wrap(str(row['commessa']), width=15))
-    t = "<br>".join(textwrap.wrap(str(row['task_nome']), width=15))
-    return f"<b>{c}</b> │ {t}"
-
-res = supabase.table("Log_Tempi").select("*").execute()
-df_gantt = pd.DataFrame(res.data) # <--- La creazione DEVE essere qui
-
-if not df_gantt.empty:
-    df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
-    
-df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
-
 # --- NEW: FRAGMENT FUNZIONE PER IL GRAFICO (Real-Time 60s) ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it, shapes):
@@ -325,7 +308,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=df_gantt['asse_y_doppio'],
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
             orientation='h', name=op, offsetgroup=op,
             # MODIFICATO: Prende il colore assegnato all'operatore dalla color_map
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
@@ -350,9 +333,6 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.01, x=0.5, xanchor="center")
     )
-    
-    fig.update_yaxes(type='category', automargin=True)
-    
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
     # MODIFICATO: render del grafico isolato nel fragment
