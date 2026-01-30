@@ -72,16 +72,43 @@ def modal_task():
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     ops_list = [o['nome'] for o in get_data("Operatori")]
+    cm_data = get_data("Commesse")
     tk_data = get_data("Task")
-    cm_data = {c['id']: c['nome_commessa'] for c in get_data("Commesse")}
+    
     op = st.selectbox("Operatore", ops_list)
-    t_opts = {f"{cm_data.get(t['commessa_id'])} - {t['nome_task']}": t['id'] for t in tk_data}
-    scelta = st.selectbox("Task", list(t_opts.keys()))
+    cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+    sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
+    sel_cm_id = cms_dict[sel_cm_nome]
+    
+    tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
+    task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
+    task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
+    
+    sel_task = st.selectbox("Task", task_list)
+    
+    new_task_id = None
+    if sel_task == "➕ Aggiungi nuovo task...":
+        nt_name = st.text_input("Nome nuovo task")
+        if nt_name:
+            if st.button("Crea Task"):
+                res = supabase.table("Task").insert({"nome_task": nt_name, "commessa_id": sel_cm_id}).execute()
+                if res.data:
+                    st.success(f"Task '{nt_name}' creato!")
+                    st.rerun()
+    else:
+        new_task_id = task_opts[sel_task]
+
     c1, c2 = st.columns(2)
     i = c1.date_input("Inizio")
     f = c2.date_input("Fine")
-    if st.button("Registra", use_container_width=True):
-        supabase.table("Log_Tempi").insert({"operatore": op, "task_id": t_opts[scelta], "inizio": str(i), "fine": str(f)}).execute()
+    
+    if st.button("Registra Log", use_container_width=True, disabled=(new_task_id is None)):
+        supabase.table("Log_Tempi").insert({
+            "operatore": op, 
+            "task_id": new_task_id, 
+            "inizio": str(i), 
+            "fine": str(f)
+        }).execute()
         st.rerun()
 
 # --- 4. LOGICA MERGE E ETICHETTE ---
@@ -188,7 +215,6 @@ with tabs[0]:
         with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
-            # FIX: Inserito valore di default [inizio, fine] per abilitare la selezione del range
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
 
         f_c = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique()))
@@ -208,7 +234,6 @@ with tabs[0]:
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
 
-        # Gestione Range Temporale
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
             x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         elif scala == "Personalizzato":
