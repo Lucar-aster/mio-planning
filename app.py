@@ -422,49 +422,54 @@ with tabs[0]:
             df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
             # 3. FILTRI UI
-            col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
-            # 1. Definiamo la scala PRIMA di tutto
-            scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
+            col_f1, col_f2, col_f3 = st.columns([2, 2, 4])
 
-            # 2. CALCOLO RANGE AUTOMATICO (Variabile interna, NON passata al widget)
-            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            if scala == "Settimana":
-                range_automatico = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
-            elif scala == "Mese":
-                range_automatico = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
-            else: # Trimestre
-                range_automatico = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
-
-            # 3. IL WIDGET (Deve avere value=None o [] per essere vuoto)
             with col_f3:
-                scelta_date = st.date_input(
-                    "Periodo Visibile",
-                    value=None,            # <--- FORZA IL VUOTO
-                    format="DD/MM/YYYY",
-                    key=f"p_{scala}",      # <--- RESETTA SE CAMBI SCALA
-                    placeholder="Seleziona date..."
-                )
+                # Creiamo due sotto-colonne per mettere selectbox e date_input affiancati
+                c_scala, c_date = st.columns([1, 1])
 
-            # 4. ALTRI FILTRI
-            lista_op = sorted(df['operatore'].unique().tolist())
+                with c_scala:
+                    opzioni_scala = ["Settimana", "Mese", "Trimestre", "Personalizzato"]
+                    scala = st.selectbox("Scala Temporale", opzioni_scala, index=1)
+
+            # Il widget delle date appare SOLO se la scala è "Personalizzato"
+                filtro_custom = None
+                if scala == "Personalizzato":
+                    with c_date:
+                        filtro_custom = st.date_input(
+                            "Scegli Periodo",
+                            value=None,
+                            format="DD/MM/YYYY",
+                            placeholder="Inizio - Fine"
+                        )
+            # --- 2. ALTRI FILTRI (Operatori e Progetti) ---
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
-            f_operatore = col_f2.multiselect("Operatori", options=lista_op)
+            f_operatore = col_f2.multiselect("Operatori", options=sorted(df['operatore'].unique()))
 
-            # 5. LOGICA DI DECISIONE: Chi comanda il grafico?
+            # --- 3. LOGICA DI CALCOLO DEL RANGE ---
+            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             df_plot = df.copy()
+
+            # Applichiamo filtri multiselect
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
 
-            # CONTROLLO SE IL WIDGET HA DATE
-            if scelta_date and len(scelta_date) == 2:
-                # Se l'utente ha scelto date, usiamo quelle
-                x_range = [pd.to_datetime(scelta_date[0]), pd.to_datetime(scelta_date[1])]
-                mask = (df_plot['Inizio'].dt.date >= scelta_date[0]) & (df_plot['Fine'].dt.date <= scelta_date[1])
+            if scala == "Personalizzato" and filtro_custom and len(filtro_custom) == 2:
+                # Comanda l'utente con le date scelte
+                x_range = [pd.to_datetime(filtro_custom[0]), pd.to_datetime(filtro_custom[1])]
+                # Filtriamo il dataframe per mostrare solo i task nel range scelto
+                mask = (df_plot['Inizio'].dt.date >= filtro_custom[0]) & (df_plot['Fine'].dt.date <= filtro_custom[1])
                 df_plot = df_plot[mask]
             else:
-                # Se il widget è vuoto, usiamo la scala automatica
-                x_range = range_automatico
+                # Comandano le scale predefinite
+                if scala == "Settimana":
+                    x_range = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
+                elif scala == "Mese":
+                    x_range = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
+                else: # Trimestre (anche se l'utente seleziona Custom ma non sceglie le date, diamo il trimestre di default)
+                    x_range = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
 
+            # Calcolo delta per i tick del grafico
             delta_giorni = (x_range[1] - x_range[0]).days
             
             # 4. BOTTONI RAPIDI
