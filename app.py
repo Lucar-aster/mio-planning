@@ -204,7 +204,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35), # Altezza dinamica OK
         margin=dict(l=10, r=10, t=40, b=0), 
-        shapes=shapes, 
+        shapes=all_shapes, 
         barmode='overlay', 
         dragmode='pan',
         xaxis=dict(
