@@ -426,27 +426,46 @@ with tabs[0]:
             lista_op = sorted(df_raw['operatore'].unique().tolist())
             f_commessa = col_f1.multiselect("Progetti", options=sorted(df['Commessa'].unique()))
             f_operatore = col_f2.multiselect("Operatori", options=lista_op)
+            
+           # La scala deve essere definita prima perché serve alla KEY del widget date_input
+            scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
+            
+            # --- 2. LOGICA DEL RANGE AUTOMATICO ---
+            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            if scala == "Settimana":
+                range_automatico = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
+            elif scala == "Mese":
+                range_automatico = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
+            else: # Trimestre
+                range_automatico = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
+
+            # --- 3. WIDGET DATE_INPUT (Senza valori di default) ---
             with col_f3:
-                filtro_manuale = st.date_input(
+                # Usiamo value=None per tenerlo vuoto. 
+                # La KEY dinamica basata su 'scala' resetta il widget quando cambi visualizzazione.
+                filtro_utente = st.date_input(
                     "Periodo Visibile",
-                    value=[],
+                    value=None,
                     format="DD/MM/YYYY",
                     key=f"date_picker_{scala}", 
                     placeholder="Seleziona date..."
-                    )
-                
-            scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
+                )
 
             df_plot = df.copy()
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
-            if isinstance(intervallo_date, tuple) and len(intervallo_date) == 2:
-                data_inizio, data_fine = intervallo_date
-                # Convertiamo in datetime per il confronto
-                mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
+            # Verifichiamo se l'utente ha selezionato un intervallo completo
+            if filtro_utente and len(filtro_utente) == 2:
+                x_range = [pd.to_datetime(filtro_utente[0]), pd.to_datetime(filtro_utente[1])]
+                # Applichiamo il filtro temporale ai dati solo se l'utente ha scelto le date
+                mask = (df_plot['Inizio'].dt.date >= filtro_utente[0]) & (df_plot['Fine'].dt.date <= filtro_utente[1])
                 df_plot = df_plot[mask]
-
+            else:
+                # Se il widget è vuoto, il grafico usa la scala ma il widget resta pulito
+                x_range = range_automatico
+            delta_giorni = (x_range[1] - x_range[0]).days
+            
             # 4. BOTTONI RAPIDI
             c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
             if c1.button("➕ Commessa", use_container_width=True): modal_commessa()
