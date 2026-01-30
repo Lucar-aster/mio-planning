@@ -209,13 +209,13 @@ with tabs[0]:
 # --- TAB 2: GESTIONE ATTIVITÀ (DATA EDITOR) ---
 with tabs[1]:
     st.header("📝 Gestione Attività")
-    if l_data and cm_data and tk_data:
-        df_edit = pd.DataFrame(l_data)
+    if l is not None and cm and tk:
+        df_edit = pd.DataFrame(l)
         df_edit['inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
         df_edit['fine'] = pd.to_datetime(df_edit['fine']).dt.date
         
-        task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk_data}
-        commessa_map = {c['id']: c['nome_commessa'] for c in cm_data}
+        task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk}
+        commessa_map = {c['id']: c['nome_commessa'] for c in cm}
         
         df_edit['task_nome'] = df_edit['task_id'].map(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
         df_edit['commessa_nome'] = df_edit['task_id'].map(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
@@ -272,11 +272,11 @@ with tabs[2]:
 
     with c_admin2:
         st.subheader("Elenco Operatori")
-        if ops_data:
-            df_o = pd.DataFrame(ops_data)
+        if ops_list:
+            df_o = pd.DataFrame(ops_list)
             st.dataframe(df_o[["nome", "colore"]], use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
-                o_sel = st.selectbox("Seleziona operatore", ops_data, format_func=lambda x: x["nome"])
+                o_sel = st.selectbox("Seleziona operatore", ops_list, format_func=lambda x: x["nome"])
                 n_o = st.text_input("Nome", value=o_sel["nome"])
                 c_o = st.color_picker("Colore", value=o_sel.get("colore", "#8dbad2"))
                 col1, col2 = st.columns(2)
