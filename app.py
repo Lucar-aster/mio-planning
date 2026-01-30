@@ -45,23 +45,36 @@ def get_it_date_label(dt, delta):
         return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
     return f"{dt.day:02d} {mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
-# --- 4. GANTT CON GRIGLIA E LINEE RIPRISTINATE ---
+# --- GANTT FRAGMENT (LOGICA RAGGRUPPAMENTO RIPRISTINATA) ---
 @st.fragment(run_every=60)
-def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta, shapes):
+def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick, delta_giorni, shapes):
     fig = go.Figure()
-    for op in df_plot['operatore'].unique():
-        df_op = df_plot[df_plot['operatore'] == op]
-        c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
-        t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
-        fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w],
-            orientation='h', name=op, offsetgroup=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
-            width=0.4, hovertemplate="<b>%{y}</b><extra></extra>"
-        ))
     
-    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D' if delta <= 31 else 'W-MON')
-    tick_text = [get_it_date_label(d, delta) for d in tick_vals]
+    # RAGGRUPPAMENTO: Uniamo i log per evitare duplicati visivi nella stessa riga
+    # Sommiamo la durata se lo stesso operatore ha più log nello stesso periodo/task
+    df_grouped = df_plot.groupby(['operatore', 'Commessa', 'Task', 'task_id'], as_index=False).agg({
+        'Inizio': 'min',
+        'Fine': 'max',
+        'Durata_ms': 'sum',
+        'id': 'first' # Teniamo un ID di riferimento per il click
+    })
+
+    for op in df_grouped['operatore'].unique():
+        df_op = df_grouped[df_grouped['operatore'] == op]
+        c_wrap = [ "<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
+        t_wrap = [ "<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
+    
+        fig.add_trace(go.Bar(
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_wrap, t_wrap],
+            orientation='h', name=op, offsetgroup=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=15),
+            width=0.4,
+            customdata=df_op[['id', 'operatore', 'task_id', 'Inizio', 'Fine']],
+            hovertemplate="<b>%{y}</b><br>Operatore: %{customdata[1]}<extra></extra>"
+        ))
+        
+    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D' if delta_giorni <= 31 else 'W-MON')
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
     fig.update_layout(
         height=400 + (len(df_plot) * 18),
