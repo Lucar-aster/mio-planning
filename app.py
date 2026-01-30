@@ -432,21 +432,20 @@ with tabs[0]:
             
             # --- 2. LOGICA DEL RANGE AUTOMATICO ---
             formato_it = "%d/%m<br>%a"
-            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            if scala == "Settimana":
-                range_automatico = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
-            elif scala == "Mese":
-                range_automatico = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
-            else: # Trimestre
-                range_automatico = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
-
+            # Reset del filtro data se si cambia scala (Opzionale, ma aiuta)
+            if f"last_scala" not in st.session_state:
+                st.session_state.last_scala = scala
+            if st.session_state.last_scala != scala:
+                st.session_state.last_scala = scala
+                # Non resettiamo qui per ora, lasciamo che la KEY faccia il lavoro
+            
             # --- 3. WIDGET DATE_INPUT (Senza valori di default) ---
             with col_f3:
                 # Usiamo value=None per tenerlo vuoto. 
                 # La KEY dinamica basata su 'scala' resetta il widget quando cambi visualizzazione.
                 filtro_utente = st.date_input(
                     "Periodo Visibile",
-                    value=None,
+                    value=[],
                     format="DD/MM/YYYY",
                     key=f"date_picker_{scala}", 
                     placeholder="Seleziona date..."
@@ -456,15 +455,27 @@ with tabs[0]:
             if f_commessa: df_plot = df_plot[df_plot['Commessa'].isin(f_commessa)]
             if f_operatore: df_plot = df_plot[df_plot['operatore'].isin(f_operatore)]
             df_plot = df_plot.sort_values(by=['Commessa', 'Task'], ascending=[False, False])
-            # Verifichiamo se l'utente ha selezionato un intervallo completo
-            if filtro_utente and len(filtro_utente) == 2:
-                x_range = [pd.to_datetime(filtro_utente[0]), pd.to_datetime(filtro_utente[1])]
-                # Applichiamo il filtro temporale ai dati solo se l'utente ha scelto le date
-                mask = (df_plot['Inizio'].dt.date >= filtro_utente[0]) & (df_plot['Fine'].dt.date <= filtro_utente[1])
-                df_plot = df_plot[mask]
+
+            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+            # Controlliamo se l'utente ha selezionato un range VALIDO (2 date)
+            if isinstance(intervallo_manuale, (list, tuple)) and len(intervallo_manuale) == 2:
+                # Comanda l'utente: il widget è popolato
+                x_range = [pd.to_datetime(intervallo_manuale[0]), pd.to_datetime(intervallo_manuale[1])]
             else:
-                # Se il widget è vuoto, il grafico usa la scala ma il widget resta pulito
-                x_range = range_automatico
+                # Il widget è VUOTO: il grafico segue la scala impostata
+                if scala == "Settimana":
+                    x_range = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
+                elif scala == "Mese":
+                    x_range = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
+                else: # Trimestre
+                    x_range = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
+
+            # Se l'utente ha scelto le date, tagliamo il DF per quel periodo
+            if isinstance(intervallo_manuale, (list, tuple)) and len(intervallo_manuale) == 2:
+                mask = (df_plot['Inizio'].dt.date >= intervallo_manuale[0]) & (df_plot['Fine'].dt.date <= intervallo_manuale[1])
+                df_plot = df_plot[mask]
+                
             delta_giorni = (x_range[1] - x_range[0]).days
             
             # 4. BOTTONI RAPIDI
@@ -507,7 +518,7 @@ with tabs[0]:
                 formato_it = "%b<br>Sett. %V"
 
             # --- NEW: CHIAMATA AL FRAGMENT ---
-            render_gantt_fragment(df_plot, color_map, oggi, x_range, x_dtick, formato_it, shapes)
+            render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, x_dtick, "%d/%m", shapes)
 
         else:
             st.info("Benvenuto! Inizia creando una commessa e un task.")
