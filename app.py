@@ -133,6 +133,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     if df_plot.empty: 
         st.info("Nessun dato trovato.")
         return
+     # Controllo e validazione delta_giorni
+    try:
+        delta_giorni = int(delta_giorni)
+    except:
+        delta_giorni = 20 # Default di sicurezza
         
     df_merged = merge_consecutive_logs(df_plot)
     fig = go.Figure()
@@ -163,6 +168,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     tick_range = pd.date_range(start=x_range[0] - timedelta(days=180), 
                                end=x_range[1] + timedelta(days=180), freq='D')
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
+
+    # Definizione dinamica del passo (dtick)
+    # Sotto i 20 giorni: un segno ogni giorno (86400000 ms)
+    # Sopra i 20 giorni: None (lascia che Plotly scelga la densità migliore per non sovrapporre i testi)
+    dynamic_dtick = 86400000.0 if delta_giorni <= 20 else None
     
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35), # Altezza dinamica OK
@@ -180,7 +190,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             ticktext=tick_text,
             showgrid=True, 
             gridcolor="#e0e0e0", 
-            dtick=86400000.0 if delta_giorni <= 20 else None
+            dtick=dynamic_dtick
         ),
         yaxis=dict(
             autorange="reversed", 
