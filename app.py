@@ -336,7 +336,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
     
     fig.update_layout(
         clickmode='event+select', barmode='group', dragmode='pan', plot_bgcolor="white",
-        height=200 + (len(df_plot.groupby(['Commessa', 'Task'])) * 30),
+        height=400 + (len(df_plot.groupby(['Commessa', 'Task'])) * 30),
         margin=dict(l=10, r=20, t=10, b=10),
         shapes=shapes,
         automargin=True,
