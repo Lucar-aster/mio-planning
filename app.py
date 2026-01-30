@@ -228,7 +228,7 @@ with tabs[1]:
             disabled=["id", "commessa_nome"],
             column_config={
                 "id": None, "commessa_nome": "Commessa",
-                "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk_data], required=True),
+                "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk], required=True),
                 "operatore": st.column_config.TextColumn("Operatore", required=True),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
                 "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
@@ -236,7 +236,7 @@ with tabs[1]:
         )
 
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
-            inv_tk = {t['nome_task']: t['id'] for t in tk_data}
+            inv_tk = {t['nome_task']: t['id'] for t in tk}
             for _, row in edited_df.iterrows():
                 payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['inizio']), "fine": str(row['fine'])}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
@@ -251,11 +251,11 @@ with tabs[2]:
 
     with c_admin1:
         st.subheader("Elenco Commesse")
-        if cm_data:
-            df_c = pd.DataFrame(cm_data)
+        if cm:
+            df_c = pd.DataFrame(cm)
             st.dataframe(df_c[["nome_commessa"]], use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
-                c_sel = st.selectbox("Seleziona commessa", cm_data, format_func=lambda x: x["nome_commessa"])
+                c_sel = st.selectbox("Seleziona commessa", cm, format_func=lambda x: x["nome_commessa"])
                 n_c = st.text_input("Nuovo nome", value=c_sel["nome_commessa"])
                 col1, col2 = st.columns(2)
                 if col1.button("Aggiorna Commessa"):
@@ -295,15 +295,15 @@ with tabs[2]:
 
     with c_admin3:
         st.subheader("Elenco Task")
-        if tk_data and cm_data:
-            df_t = pd.DataFrame(tk_data)
-            c_map = {c['id']: c['nome_commessa'] for c in cm_data}
+        if tk and cm:
+            df_t = pd.DataFrame(tk)
+            c_map = {c['id']: c['nome_commessa'] for c in cm}
             df_t['Progetto'] = df_t['commessa_id'].map(c_map)
             st.dataframe(df_t[["nome_task", "Progetto"]], use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
-                t_sel = st.selectbox("Seleziona task", tk_data, format_func=lambda x: x["nome_task"])
+                t_sel = st.selectbox("Seleziona task", tk, format_func=lambda x: x["nome_task"])
                 n_t = st.text_input("Rinomina", value=t_sel["nome_task"])
-                c_t = st.selectbox("Sposta a Commessa", cm_data, format_func=lambda x: x['nome_commessa'])
+                c_t = st.selectbox("Sposta a Commessa", cm, format_func=lambda x: x['nome_commessa'])
                 col1, col2 = st.columns(2)
                 if col1.button("Salva Task"):
                     supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute()
@@ -313,7 +313,7 @@ with tabs[2]:
                     st.cache_data.clear(); st.rerun()
         with st.form("new_task"):
             nt_n = st.text_input("➕ Nuovo Task")
-            nt_c = st.selectbox("Associa a Progetto", cm_data, format_func=lambda x: x['nome_commessa'])
+            nt_c = st.selectbox("Associa a Progetto", cm, format_func=lambda x: x['nome_commessa'])
             if st.form_submit_button("Aggiungi Task"):
                 supabase.table("Task").insert({"nome_task": nt_n, "commessa_id": nt_c['id']}).execute()
                 st.cache_data.clear(); st.rerun()
