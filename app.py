@@ -154,7 +154,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
-        xaxis=dict(type="date", side="top", range=x_range, fixedrange=False, tickmode="array", tickvals=tick_vals, ticktext=tick_text, showgrid=True, gridcolor="#e0e0e0", dtick=86400000.0),
+        xaxis=dict(type="date", 
+            side="top", 
+            range=x_range, 
+            fixedrange=False, 
+            showgrid=True, 
+            gridcolor="#e0e0e0",
+            # Rimosso tickvals e ticktext statici per permettere il refresh al pan
+            tickformat="%a %d\n%b"),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
         clickmode='event+select'
