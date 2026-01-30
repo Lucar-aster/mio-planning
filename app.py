@@ -429,7 +429,7 @@ with tabs[0]:
             with col_f3:
                 filtro_manuale = st.date_input(
                     "Periodo Visibile",
-                    value=None,
+                    value=[],
                     format="DD/MM/YYYY",
                     key=f"date_picker_{scala}", 
                     placeholder="Seleziona date..."
