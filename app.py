@@ -9,7 +9,7 @@ import textwrap
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
-# --- 2. CSS ---
+# --- 2. CSS: SPAZI RIDOTTI ---
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
@@ -37,7 +37,7 @@ def get_data(table):
     try: return supabase.table(table).select("*").execute().data
     except: return []
 
-# --- MODALI ---
+# --- MODALI (Tutte preservate) ---
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_id, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
@@ -56,7 +56,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end):
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
     n = st.text_input("Nome Commessa")
-    if st.button("Salva"):
+    if st.button("Salva", use_container_width=True):
         supabase.table("Commesse").insert({"nome_commessa": n}).execute()
         st.rerun()
 
@@ -65,7 +65,7 @@ def modal_task():
     cms = {c['nome_commessa']: c['id'] for c in get_data("Commesse")}
     n = st.text_input("Nome Task")
     c = st.selectbox("Commessa", options=list(cms.keys()))
-    if st.button("Crea"):
+    if st.button("Crea", use_container_width=True):
         supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c]}).execute()
         st.rerun()
 
@@ -84,7 +84,7 @@ def modal_log():
         supabase.table("Log_Tempi").insert({"operatore": op, "task_id": t_opts[scelta], "inizio": str(i), "fine": str(f)}).execute()
         st.rerun()
 
-# --- 4. FUNZIONE DI RAGGRUPPAMENTO LOG CONSECUTIVI ---
+# --- 4. LOGICA MERGE E ETICHETTE ---
 def merge_consecutive_logs(df):
     if df.empty: return df
     df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
@@ -95,10 +95,8 @@ def merge_consecutive_logs(df):
             if current_row is None:
                 current_row = row.to_dict()
             else:
-                # Se il log inizia entro 1 giorno dalla fine del precedente, unisci
                 if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
                     current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
-                    # Aggiorniamo la durata per Plotly
                     current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
                 else:
                     merged.append(current_row)
@@ -107,22 +105,24 @@ def merge_consecutive_logs(df):
             merged.append(current_row)
     return pd.DataFrame(merged)
 
-# --- 5. GANTT FRAGMENT ---
 def get_it_date_label(dt, delta):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    # Logica asse X: se periodo lungo (es trimestre) mostra meno dettagli per leggibilità
+    if delta > 40:
+        return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
+# --- 5. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty:
         st.info("Nessun dato trovato.")
         return
 
-    # Applichiamo il raggruppamento temporale
     df_merged = merge_consecutive_logs(df_plot)
-
     fig = go.Figure()
+
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
@@ -133,10 +133,18 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             orientation='h', name=op, alignmentgroup="g1", offsetgroup=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
             width=0.4, customdata=df_op[['id', 'operatore', 'Inizio', 'Fine']],
-            hovertemplate="<b>%{y}</b><br>Operatore: %{name}<extra></extra>"
+            # Hovertemplate con date accorciate (es. 01/01/2026)
+            hovertemplate=(
+                "<b>%{name}</b><br>" +
+                "Inizio: %{customdata[2]|%d/%m/%Y}<br>" +
+                "Fine: %{customdata[3]|%d/%m/%Y}<br>" +
+                "<extra></extra>"
+            )
         ))
     
-    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D' if delta_giorni <= 31 else 'W-MON')
+    # Tick frequenza dinamica
+    freq = 'D' if delta_giorni <= 32 else 'W-MON'
+    tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq=freq)
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
     fig.update_layout(
@@ -194,12 +202,14 @@ with tabs[0]:
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
 
+        # Calcolo range temporale
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
             x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         else:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
 
+        # Weekend
         shapes = []
         curr = x_range[0] - timedelta(days=2)
         while curr <= x_range[1] + timedelta(days=32):
@@ -208,6 +218,7 @@ with tabs[0]:
             curr += timedelta(days=1)
         
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
+
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
