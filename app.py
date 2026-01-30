@@ -473,18 +473,21 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            if isinstance(intervallo_date, (list, tuple)) and len(intervallo_date) == 2:
-                x_range = [pd.to_datetime(intervallo_date[0]), pd.to_datetime(intervallo_date[1])]
-                delta_giorni = (x_range[1] - x_range[0]).days
-            else:
-                if scala == "Settimana":
-                    offset = 4; x_dtick = 86400000 
-                elif scala == "Mese":
-                    offset = 15; x_dtick = 86400000 * 2
-                else:
-                    offset = 45; x_dtick = 86400000 * 7
+            if scala == "Settimana":
+                default_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+            elif scala == "Mese":
+                default_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+            else: # Trimestre
+                default_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
 
-            x_range = [oggi - timedelta(days=offset), oggi + timedelta(days=offset)]
+            if intervallo_date and len(intervallo_date) == 2:
+                data_inizio, data_fine = intervallo_date
+                mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
+                df_plot = df_plot[mask]
+                x_range = [pd.to_datetime(data_inizio), pd.to_datetime(data_fine)]
+            else:
+                x_range = default_range
+
             delta_giorni = (x_range[1] - x_range[0]).days
             
             if delta_giorni <= 7:
