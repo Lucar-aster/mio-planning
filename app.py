@@ -132,7 +132,23 @@ def get_it_date_label(dt, delta):
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
+    # Configurazione lingua italiana per Plotly
+    import plotly.io as pio
+    pio.templates.default = "plotly_white"
+    
+    # Definisco la configurazione italiana
+    config_it = dict(
+        name="it",
+        periods=["AM", "PM"],
+        days=["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
+        shortDays=["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"],
+        months=["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"],
+        shortMonths=["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"],
+        date="%d/%m/%Y"
+    )
+    
     fig = go.Figure()
+    fig.update_layout(separators=",.", font=dict(family="Arial"))
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
@@ -162,6 +178,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             gridcolor="#e0e0e0",
             # Rimosso tickvals e ticktext statici per permettere il refresh al pan
             tickformat="%a %d %b\nSett. %V",
+            hoverformat="%d %b %Y",
             dtick=86400000.0 if delta_giorni <= 40 else "M1"),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
         legend=dict(orientation="h", yanchor="top", y=-0.02, xanchor="center", x=0.5, font=dict(size=10)),
