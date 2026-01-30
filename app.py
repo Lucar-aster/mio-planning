@@ -302,13 +302,15 @@ def modal_edit_log(log_id, data_corrente):
     except Exception as e: st.error(f"Errore: {e}")
 
     # TESTO A CAPO
-res = supabase.table("Log_Tempi").select("*").execute()
-df_gantt = pd.DataFrame(res.data) # <--- La creazione DEVE essere qui
+
 def formatta_colonne_y(row):
     import textwrap
     c = "<br>".join(textwrap.wrap(str(row['commessa']), width=15))
     t = "<br>".join(textwrap.wrap(str(row['task_nome']), width=15))
     return f"<b>{c}</b> │ {t}"
+
+res = supabase.table("Log_Tempi").select("*").execute()
+df_gantt = pd.DataFrame(res.data) # <--- La creazione DEVE essere qui
 
 if not df_gantt.empty:
     df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
