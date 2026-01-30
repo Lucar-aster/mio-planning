@@ -303,12 +303,23 @@ def modal_edit_log(log_id, data_corrente):
 # --- NEW: FRAGMENT FUNZIONE PER IL GRAFICO (Real-Time 60s) ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it, shapes):
+    import textwrap
     fig = go.Figure()
     mesi_it = {1:"Gen", 2:"Feb", 3:"Mar", 4:"Apr", 5:"Mag", 6:"Giu", 7:"Lug", 8:"Ago", 9:"Set", 10:"Ott", 11:"Nov", 12:"Dic"}
+    
+    def wrap_text(txt, width=15):
+        if not txt or txt == "N/A": return txt
+        # wrap() divide il testo in una lista di righe senza spezzare le parole
+        return "<br>".join(textwrap.wrap(str(txt), width=width))
+    
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
+        y_multi_axis = [
+            [wrap_text(c, 15) for c in df_op['Commessa']], # Colonna 1 (Commesse)
+            [wrap_text(t, 20) for t in df_op['Task']]     # Colonna 2 (Task)
+        ]
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_multi_axis,
             orientation='h', name=op, offsetgroup=op,
             # MODIFICATO: Prende il colore assegnato all'operatore dalla color_map
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
