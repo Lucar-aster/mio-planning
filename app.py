@@ -25,17 +25,18 @@ st.markdown(f"""
     <hr style="margin-top: 5px; margin-bottom: 15px; border: 0; border-top: 1px solid #eee;">
 """, unsafe_allow_html=True)
 
-# --- 3. CONNESSIONE ---
+# --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
-if 'chart_key' not in st.session_state:
-    st.session_state.chart_key = 0
-
-def get_data(table):
+@st.cache_data(ttl=2)
+def get_cached_data(table):
     try: return supabase.table(table).select("*").execute().data
     except: return []
+
+if 'chart_key' not in st.session_state:
+    st.session_state.chart_key = 0
 
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
@@ -48,9 +49,11 @@ def modal_edit_log(log_id, current_op, current_start, current_end):
     col1, col2 = st.columns(2)
     if col1.button("Aggiorna", type="primary", use_container_width=True):
         supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
+        st.cache_data.clear()
         st.rerun()
     if col2.button("Elimina", use_container_width=True):
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+        st.cache_data.clear()
         st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
@@ -58,56 +61,46 @@ def modal_commessa():
     n = st.text_input("Nome Commessa")
     if st.button("Salva", use_container_width=True):
         supabase.table("Commesse").insert({"nome_commessa": n}).execute()
+        st.cache_data.clear()
         st.rerun()
 
 @st.dialog("📑 Nuovo Task")
 def modal_task():
-    cms = {c['nome_commessa']: c['id'] for c in get_data("Commesse")}
+    cms = {c['nome_commessa']: c['id'] for c in get_cached_data("Commesse")}
     n = st.text_input("Nome Task")
     c = st.selectbox("Commessa", options=list(cms.keys()))
     if st.button("Crea", use_container_width=True):
         supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c]}).execute()
+        st.cache_data.clear()
         st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
-    ops_list = [o['nome'] for o in get_data("Operatori")]
-    cm_data = get_data("Commesse")
-    tk_data = get_data("Task")
-    
+    ops_list = [o['nome'] for o in get_cached_data("Operatori")]
+    cm_data = get_cached_data("Commesse")
+    tk_data = get_cached_data("Task")
     op = st.selectbox("Operatore", ops_list)
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
     sel_cm_id = cms_dict[sel_cm_nome]
-    
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
     task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
-    
     sel_task = st.selectbox("Task", task_list)
-    
-    new_task_name = ""
-    if sel_task == "➕ Aggiungi nuovo task...":
-        new_task_name = st.text_input("Inserisci nome nuovo task")
-
+    new_task_name = st.text_input("Inserisci nome nuovo task") if sel_task == "➕ Aggiungi nuovo task..." else ""
     c1, c2 = st.columns(2)
-    i = c1.date_input("Inizio")
-    f = c2.date_input("Fine")
-    
+    i, f = c1.date_input("Inizio"), c2.date_input("Fine")
     if st.button("Registra Log", use_container_width=True):
         target_task_id = None
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
                 res = supabase.table("Task").insert({"nome_task": new_task_name, "commessa_id": sel_cm_id}).execute()
                 if res.data: target_task_id = res.data[0]['id']
-            else:
-                st.error("Inserisci un nome per il nuovo task")
-                return
-        else:
-            target_task_id = task_opts[sel_task]
-        
+            else: st.error("Inserisci nome task"); return
+        else: target_task_id = task_opts[sel_task]
         if target_task_id:
             supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f)}).execute()
+            st.cache_data.clear()
             st.rerun()
 
 # --- 4. LOGICA MERGE E ETICHETTE ---
@@ -124,8 +117,7 @@ def merge_consecutive_logs(df):
                     current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
                     current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
                 else:
-                    merged.append(current_row)
-                    current_row = row.to_dict()
+                    merged.append(current_row); current_row = row.to_dict()
         if current_row: merged.append(current_row)
     return pd.DataFrame(merged)
 
@@ -138,39 +130,27 @@ def get_it_date_label(dt, delta):
 # --- 5. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    if df_plot.empty:
-        st.info("Nessun dato trovato.")
-        return
-
+    if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
     fig = go.Figure()
-
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
-        
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w],
             orientation='h', name=op, alignmentgroup="g1", offsetgroup=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
-            width=0.4, 
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4, 
             customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
-            hovertemplate=(
-                "<b>%{customdata[4]} - %{customdata[5]}</b><br>" +
-                "%{customdata[1]}<br>" +
-                "%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}" +
-                "<extra></extra>"
-            )
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<extra></extra>"
         ))
     
     grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
     if 15 < delta_giorni <= 40: tick_vals = grid_vals[::2]
     elif delta_giorni > 40: tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
     else: tick_vals = grid_vals
-
-    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
@@ -180,69 +160,52 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         clickmode='event+select'
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000, line_width=2, line_color="red")
-    
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'scrollZoom': False, 'displayModeBar': False})
-    
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
-        if p and "customdata" in p[0]:
-            modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
+        if p and "customdata" in p[0]: modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
 # --- 6. MAIN UI ---
 tabs = st.tabs(["📊 Timeline", "📋 Dati", "⚙️ Setup"])
-l, tk, cm, ops_list = get_data("Log_Tempi"), get_data("Task"), get_data("Commesse"), get_data("Operatori")
+l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 
 with tabs[0]:
     if l and tk and cm:
         tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
         cm_m = {c['id']: c['nome_commessa'] for c in cm}
         df = pd.DataFrame(l)
-        df['Inizio'] = pd.to_datetime(df['inizio']).dt.normalize()
-        df['Fine'] = pd.to_datetime(df['fine']).dt.normalize()
+        df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
         df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
         df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
         df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
-
         c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
         with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
-
-        f_c = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique()))
-        f_o = c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
-
+        f_c, f_o = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique())), c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b4 = st.columns(4)
         if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
         if b2.button("📑 Task", use_container_width=True): modal_task()
         if b3.button("⏱️ Log", use_container_width=True): modal_log()
-        if b4.button("📍 Oggi", use_container_width=True): 
-            st.session_state.chart_key += 1
-            st.rerun()
-
+        if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
         oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_p = df.copy()
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
-
-        if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
-            x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
-        elif scala == "Personalizzato":
-            st.warning("Seleziona data inizio e fine nel calendario.")
-            st.stop()
+        if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
+        elif scala == "Personalizzato": st.warning("Seleziona data inizio e fine."); st.stop()
         else:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-
         shapes = []
         curr = x_range[0] - timedelta(days=2)
         while curr <= x_range[1] + timedelta(days=32):
-            if curr.weekday() >= 5:
-                shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.15)", layer="below", line_width=0))
+            if curr.weekday() >= 5: shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.15)", layer="below", line_width=0))
             curr += timedelta(days=1)
-        
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
+
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
