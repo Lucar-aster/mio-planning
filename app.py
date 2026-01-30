@@ -431,6 +431,7 @@ with tabs[0]:
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
             
             # --- 2. LOGICA DEL RANGE AUTOMATICO ---
+            formato_it = "%d/%m<br>%a"
             oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             if scala == "Settimana":
                 range_automatico = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
@@ -490,31 +491,7 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            # --- 1. DEFINIZIONE DEL RANGE VISIVO (SCALA) ---
-            # Questo decide cosa vedi sul grafico, indipendentemente dal widget
-            oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-            if scala == "Settimana":
-                x_range_scala = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
-            elif scala == "Mese":
-                x_range_scala = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
-            else: # Trimestre
-                x_range_scala = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
-
-            # --- 2. LOGICA DI FILTRO E RANGE FINALE ---
-            # Se l'utente ha selezionato un range nel widget, vince il widget
-            if filtro_manueale and len(intervallo_date) == 2:
-                d_inizio, d_fine = intervallo_date
-                x_range = [pd.to_datetime(filtro_manuale[0]), pd.to_datetime(filtro_manuale[1])]
-                # Filtra i dati del grafico
-                mask = (df_plot['Inizio'].dt.date >= filtro_manuale[0]) & (df_plot['Fine'].dt.date <= filtro_manuale[1])
-                df_plot = df_plot[mask]
-            else:
-                # Se il widget è vuoto, usa il range della SCALA e NON filtrare il DataFrame
-                x_range = range_scala
-                # NON applichiamo filtri a df_plot qui, così vedi tutto il periodo della scala
-
-               delta_giorni = (x_range[1] - x_range[0]).days
+           delta_giorni = (x_range[1] - x_range[0]).days
             
             if delta_giorni <= 7:
                 x_dtick = 86400000          # Un tick ogni giorno
