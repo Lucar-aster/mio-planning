@@ -122,7 +122,7 @@ st.markdown("""
     unsafe_allow_html=True
 )
     # TESTO A CAPO
-   def formatta_colonne_y(row, width_commessa=15, width_task=20):
+def formatta_colonne_y(row, width_commessa=15, width_task=20):
         # Applica il "a capo" a Commessa
         c = str(row['commessa'])
         if len(c) > width_commessa:
