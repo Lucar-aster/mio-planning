@@ -363,17 +363,24 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         })
 
     # TESTO A CAPO
-    def a_capo_testo(testo, max_len=15):
-        if isinstance(testo, str) and len(testo) > max_len:
-            # Trova uno spazio vicino alla metà per non tagliare le parole
-            meta = len(testo) // 2
-            spazio_vicino = testo.find(' ', meta - 5, meta + 5)
-            if spazio_vicino != -1:
-                return testo[:spazio_vicino] + '<br>' + testo[spazio_vicino+1:]
-            else:
-                # Se non ci sono spazi, taglia brutalmente a metà
-                return testo[:meta] + '<br>' + testo[meta:]
-        return testo
+   def formatta_colonne_y(row, width_commessa=15, width_task=20):
+    # Applica il "a capo" a Commessa
+    c = str(row['commessa'])
+    if len(c) > width_commessa:
+        c = c[:width_commessa] + "..." # O usi la logica <br> se vuoi più righe
+    
+    # Applica il "a capo" a Task
+    t = str(row['task_nome'])
+    if len(t) > width_task:
+        # Spezziamo il task a metà con <br>
+        meta = width_task // 2
+        t = t[:meta] + "<br>" + t[meta:]
+
+    # Creiamo una struttura a due "celle" affiancate usando spazi o HTML
+    # Nota: Usiamo <b> per la commessa per distinguerla visivamente
+    return f"<b>{c.ljust(width_commessa)}</b> | {t}"
+
+df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
 
 # --- NAVIGAZIONE ---
 tabs = st.tabs(["📊 Timeline", "⏱️ Gestione Log", "⚙️ Configurazione"])
