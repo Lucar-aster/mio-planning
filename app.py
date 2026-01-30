@@ -122,22 +122,14 @@ st.markdown("""
     unsafe_allow_html=True
 )
     # TESTO A CAPO
-def formatta_colonne_y(row, width_commessa=15, width_task=20):
-        # Applica il "a capo" a Commessa
-        c = str(row['commessa'])
-        if len(c) > width_commessa:
-            c = c[:width_commessa] + "..." # O usi la logica <br> se vuoi più righe
-    
-        # Applica il "a capo" a Task
-        t = str(row['task_nome'])
-        if len(t) > width_task:
-            # Spezziamo il task a metà con <br>
-            meta = width_task // 2
-            t = t[:meta] + "<br>" + t[meta:]
+def formatta_colonne_y(row):
+    import textwrap
+    c = "<br>".join(textwrap.wrap(str(row['commessa']), width=15))
+    t = "<br>".join(textwrap.wrap(str(row['task_nome']), width=15))
+    return f"<b>{c}</b> │ {t}"
 
-        # Creiamo una struttura a due "celle" affiancate usando spazi o HTML
-        # Nota: Usiamo <b> per la commessa per distinguerla visivamente
-        return f"<b>{c.ljust(width_commessa)}</b> | {t}"
+if not df_gantt.empty:
+    df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
     
 df_gantt['asse_y_doppio'] = df_gantt.apply(formatta_colonne_y, axis=1)
 
@@ -327,7 +319,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[df_op['Commessa'], df_op['Task']],
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=df_gantt['asse_y_doppio'],
             orientation='h', name=op, offsetgroup=op,
             # MODIFICATO: Prende il colore assegnato all'operatore dalla color_map
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=10), 
@@ -353,11 +345,7 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         legend=dict(orientation="h", y=-0.01, x=0.5, xanchor="center")
     )
     
-    fig.update_yaxes(
-    tickmode='linear',
-    automargin=True,  # Fondamentale per far spazio al testo su più righe
-    tickfont=dict(size=10) # Se il testo è su due righe, un font leggermente più piccolo aiuta
-    )
+    fig.update_yaxes(type='category', automargin=True)
     
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
