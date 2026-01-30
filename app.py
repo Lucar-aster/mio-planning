@@ -9,7 +9,7 @@ import textwrap
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
-# --- 2. CSS: ZERO PADDING E TITOLO COMPATTO ---
+# --- 2. CSS ---
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
@@ -84,7 +84,30 @@ def modal_log():
         supabase.table("Log_Tempi").insert({"operatore": op, "task_id": t_opts[scelta], "inizio": str(i), "fine": str(f)}).execute()
         st.rerun()
 
-# --- 4. GANTT FRAGMENT ---
+# --- 4. FUNZIONE DI RAGGRUPPAMENTO LOG CONSECUTIVI ---
+def merge_consecutive_logs(df):
+    if df.empty: return df
+    df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
+    merged = []
+    for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
+        current_row = None
+        for _, row in group.iterrows():
+            if current_row is None:
+                current_row = row.to_dict()
+            else:
+                # Se il log inizia entro 1 giorno dalla fine del precedente, unisci
+                if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
+                    current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
+                    # Aggiorniamo la durata per Plotly
+                    current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
+                else:
+                    merged.append(current_row)
+                    current_row = row.to_dict()
+        if current_row:
+            merged.append(current_row)
+    return pd.DataFrame(merged)
+
+# --- 5. GANTT FRAGMENT ---
 def get_it_date_label(dt, delta):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
@@ -96,9 +119,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         st.info("Nessun dato trovato.")
         return
 
+    # Applichiamo il raggruppamento temporale
+    df_merged = merge_consecutive_logs(df_plot)
+
     fig = go.Figure()
-    for op in df_plot['operatore'].unique():
-        df_op = df_plot[df_plot['operatore'] == op]
+    for op in df_merged['operatore'].unique():
+        df_op = df_merged[df_merged['operatore'] == op]
         c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
         
@@ -114,7 +140,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
     
     fig.update_layout(
-        height=400 + (len(df_plot[['Commessa', 'Task']].drop_duplicates()) * 35),
+        height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
         xaxis=dict(type="date", side="top", tickmode="array", tickvals=tick_vals, ticktext=tick_text, range=x_range, showgrid=True, gridcolor="#e0e0e0", fixedrange=False),
         yaxis=dict(autorange="reversed", showgrid=True, gridcolor="#f0f0f0", showdividers=True, dividercolor="grey", fixedrange=True),
@@ -130,9 +156,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if p and "customdata" in p[0]:
             modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
-# --- 5. MAIN UI ---
+# --- 6. MAIN UI ---
 tabs = st.tabs(["📊 Timeline", "📋 Dati", "⚙️ Setup"])
-
 l, tk, cm, ops_list = get_data("Log_Tempi"), get_data("Task"), get_data("Commesse"), get_data("Operatori")
 
 with tabs[0]:
@@ -183,14 +208,6 @@ with tabs[0]:
             curr += timedelta(days=1)
         
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
-
-with tabs[1]:
-    st.subheader("Dati Log")
-    if l: st.dataframe(pd.DataFrame(l), use_container_width=True)
-
-with tabs[2]:
-    st.subheader("Configurazione Operatori")
-    if ops_list: st.table(pd.DataFrame(ops_list))
         
 # --- TAB 2: REGISTRA TEMPI (CON COLONNA COMMESSA) ---
 with tabs[1]:
