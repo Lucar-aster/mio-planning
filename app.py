@@ -18,9 +18,7 @@ config_it = dict({
 })
 
 # Configurazione globale per i widget Streamlit
-# Questo forza il formato DD/MM/YYYY in tutti i date_input
-if "st_format" not in st.session_state:
-    st.date_input = st.date_input
+
 
 # Prova a impostare il locale in italiano
 def set_it_locale():
