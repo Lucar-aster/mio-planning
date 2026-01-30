@@ -434,7 +434,7 @@ with tabs[0]:
                     "Periodo Visibile",
                     value=none,
                     format="DD/MM/YYYY",
-                    placeholder="Seleziona date..."
+                    key="filtro_date_manuale"
                     )
                 
             scala = col_f4.selectbox("Visualizzazione", ["Settimana", "Mese", "Trimestre"], index=1)
@@ -473,20 +473,23 @@ with tabs[0]:
                 curr += timedelta(days=1)
 
             formato_it = "%d/%m<br>%a"
-            if scala == "Settimana":
-                default_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
-            elif scala == "Mese":
-                default_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
-            else: # Trimestre
-                default_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
+            filtro_attivo = isinstance(intervallo_date, (list, tuple)) and len(intervallo_date) == 2
 
-            if intervallo_date and len(intervallo_date) == 2:
+            if filtro_attivo:
+                # Se l'utente ha usato il filtro, il grafico segue il filtro
                 data_inizio, data_fine = intervallo_date
+                x_range = [pd.to_datetime(data_inizio), pd.to_datetime(data_fine)]
+                # Applichiamo il filtro anche al DataFrame
                 mask = (df_plot['Inizio'].dt.date >= data_inizio) & (df_plot['Fine'].dt.date <= data_fine)
                 df_plot = df_plot[mask]
-                x_range = [pd.to_datetime(data_inizio), pd.to_datetime(data_fine)]
             else:
-                x_range = default_range
+                # Se il filtro è vuoto, il grafico segue la SCALA (Settimana, Mese, Trimestre)
+                if scala == "Settimana":
+                    x_range = [oggi - timedelta(days=3), oggi + timedelta(days=4)]
+                elif scala == "Mese":
+                    x_range = [oggi - timedelta(days=15), oggi + timedelta(days=15)]
+                else: # Trimestre
+                    x_range = [oggi - timedelta(days=45), oggi + timedelta(days=45)]
 
             delta_giorni = (x_range[1] - x_range[0]).days
             
