@@ -136,7 +136,8 @@ def get_data(table):
 # --- INIZIALIZZAZIONE SESSION STATE (MODIFICATO: Spostato in alto per sicurezza) ---
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
-
+if "intervallo_filtro" not in st.session_state:
+    st.session_state.intervallo_filtro = [] # Vuoto al primo avvio
 # --- FUNZIONI DI INSERIMENTO (MODALS) ---
 
 @st.dialog("➕ Nuova Commessa")
@@ -431,6 +432,7 @@ with tabs[0]:
                 oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 intervallo_date = st.date_input(
                     "Periodo Visibile",
+                    value=st.session_state.intervallo_filtro,
                     format="DD/MM/YYYY",
                     )
                 
