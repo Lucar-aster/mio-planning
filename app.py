@@ -475,11 +475,11 @@ with tabs[0]:
             oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
             if scala == "Settimana":
-                x_range_default = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
+                x_range_scala = [oggi_dt - timedelta(days=3), oggi_dt + timedelta(days=4)]
             elif scala == "Mese":
-                x_range_default = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
+                x_range_scala = [oggi_dt - timedelta(days=15), oggi_dt + timedelta(days=15)]
             else: # Trimestre
-                x_range_default = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
+                x_range_scala = [oggi_dt - timedelta(days=45), oggi_dt + timedelta(days=45)]
 
             # --- 2. LOGICA DI FILTRO E RANGE FINALE ---
             # Se l'utente ha selezionato un range nel widget, vince il widget
