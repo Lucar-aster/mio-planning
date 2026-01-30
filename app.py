@@ -193,7 +193,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             tickvals=tick_range,
             ticktext=tick_text,
             showgrid=False, 
-            zeroline=False
+            zeroline=False,
+            anchor="y"
         ),
         # ASSE SECONDARIO: Gestisce solo la GRIGLIA GIORNALIERA
         xaxis2=dict(
@@ -201,7 +202,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             overlaying="x", side="top", showticklabels=False,
             tickmode="linear", dtick=86400000.0, # Un segno ogni giorno
             showgrid=True, gridcolor="#e0e0e0", 
-            zeroline=False, position=1
+            zeroline=False, anchor="y",
+            layer="below traces"
         ),
         yaxis=dict(
             autorange="reversed", 
