@@ -49,36 +49,15 @@ def modal_edit_log(log_id, current_op, current_start, current_end):
     col1, col2 = st.columns(2)
     if col1.button("Aggiorna", type="primary", use_container_width=True):
         supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
-        st.cache_data.clear()
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
     if col2.button("Elimina", use_container_width=True):
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
-        st.cache_data.clear()
-        st.rerun()
-
-@st.dialog("➕ Nuova Commessa")
-def modal_commessa():
-    n = st.text_input("Nome Commessa")
-    if st.button("Salva", use_container_width=True):
-        supabase.table("Commesse").insert({"nome_commessa": n}).execute()
-        st.cache_data.clear()
-        st.rerun()
-
-@st.dialog("📑 Nuovo Task")
-def modal_task():
-    cms = {c['nome_commessa']: c['id'] for c in get_cached_data("Commesse")}
-    n = st.text_input("Nome Task")
-    c = st.selectbox("Commessa", options=list(cms.keys()))
-    if st.button("Crea", use_container_width=True):
-        supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c]}).execute()
-        st.cache_data.clear()
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
-    cm_data = get_cached_data("Commesse")
-    tk_data = get_cached_data("Task")
+    cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     op = st.selectbox("Operatore", ops_list)
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
@@ -100,10 +79,9 @@ def modal_log():
         else: target_task_id = task_opts[sel_task]
         if target_task_id:
             supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f)}).execute()
-            st.cache_data.clear()
-            st.rerun()
+            st.cache_data.clear(); st.rerun()
 
-# --- 4. LOGICA MERGE E ETICHETTE ---
+# --- 4. LOGICA GANTT ---
 def merge_consecutive_logs(df):
     if df.empty: return df
     df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
@@ -127,7 +105,6 @@ def get_it_date_label(dt, delta):
     if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
-# --- 5. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
@@ -146,11 +123,9 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         ))
     
     grid_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    if 15 < delta_giorni <= 40: tick_vals = grid_vals[::2]
-    elif delta_giorni > 40: tick_vals = pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON')
-    else: tick_vals = grid_vals
-    
+    tick_vals = grid_vals[::2] if 15 < delta_giorni <= 40 else (pd.date_range(start=x_range[0], end=x_range[1], freq='W-MON') if delta_giorni > 40 else grid_vals)
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_vals]
+    
     fig.update_layout(
         height=400 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 35),
         margin=dict(l=10, r=10, t=40, b=0), shapes=shapes, barmode='overlay', dragmode='pan',
@@ -160,160 +135,115 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         clickmode='event+select'
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000, line_width=2, line_color="red")
+    
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'scrollZoom': False, 'displayModeBar': False})
+    
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
-        if p and "customdata" in p[0]: modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
+        if p and "customdata" in p[0]:
+            modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
-# --- 6. MAIN UI ---
-tabs = st.tabs(["📊 Timeline", "📋 Dati", "⚙️ Setup"])
-l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
+# --- 5. MAIN UI ---
+tabs = st.tabs(["📊 Timeline", "📋 Gestione Attività", "⚙️ Configurazione"])
+l_data, tk_data, cm_data, ops_data = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 
+# --- TAB 1: TIMELINE ---
 with tabs[0]:
-    if l and tk and cm:
-        tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
-        cm_m = {c['id']: c['nome_commessa'] for c in cm}
-        df = pd.DataFrame(l)
+    if l_data and tk_data and cm_data:
+        tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk_data}
+        cm_m = {c['id']: c['nome_commessa'] for c in cm_data}
+        df = pd.DataFrame(l_data)
         df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
         df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
         df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
         df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
+        
         c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
         with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
+        
         f_c, f_o = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique())), c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
+        
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b4 = st.columns(4)
-        if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
-        if b2.button("📑 Task", use_container_width=True): modal_task()
-        if b3.button("⏱️ Log", use_container_width=True): modal_log()
-        if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+        col_btn1, col_btn2, col_btn3 = st.columns([1,1,6])
+        if col_btn1.button("⏱️ Nuovo Log", use_container_width=True): modal_log()
+        if col_btn2.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+
         oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         df_p = df.copy()
         if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
         if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
+        
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
-        elif scala == "Personalizzato": st.warning("Seleziona data inizio e fine."); st.stop()
         else:
             d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
+
         shapes = []
         curr = x_range[0] - timedelta(days=2)
         while curr <= x_range[1] + timedelta(days=32):
             if curr.weekday() >= 5: shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.15)", layer="below", line_width=0))
             curr += timedelta(days=1)
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_data}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
 
-# --- TAB 2: GESTIONE ATTIVITÀ (DATA EDITOR) ---
+# --- TAB 2: GESTIONE ATTIVITÀ ---
 with tabs[1]:
     st.header("📝 Gestione Attività")
     if l_data and cm_data and tk_data:
         df_edit = pd.DataFrame(l_data)
         df_edit['inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
         df_edit['fine'] = pd.to_datetime(df_edit['fine']).dt.date
-        
         task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk_data}
         commessa_map = {c['id']: c['nome_commessa'] for c in cm_data}
-        
         df_edit['task_nome'] = df_edit['task_id'].map(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
         df_edit['commessa_nome'] = df_edit['task_id'].map(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
         
         df_display = df_edit[['id', 'commessa_nome', 'task_nome', 'operatore', 'inizio', 'fine']].copy()
-        st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
-
-        edited_df = st.data_editor(
-            df_display, key="log_editor_v3", num_rows="dynamic",
-            disabled=["id", "commessa_nome"],
-            column_config={
-                "id": None, "commessa_nome": "Commessa",
-                "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk_data], required=True),
-                "operatore": st.column_config.TextColumn("Operatore", required=True),
-                "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
-                "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
-            }, hide_index=True, use_container_width=True
-        )
-
+        edited_df = st.data_editor(df_display, key="log_editor_v3", num_rows="dynamic", disabled=["id", "commessa_nome"], column_config={"id": None, "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk_data], required=True), "inizio": st.column_config.DateColumn(format="DD/MM/YYYY"), "fine": st.column_config.DateColumn(format="DD/MM/YYYY")}, hide_index=True, use_container_width=True)
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
             inv_tk = {t['nome_task']: t['id'] for t in tk_data}
             for _, row in edited_df.iterrows():
                 payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['inizio']), "fine": str(row['fine'])}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
-            st.cache_data.clear()
-            st.success("Database aggiornato!")
-            st.rerun()
+            st.cache_data.clear(); st.success("Database aggiornato!"); st.rerun()
 
-# --- TAB 3: CONFIGURAZIONE SISTEMA ---
+# --- TAB 3: CONFIGURAZIONE ---
 with tabs[2]:
     st.header("⚙️ Configurazione")
     c_admin1, c_admin2, c_admin3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
-
     with c_admin1:
-        st.subheader("Elenco Commesse")
         if cm_data:
             df_c = pd.DataFrame(cm_data)
             st.dataframe(df_c[["nome_commessa"]], use_container_width=True, hide_index=True)
-            with st.expander("📝 Modifica / 🗑️ Elimina"):
-                c_sel = st.selectbox("Seleziona commessa", cm_data, format_func=lambda x: x["nome_commessa"])
-                n_c = st.text_input("Nuovo nome", value=c_sel["nome_commessa"])
-                col1, col2 = st.columns(2)
-                if col1.button("Aggiorna Commessa"):
-                    supabase.table("Commesse").update({"nome_commessa": n_c}).eq("id", c_sel["id"]).execute()
-                    st.cache_data.clear(); st.rerun()
-                if col2.button("Elimina Commessa", type="primary"):
-                    supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute()
-                    st.cache_data.clear(); st.rerun()
+            with st.expander("Modifica / Elimina"):
+                c_sel = st.selectbox("Seleziona", cm_data, format_func=lambda x: x["nome_commessa"])
+                n_c = st.text_input("Nome", value=c_sel["nome_commessa"])
+                if st.button("Aggiorna"): supabase.table("Commesse").update({"nome_commessa": n_c}).eq("id", c_sel["id"]).execute(); st.cache_data.clear(); st.rerun()
+                if st.button("Elimina", type="primary"): supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute(); st.cache_data.clear(); st.rerun()
         with st.form("new_c"):
-            n_new_c = st.text_input("➕ Nuova Commessa")
-            if st.form_submit_button("Salva"):
-                supabase.table("Commesse").insert({"nome_commessa": n_new_c}).execute()
-                st.cache_data.clear(); st.rerun()
-
+            n_new = st.text_input("➕ Nuova Commessa")
+            if st.form_submit_button("Salva"): supabase.table("Commesse").insert({"nome_commessa": n_new}).execute(); st.cache_data.clear(); st.rerun()
     with c_admin2:
-        st.subheader("Elenco Operatori")
         if ops_data:
             df_o = pd.DataFrame(ops_data)
             st.dataframe(df_o[["nome", "colore"]], use_container_width=True, hide_index=True)
-            with st.expander("📝 Modifica / 🗑️ Elimina"):
-                o_sel = st.selectbox("Seleziona operatore", ops_data, format_func=lambda x: x["nome"])
+            with st.expander("Modifica / Elimina"):
+                o_sel = st.selectbox("Seleziona", ops_data, format_func=lambda x: x["nome"])
                 n_o = st.text_input("Nome", value=o_sel["nome"])
                 c_o = st.color_picker("Colore", value=o_sel.get("colore", "#8dbad2"))
-                col1, col2 = st.columns(2)
-                if col1.button("Aggiorna Operatore"):
-                    supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute()
-                    st.cache_data.clear(); st.rerun()
-                if col2.button("Elimina Operatore", type="primary"):
-                    supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute()
-                    st.cache_data.clear(); st.rerun()
-        with st.form("new_op"):
-            n_new_o = st.text_input("➕ Nuovo Operatore")
-            c_new_o = st.color_picker("Colore", "#8dbad2")
-            if st.form_submit_button("Salva"):
-                supabase.table("Operatori").insert({"nome": n_new_o, "colore": c_new_o}).execute()
-                st.cache_data.clear(); st.rerun()
-
+                if st.button("Aggiorna Operatore"): supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute(); st.cache_data.clear(); st.rerun()
+                if st.button("Elimina Operatore", type="primary"): supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute(); st.cache_data.clear(); st.rerun()
     with c_admin3:
-        st.subheader("Elenco Task")
         if tk_data and cm_data:
             df_t = pd.DataFrame(tk_data)
             c_map = {c['id']: c['nome_commessa'] for c in cm_data}
             df_t['Progetto'] = df_t['commessa_id'].map(c_map)
             st.dataframe(df_t[["nome_task", "Progetto"]], use_container_width=True, hide_index=True)
-            with st.expander("📝 Modifica / 🗑️ Elimina"):
-                t_sel = st.selectbox("Seleziona task", tk_data, format_func=lambda x: x["nome_task"])
+            with st.expander("Modifica / Elimina"):
+                t_sel = st.selectbox("Seleziona", tk_data, format_func=lambda x: x["nome_task"])
                 n_t = st.text_input("Rinomina", value=t_sel["nome_task"])
-                c_t = st.selectbox("Sposta a Commessa", cm_data, format_func=lambda x: x['nome_commessa'])
-                col1, col2 = st.columns(2)
-                if col1.button("Salva Task"):
-                    supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute()
-                    st.cache_data.clear(); st.rerun()
-                if col2.button("Rimuovi Task", type="primary"):
-                    supabase.table("Task").delete().eq("id", t_sel["id"]).execute()
-                    st.cache_data.clear(); st.rerun()
-        with st.form("new_task"):
-            nt_n = st.text_input("➕ Nuovo Task")
-            nt_c = st.selectbox("Associa a Progetto", cm_data, format_func=lambda x: x['nome_commessa'])
-            if st.form_submit_button("Aggiungi Task"):
-                supabase.table("Task").insert({"nome_task": nt_n, "commessa_id": nt_c['id']}).execute()
-                st.cache_data.clear(); st.rerun()
+                c_t = st.selectbox("Sposta a", cm_data, format_func=lambda x: x['nome_commessa'])
+                if st.button("Salva Task"): supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute(); st.cache_data.clear(); st.rerun()
+                if st.button("Rimuovi Task", type="primary"): supabase.table("Task").delete().eq("id", t_sel["id"]).execute(); st.cache_data.clear(); st.rerun()
