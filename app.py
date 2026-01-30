@@ -340,13 +340,23 @@ def render_gantt_fragment(df_plot, lista_op, oggi, x_range, x_dtick, formato_it,
         margin=dict(l=10, r=20, t=10, b=10),
         shapes=shapes,
         automargin=True,
-        xaxis=dict(type="date", side="top", tickmode='linear',       # Forza l'uso dei nostri valori
+        xaxis=dict(type="date", side="top", tickmode="array",       # Forza l'uso dei nostri valori
         tickvals=tick_vals,    # Le posizioni dei giorni
         ticktext=tick_text,    # Le etichette tradotte in italiano
         tickfont=dict(size=10, color="#1E3A8A"),range=x_range, dtick=x_dtick, tickformat="%b<br>%d %a<br>Sett. %V", showgrid=True, gridcolor="#e0e0e0"),
         yaxis=dict(autorange="reversed", gridcolor="#f5f5f5"),
         legend=dict(orientation="h", y=-0.01, x=0.5, xanchor="center")
     )
+
+    fig.update_yaxes(
+        type='category',
+        # Questa impostazione forza Plotly a mostrare tutte le etichette
+        tickmode='linear', 
+        automargin=True,
+        # Impedisce a Plotly di raggruppare troppo se ci sono <br>
+        showdividers=True, 
+        dividercolor="grey"
+    
     fig.add_vline(x=oggi.timestamp() * 1000+ 43200000, line_width=2, line_color="#ff5252")
 
     # MODIFICATO: render del grafico isolato nel fragment
