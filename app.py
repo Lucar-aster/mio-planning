@@ -432,7 +432,7 @@ with tabs[0]:
                 oggi = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 intervallo_date = st.date_input(
                     "Periodo Visibile",
-                    value=none,
+                    value=None,
                     format="DD/MM/YYYY",
                     key="filtro_date_manuale"
                     )
