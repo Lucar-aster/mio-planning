@@ -301,6 +301,7 @@ with tabs[2]:
             df_t = pd.DataFrame(tk)
             c_map = {c['id']: c['nome_commessa'] for c in cm}
             df_t['Commessa'] = df_t['commessa_id'].map(c_map)
+            df_t = df_t.rename(columns={"nome_task": "Task"})
             df_t = df_t[["Commessa", "Task"]]
             st.dataframe(df_t, use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
