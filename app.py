@@ -421,7 +421,7 @@ with tabs[2]:
                 if col1.button("Aggiorna Operatore"):
                     supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute()
                     get_cached_data.clear(); st.rerun()
-               conf_op_key = f"del_op_{o_sel['id']}"
+                    conf_op_key = f"del_op_{o_sel['id']}"
                 if conf_op_key not in st.session_state: st.session_state[conf_op_key] = False
 
                     if not st.session_state[conf_op_key]:
