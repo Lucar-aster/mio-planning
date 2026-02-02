@@ -348,10 +348,37 @@ with tabs[2]:
                 if col1.button("Aggiorna Commessa"):
                     supabase.table("Commesse").update({"nome_commessa": n_c}).eq("id", c_sel["id"]).execute()
                     get_cached_data.clear(); st.rerun()
-                if col2.button("Elimina Commessa", type="primary"):
-                    supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute()
-                    get_cached_data.clear(); st.rerun()
-        with st.form("new_c"):
+                confirm_key = f"delete_confirm_{c_sel['id']}"
+            
+                if confirm_key not in st.session_state:
+                    st.session_state[confirm_key] = False
+
+                if not st.session_state[confirm_key]:
+                    if col2.button("Elimina Commessa", type="primary"):
+                        st.session_state[confirm_key] = True
+                        st.rerun()
+                else:
+                    st.warning(f"⚠️ Sicuro? Saranno eliminati anche tutti i Log e i Task di: {c_sel['nome_commessa']}")
+                    c_si, c_no = st.columns(2)
+                    
+                    if c_si.button("✅ Sì, elimina tutto", type="primary", use_container_width=True):
+                        # 1. Elimina Task e Log collegati (Cascata manuale)
+                        # Assicurati che 'commessa_id' sia il nome corretto della colonna nelle altre tabelle
+                        supabase.table("Log_Tempi").delete().eq("commessa_id", c_sel["id"]).execute()
+                        supabase.table("Task").delete().eq("commessa_id", c_sel["id"]).execute()
+                        
+                        # 2. Elimina la Commessa
+                        supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute()
+                        
+                        # 3. Reset e pulizia
+                        del st.session_state[confirm_key]
+                        get_cached_data.clear()
+                        st.rerun()
+                
+                    if c_no.button("❌ Annulla", use_container_width=True):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
+                        
             n_new_c = st.text_input("➕ Nuova Commessa")
             if st.form_submit_button("Salva"):
                 supabase.table("Commesse").insert({"nome_commessa": n_new_c}).execute()
