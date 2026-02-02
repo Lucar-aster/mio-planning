@@ -30,7 +30,7 @@ URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
 supabase = create_client(URL, KEY)
 
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=60)
 def get_cached_data(table):
     try: return supabase.table(table).select("*").execute().data
     except: return []
