@@ -497,7 +497,7 @@ with tabs[2]:
                     st.session_state[conf_tk_key] = False
                     st.rerun()
 
-    st.divider()
+        st.divider()
         with st.form("new_task"):
             nt_n = st.text_input("➕ Nuovo Task")
             nt_c = st.selectbox("Associa a Progetto", cm, format_func=lambda x: x['nome_commessa'])
