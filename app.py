@@ -343,7 +343,7 @@ with tabs[2]:
             st.dataframe(df_c[["nome_commessa"]], use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
                 c_sel = st.selectbox("Seleziona commessa", cm, format_func=lambda x: x["nome_commessa"], key="sel_comm_edit")
-                n_c = st.text_input("Nuovo nome", value=c_sel["nome_commessa"], key=f"comm_name_{c_sel['id']})
+                n_c = st.text_input("Nuovo nome", value=c_sel["nome_commessa"], key=f"comm_name_{c_sel['id']}")
                 col1, col2 = st.columns(2)
                 if col1.button("Aggiorna Commessa", key=f"upd_c_{c_sel['id']}"):
                     supabase.table("Commesse").update({"nome_commessa": n_c}).eq("id", c_sel["id"]).execute()
