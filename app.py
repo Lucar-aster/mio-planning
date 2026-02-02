@@ -411,45 +411,54 @@ with tabs[2]:
         if ops_list:
             df_o = pd.DataFrame(ops_list)
             st.dataframe(df_o[["nome", "colore"]].style.apply(lambda x: [f"background-color: {val}" for val in df_o['colore']], subset=['colore']), 
-                use_container_width=True, 
-                hide_index=True)
+                        use_container_width=True, 
+                        hide_index=True)
+            
             with st.expander("📝 Modifica / 🗑️ Elimina"):
-                o_sel = st.selectbox("Seleziona operatore", ops_list, format_func=lambda x: x["nome"])
-                n_o = st.text_input("Nome", value=o_sel["nome"])
-                c_o = st.color_picker("Colore", value=o_sel.get("colore", "#8dbad2"))
+                o_sel = st.selectbox("Seleziona operatore", ops_list, format_func=lambda x: x["nome"], key="sel_op")
+                n_o = st.text_input("Nome", value=o_sel["nome"], key="edit_op_name")
+                c_o = st.color_picker("Colore", value=o_sel.get("colore", "#8dbad2"), key="edit_op_color")
+                
                 col1, col2 = st.columns(2)
-                if col1.button("Aggiorna Operatore"):
+                
+                if col1.button("Aggiorna Operatore", key="btn_upd_op"):
                     supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute()
-                    get_cached_data.clear(); st.rerun()
-                    conf_op_key = f"del_op_{o_sel['id']}"
-                if conf_op_key not in st.session_state: st.session_state[conf_op_key] = False
+                    get_cached_data.clear()
+                    st.rerun()
+
+                # --- Logica di conferma (SPOSTATA FUORI DALL'IF SOPRA) ---
+                conf_op_key = f"del_op_{o_sel['id']}"
+                if conf_op_key not in st.session_state: 
+                    st.session_state[conf_op_key] = False
 
                 if not st.session_state[conf_op_key]:
-                        if col2.button("Elimina Operatore", type="primary", key="btn_pre_del_op"):
-                            st.session_state[conf_op_key] = True
-                            st.rerun()
+                    if col2.button("Elimina Operatore", type="primary", key="btn_pre_del_op"):
+                        st.session_state[conf_op_key] = True
+                        st.rerun()
                 else:
-                        st.error(f"⚠️ Elimino anche tutti i Log di {o_sel['nome']}?")
-                        b1, b2 = st.columns(2)
-                        if b1.button("Sì, elimina", type="primary", key="btn_confirm_op"):
-                            # Cascata: elimina i log dell'operatore prima dell'operatore stesso
-                            supabase.table("Log_Tempi").delete().eq("operatore", o_sel["nome"]).execute()
-                            supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute()
-                            st.session_state[conf_op_key] = False
-                            get_cached_data.clear(); st.rerun()
-                        if b2.button("Annulla", key="btn_cancel_op"):
-                            st.session_state[conf_op_key] = False
-                            st.rerun()
+                    st.error(f"⚠️ Elimino anche tutti i Log di {o_sel['nome']}?")
+                    b1, b2 = st.columns(2)
+                    if b1.button("Sì, elimina", type="primary", key="btn_confirm_op"):
+                        supabase.table("Log_Tempi").delete().eq("operatore", o_sel["nome"]).execute()
+                        supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute()
+                        st.session_state[conf_op_key] = False
+                        get_cached_data.clear()
+                        st.rerun()
+                    if b2.button("Annulla", key="btn_cancel_op"):
+                        st.session_state[conf_op_key] = False
+                        st.rerun()
 
-    st.divider()
-    
-            with st.form("new_op"):
-                n_new_o = st.text_input("➕ Nuovo Operatore")
-                c_new_o = st.color_picker("Colore", "#8dbad2")
-                if st.form_submit_button("Salva"):
+        st.divider()
+
+        # --- ORA IL FORM È ALLINEATO CORRETTAMENTE ---
+        with st.form("new_op"):
+            n_new_o = st.text_input("➕ Nuovo Operatore")
+            c_new_o = st.color_picker("Colore", "#8dbad2")
+            if st.form_submit_button("Salva"):
+                if n_new_o:
                     supabase.table("Operatori").insert({"nome": n_new_o, "colore": c_new_o}).execute()
-                    get_cached_data.clear(); st.rerun()
-
+                    get_cached_data.clear()
+                    st.rerun()
     with c_admin3:
         st.subheader("Elenco Task")
         if tk and cm:
