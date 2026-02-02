@@ -49,11 +49,11 @@ def modal_edit_log(log_id, current_op, current_start, current_end):
     col1, col2 = st.columns(2)
     if col1.button("Aggiorna", type="primary", use_container_width=True):
         supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
-        st.cache_data.clear(get_cached_data)
+        get_cached_data.clear()
         st.rerun()
     if col2.button("Elimina", use_container_width=True):
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
-        st.cache_data.clear(get_cached_data)
+        get_cached_data.clear()
         st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
@@ -61,7 +61,7 @@ def modal_commessa():
     n = st.text_input("Nome Commessa")
     if st.button("Salva", use_container_width=True):
         supabase.table("Commesse").insert({"nome_commessa": n}).execute()
-        st.cache_data.clear(get_cached_data)
+        get_cached_data.clear()
         st.rerun()
 
 @st.dialog("📑 Nuovo Task")
@@ -71,7 +71,7 @@ def modal_task():
     c = st.selectbox("Commessa", options=list(cms.keys()))
     if st.button("Crea", use_container_width=True):
         supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c]}).execute()
-        st.cache_data.clear(get_cached_data)
+        get_cached_data.clear()
         st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
@@ -100,7 +100,7 @@ def modal_log():
         else: target_task_id = task_opts[sel_task]
         if target_task_id:
             supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f)}).execute()
-            st.cache_data.clear(get_cached_data)
+            get_cached_data.clear()
             st.rerun()
 
 # --- 4. LOGICA MERGE E ETICHETTE ---
@@ -327,7 +327,7 @@ with tabs[1]:
             for _, row in edited_df.iterrows():
                 payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['inizio']), "fine": str(row['fine'])}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
-            st.cache_data.clear(get_cached_data)
+            get_cached_data.clear()
             st.success("Database aggiornato!")
             st.rerun()
 
@@ -347,15 +347,15 @@ with tabs[2]:
                 col1, col2 = st.columns(2)
                 if col1.button("Aggiorna Commessa"):
                     supabase.table("Commesse").update({"nome_commessa": n_c}).eq("id", c_sel["id"]).execute()
-                    st.cache_data.clear(get_cached_data); st.rerun()
+                    get_cached_data.clear(); st.rerun()
                 if col2.button("Elimina Commessa", type="primary"):
                     supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute()
-                    st.cache_data.clear(get_cached_data); st.rerun()
+                    get_cached_data.clear(); st.rerun()
         with st.form("new_c"):
             n_new_c = st.text_input("➕ Nuova Commessa")
             if st.form_submit_button("Salva"):
                 supabase.table("Commesse").insert({"nome_commessa": n_new_c}).execute()
-                st.cache_data.clear(get_cached_data); st.rerun()
+                get_cached_data.clear(); st.rerun()
 
     with c_admin2:
         st.subheader("Elenco Operatori")
@@ -371,16 +371,16 @@ with tabs[2]:
                 col1, col2 = st.columns(2)
                 if col1.button("Aggiorna Operatore"):
                     supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute()
-                    st.cache_data.clear(get_cached_data); st.rerun()
+                    get_cached_data.clear(); st.rerun()
                 if col2.button("Elimina Operatore", type="primary"):
                     supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute()
-                    st.cache_data.clear(get_cached_data); st.rerun()
+                    get_cached_data.clear(); st.rerun()
         with st.form("new_op"):
             n_new_o = st.text_input("➕ Nuovo Operatore")
             c_new_o = st.color_picker("Colore", "#8dbad2")
             if st.form_submit_button("Salva"):
                 supabase.table("Operatori").insert({"nome": n_new_o, "colore": c_new_o}).execute()
-                st.cache_data.clear(get_cached_data); st.rerun()
+                get_cached_data.clear(); st.rerun()
 
     with c_admin3:
         st.subheader("Elenco Task")
@@ -398,13 +398,13 @@ with tabs[2]:
                 col1, col2 = st.columns(2)
                 if col1.button("Salva Task"):
                     supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute()
-                    st.cache_data.clear(get_cached_data); st.rerun()
+                    get_cached_data.clear(); st.rerun()
                 if col2.button("Rimuovi Task", type="primary"):
                     supabase.table("Task").delete().eq("id", t_sel["id"]).execute()
-                    st.cache_data.clear(get_cached_data); st.rerun()
+                    get_cached_data.clear(); st.rerun()
         with st.form("new_task"):
             nt_n = st.text_input("➕ Nuovo Task")
             nt_c = st.selectbox("Associa a Progetto", cm, format_func=lambda x: x['nome_commessa'])
             if st.form_submit_button("Aggiungi Task"):
                 supabase.table("Task").insert({"nome_task": nt_n, "commessa_id": nt_c['id']}).execute()
-                st.cache_data.clear(get_cached_data); st.rerun()
+                get_cached_data.clear(); st.rerun()
