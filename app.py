@@ -416,8 +416,8 @@ with tabs[2]:
             
             with st.expander("📝 Modifica / 🗑️ Elimina"):
                 o_sel = st.selectbox("Seleziona operatore", ops_list, format_func=lambda x: x["nome"], key="sel_op")
-                n_o = st.text_input("Nome", value=o_sel["nome"], key="edit_op_name")
-                c_o = st.color_picker("Colore", value=o_sel.get("colore", "#8dbad2"), key="edit_op_color")
+                n_o = st.text_input("Nome", value=o_sel["nome"], key=f"name_{o_sel['id']}")
+                c_o = st.color_picker("Colore", value=o_sel.get("colore", "#8dbad2"), key=f"col_{o_sel['id']}")
                 
                 col1, col2 = st.columns(2)
                 
