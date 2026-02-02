@@ -268,7 +268,7 @@ with tabs[0]:
         c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
         with c_f3:
             cs, cd = st.columns([1, 1])
-            scala = cs.selectbox("Scala", ["Settimana", "Mese", "Trimestre", "Personalizzato"], index=1)
+            scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1)
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
         f_c, f_o = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique())), c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
@@ -284,7 +284,7 @@ with tabs[0]:
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         elif scala == "Personalizzato": st.warning("Seleziona data inizio e fine."); st.stop()
         else:
-            d = {"Settimana": 4, "Mese": 15, "Trimestre": 45}.get(scala, 15)
+            d = {"Settimana": 4, "2 Settimane": 8; "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
         shapes = []
         curr = x_range[0] - timedelta(days=2)
