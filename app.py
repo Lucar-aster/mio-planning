@@ -364,7 +364,7 @@ with tabs[2]:
                     if c_si.button("✅ Sì, elimina tutto", type="primary", use_container_width=True):
                         # 1. Elimina Task e Log collegati (Cascata manuale)
                         # Assicurati che 'commessa_id' sia il nome corretto della colonna nelle altre tabelle
-                        supabase.table("Log_Tempi").delete().eq("commessa_id", c_sel["id"]).execute()
+                        supabase.table("Log_Tempi").delete().eq("task_id", c_sel["id"]).execute()
                         supabase.table("Task").delete().eq("commessa_id", c_sel["id"]).execute()
                         
                         # 2. Elimina la Commessa
