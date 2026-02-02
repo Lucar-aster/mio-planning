@@ -284,7 +284,7 @@ with tabs[0]:
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         elif scala == "Personalizzato": st.warning("Seleziona data inizio e fine."); st.stop()
         else:
-            d = {"Settimana": 4, "2 Settimane": 8; "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
+            d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
         shapes = []
         curr = x_range[0] - timedelta(days=2)
