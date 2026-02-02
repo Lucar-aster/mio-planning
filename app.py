@@ -231,7 +231,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             dividercolor="grey", 
             fixedrange=True
         ),
-        legend=dict(orientation="h", yanchor="bottom", y=1.07, xanchor="center", x=0.5, font=dict(size=10)),
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="center", x=0.5, font=dict(size=10)),
         clickmode='event+select' # Click per modale OK
     )
     
