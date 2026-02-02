@@ -421,9 +421,28 @@ with tabs[2]:
                 if col1.button("Aggiorna Operatore"):
                     supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute()
                     get_cached_data.clear(); st.rerun()
-                if col2.button("Elimina Operatore", type="primary"):
-                    supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute()
-                    get_cached_data.clear(); st.rerun()
+               conf_op_key = f"del_op_{o_sel['id']}"
+                if conf_op_key not in st.session_state: st.session_state[conf_op_key] = False
+
+                    if not st.session_state[conf_op_key]:
+                        if col2.button("Elimina Operatore", type="primary", key="btn_pre_del_op"):
+                            st.session_state[conf_op_key] = True
+                            st.rerun()
+                    else:
+                        st.error(f"⚠️ Elimino anche tutti i Log di {o_sel['nome']}?")
+                        b1, b2 = st.columns(2)
+                        if b1.button("Sì, elimina", type="primary", key="btn_confirm_op"):
+                            # Cascata: elimina i log dell'operatore prima dell'operatore stesso
+                            supabase.table("Log_Tempi").delete().eq("operatore", o_sel["nome"]).execute()
+                            supabase.table("Operatori").delete().eq("id", o_sel["id"]).execute()
+                            st.session_state[conf_op_key] = False
+                            get_cached_data.clear(); st.rerun()
+                        if b2.button("Annulla", key="btn_cancel_op"):
+                            st.session_state[conf_op_key] = False
+                            st.rerun()
+
+    st.divider()
+    
         with st.form("new_op"):
             n_new_o = st.text_input("➕ Nuovo Operatore")
             c_new_o = st.color_picker("Colore", "#8dbad2")
