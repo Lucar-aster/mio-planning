@@ -424,11 +424,11 @@ with tabs[2]:
                     conf_op_key = f"del_op_{o_sel['id']}"
                 if conf_op_key not in st.session_state: st.session_state[conf_op_key] = False
 
-                    if not st.session_state[conf_op_key]:
+                if not st.session_state[conf_op_key]:
                         if col2.button("Elimina Operatore", type="primary", key="btn_pre_del_op"):
                             st.session_state[conf_op_key] = True
                             st.rerun()
-                    else:
+                else:
                         st.error(f"⚠️ Elimino anche tutti i Log di {o_sel['nome']}?")
                         b1, b2 = st.columns(2)
                         if b1.button("Sì, elimina", type="primary", key="btn_confirm_op"):
