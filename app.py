@@ -362,18 +362,32 @@ with tabs[2]:
                     c_si, c_no = st.columns(2)
                     
                     if c_si.button("✅ Sì, elimina tutto", type="primary", use_container_width=True):
-                        # 1. Elimina Task e Log collegati (Cascata manuale)
-                        # Assicurati che 'commessa_id' sia il nome corretto della colonna nelle altre tabelle
-                        supabase.table("Log_Tempi").delete().eq("task_id", c_sel["id"]).execute()
-                        supabase.table("Task").delete().eq("commessa_id", c_sel["id"]).execute()
-                        
-                        # 2. Elimina la Commessa
-                        supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute()
-                        
-                        # 3. Reset e pulizia
-                        del st.session_state[confirm_key]
-                        get_cached_data.clear()
-                        st.rerun()
+                        try:
+                            # 1. Recuperiamo gli ID dei task associati a questa commessa
+                            tasks_da_eliminare = supabase.table("Task").select("id").eq("commessa_id", c_sel["id"]).execute().data
+        
+                            if tasks_da_eliminare:
+                                # Estraiamo solo i valori degli ID in una lista [1, 2, 3...]
+                                list_task_ids = [t['id'] for t in tasks_da_eliminare]
+            
+                                # 2. Eliminiamo i Log che puntano a questi Task
+                                # Usiamo l'operatore .in_() per colpire tutti i task_id in un colpo solo
+                                supabase.table("Log_Tempi").delete().in_("task_id", list_task_ids).execute()
+        
+                            # 3. Ora possiamo eliminare i Task della commessa
+                            supabase.table("Task").delete().eq("commessa_id", c_sel["id"]).execute()
+        
+                            # 4. Infine eliminiamo la Commessa
+                            supabase.table("Commesse").delete().eq("id", c_sel["id"]).execute()
+        
+                            # Pulizia e reset
+                            st.session_state[confirm_key] = False
+                            get_cached_data.clear()
+                            st.success("Commessa e tutta la gerarchia di Task e Log eliminati!")
+                            st.rerun()
+        
+                    except Exception as e:
+                    st.error(f"Errore durante l'eliminazione a catena: {e}")
                 
                     if c_no.button("❌ Annulla", use_container_width=True):
                         st.session_state[confirm_key] = False
