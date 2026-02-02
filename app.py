@@ -342,10 +342,10 @@ with tabs[2]:
             df_c = pd.DataFrame(cm)
             st.dataframe(df_c[["nome_commessa"]], use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
-                c_sel = st.selectbox("Seleziona commessa", cm, format_func=lambda x: x["nome_commessa"])
-                n_c = st.text_input("Nuovo nome", value=c_sel["nome_commessa"])
+                c_sel = st.selectbox("Seleziona commessa", cm, format_func=lambda x: x["nome_commessa"], key="sel_comm_edit")
+                n_c = st.text_input("Nuovo nome", value=c_sel["nome_commessa"], key=f"comm_name_{c_sel['id']})
                 col1, col2 = st.columns(2)
-                if col1.button("Aggiorna Commessa"):
+                if col1.button("Aggiorna Commessa", key=f"upd_c_{c_sel['id']}"):
                     supabase.table("Commesse").update({"nome_commessa": n_c}).eq("id", c_sel["id"]).execute()
                     get_cached_data.clear(); st.rerun()
                 confirm_key = f"delete_confirm_{c_sel['id']}"
@@ -469,11 +469,17 @@ with tabs[2]:
             df_t = df_t[["Commessa", "Task"]]
             st.dataframe(df_t, use_container_width=True, hide_index=True)
             with st.expander("📝 Modifica / 🗑️ Elimina"):
-                t_sel = st.selectbox("Seleziona task", tk, format_func=lambda x: x["nome_task"])
-                n_t = st.text_input("Rinomina", value=t_sel["nome_task"])
-                c_t = st.selectbox("Sposta a Commessa", cm, format_func=lambda x: x['nome_commessa'])
+                t_sel = st.selectbox("Seleziona task", tk, format_func=lambda x: x["nome_task"], key="sel_tk_edit")
+                # Troviamo l'indice della commessa attuale per il selectbox di "spostamento"
+                current_comm_idx = 0
+                for i, c in enumerate(cm):
+                    if c['id'] == t_sel['commessa_id']:
+                        current_comm_idx = i
+                        break
+                n_t = st.text_input("Rinomina", value=t_sel["nome_task"], key=f"tk_name_{t_sel['id']}")
+                c_t = st.selectbox("Sposta a Commessa", cm, format_func=lambda x: x['nome_commessa'], key=f"tk_comm_{t_sel['id']}")
                 col1, col2 = st.columns(2)
-                if col1.button("Salva Task"):
+                if col1.button("Salva Task", key=f"upd_tk_{t_sel['id']}"):
                     supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute()
                     get_cached_data.clear(); st.rerun()
 # --- Logica di conferma Eliminazione Task ---
