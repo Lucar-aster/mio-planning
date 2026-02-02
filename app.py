@@ -443,12 +443,12 @@ with tabs[2]:
 
     st.divider()
     
-        with st.form("new_op"):
-            n_new_o = st.text_input("➕ Nuovo Operatore")
-            c_new_o = st.color_picker("Colore", "#8dbad2")
-            if st.form_submit_button("Salva"):
-                supabase.table("Operatori").insert({"nome": n_new_o, "colore": c_new_o}).execute()
-                get_cached_data.clear(); st.rerun()
+            with st.form("new_op"):
+                n_new_o = st.text_input("➕ Nuovo Operatore")
+                c_new_o = st.color_picker("Colore", "#8dbad2")
+                if st.form_submit_button("Salva"):
+                    supabase.table("Operatori").insert({"nome": n_new_o, "colore": c_new_o}).execute()
+                    get_cached_data.clear(); st.rerun()
 
     with c_admin3:
         st.subheader("Elenco Task")
