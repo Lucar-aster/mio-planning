@@ -476,9 +476,28 @@ with tabs[2]:
                 if col1.button("Salva Task"):
                     supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute()
                     get_cached_data.clear(); st.rerun()
-                if col2.button("Rimuovi Task", type="primary"):
+# --- Logica di conferma Eliminazione Task ---
+            conf_tk_key = f"del_tk_{t_sel['id']}"
+            if conf_tk_key not in st.session_state: st.session_state[conf_tk_key] = False
+
+            if not st.session_state[conf_tk_key]:
+                if col2.button("Rimuovi Task", type="primary", key="btn_pre_del_tk"):
+                    st.session_state[conf_tk_key] = True
+                    st.rerun()
+            else:
+                st.error("⚠️ Elimino i log associati a questo task?")
+                b1, b2 = st.columns(2)
+                if b1.button("Sì, rimuovi tutto", type="primary", key="btn_confirm_tk"):
+                    # Cascata: elimina i log che hanno questo specifico task
+                    supabase.table("Log_Tempi").delete().eq("Task", t_sel["nome_task"]).execute()
                     supabase.table("Task").delete().eq("id", t_sel["id"]).execute()
+                    st.session_state[conf_tk_key] = False
                     get_cached_data.clear(); st.rerun()
+                if b2.button("Annulla", key="btn_cancel_tk"):
+                    st.session_state[conf_tk_key] = False
+                    st.rerun()
+
+    st.divider()
         with st.form("new_task"):
             nt_n = st.text_input("➕ Nuovo Task")
             nt_c = st.selectbox("Associa a Progetto", cm, format_func=lambda x: x['nome_commessa'])
