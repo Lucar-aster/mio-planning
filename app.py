@@ -191,10 +191,10 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     end_buffer = x_range[1] + timedelta(days=180)
     
     # Scegliamo la frequenza in base alla scala
-    if delta_giorni > 20:
+    if delta_giorni > 60:
         # Vista ampia: un tick ogni Lunedì
         tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
-    elif delta_giorni <60:
+    elif delta_giorni >20:
         
        full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
        tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
