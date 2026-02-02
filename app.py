@@ -387,7 +387,7 @@ with tabs[2]:
                             st.rerun()
         
                         except Exception as e:
-                        st.error(f"Errore durante l'eliminazione a catena: {e}")
+                            st.error(f"Errore durante l'eliminazione a catena: {e}")
                 
                     if c_no.button("❌ Annulla", use_container_width=True):
                         st.session_state[confirm_key] = False
