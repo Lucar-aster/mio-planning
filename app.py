@@ -477,7 +477,7 @@ with tabs[2]:
                         current_comm_idx = i
                         break
                 n_t = st.text_input("Rinomina", value=t_sel["nome_task"], key=f"tk_name_{t_sel['id']}")
-                c_t = st.selectbox("Sposta a Commessa", cm, format_func=lambda x: x['nome_commessa'], key=f"tk_comm_{t_sel['id']}")
+                c_t = st.selectbox("Sposta a Commessa", cm, ndex=current_comm_idx, format_func=lambda x: x['nome_commessa'], key=f"tk_comm_{t_sel['id']}")
                 col1, col2 = st.columns(2)
                 if col1.button("Salva Task", key=f"upd_tk_{t_sel['id']}"):
                     supabase.table("Task").update({"nome_task": n_t, "commessa_id": c_t["id"]}).eq("id", t_sel["id"]).execute()
