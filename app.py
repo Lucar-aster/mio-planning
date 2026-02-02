@@ -379,10 +379,18 @@ with tabs[2]:
                         st.session_state[confirm_key] = False
                         st.rerun()
                         
-            n_new_c = st.text_input("➕ Nuova Commessa")
-            if st.form_submit_button("Salva"):
-                supabase.table("Commesse").insert({"nome_commessa": n_new_c}).execute()
-                get_cached_data.clear(); st.rerun()
+            with st.form("new_c_form"):
+                st.write("➕ **Aggiungi Nuova Commessa**")
+                n_new_c = st.text_input("Nome Commessa")
+                submit_new = st.form_submit_button("Salva Commessa")
+        
+                if submit_new:
+                    if n_new_c:
+                        supabase.table("Commesse").insert({"nome_commessa": n_new_c}).execute()
+                        get_cached_data.clear()
+                        st.rerun()
+                    else:
+                        st.error("Inserisci un nome!")
 
     with c_admin2:
         st.subheader("Elenco Operatori")
