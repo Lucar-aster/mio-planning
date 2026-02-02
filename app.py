@@ -421,7 +421,7 @@ with tabs[2]:
                 
                 col1, col2 = st.columns(2)
                 
-                if col1.button("Aggiorna Operatore", key="btn_upd_op"):
+                if col1.button("Aggiorna Operatore", key="btn_upd_{o_sel['id']}"):
                     supabase.table("Operatori").update({"nome": n_o, "colore": c_o}).eq("id", o_sel["id"]).execute()
                     get_cached_data.clear()
                     st.rerun()
