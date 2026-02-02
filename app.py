@@ -386,8 +386,8 @@ with tabs[2]:
                             st.success("Commessa e tutta la gerarchia di Task e Log eliminati!")
                             st.rerun()
         
-                    except Exception as e:
-                    st.error(f"Errore durante l'eliminazione a catena: {e}")
+                        except Exception as e:
+                        st.error(f"Errore durante l'eliminazione a catena: {e}")
                 
                     if c_no.button("❌ Annulla", use_container_width=True):
                         st.session_state[confirm_key] = False
