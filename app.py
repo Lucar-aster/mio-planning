@@ -360,40 +360,17 @@ with tabs[1]:
         st.markdown("""
             <style>
                 /* 1. Riduce lo spazio tra i mesi */
-                .fc .fc-multimonth-month {
-                    padding: 0px !important;
-                    margin-bottom: 2px !important;
-                }
-    
+                .fc .fc-multimonth-month {padding: 0px !important; margin-bottom: 2px !important;}
                 /* 2. Riduce l'altezza minima della cella del giorno */
-                .fc .fc-daygrid-day-frame {
-                    min-height: 35px !important; /* Valore originale era ~100px */
-                    height: 35px !important;
-                }
-    
+                .fc .fc-daygrid-day-frame {min-height: 35px !important; height: 35px !important;}
                 /* 3. Riduce lo spazio sopra il numero del giorno */
-                .fc .fc-daygrid-day-top {
-                    flex-direction: row !important;
-                    font-size: 0.85em !important;
-                }
-    
+                .fc .fc-daygrid-day-top {flex-direction: row !important; font-size: 0.85em !important;}
                 /* 4. Comprime gli eventi all'interno delle celle */
-                .fc-daygrid-event {
-                    margin-top: 0px !important;
-                    margin-bottom: 1px !important;
-                    padding: 0px 2px !important;
-                     font-size: 0.8em !important;
-                }
-
+                .fc-daygrid-event {margin-top: 0px !important; margin-bottom: 1px !important; padding: 0px 2px !important; font-size: 0.8em !important;}
                 /* 5. Rimuove padding in eccesso dal contenitore del mese */
-                .fc-multimonth-daygrid {
-                    --fc-daygrid-event-h-height: 18px; /* Rende le barre degli eventi più sottili */
-                }
-        
+                .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;}
                 /* 6. Forza l'altezza dell'iframe di Streamlit per evitare scroll interni */
-                iframe[title="streamlit_calendar.calendar"] {
-                    min-height: 1500px !important;
-                }
+                iframe[title="streamlit_calendar.calendar"] {min-height: 1500px !important;}
             </style>
         """, unsafe_allow_html=True)
 
