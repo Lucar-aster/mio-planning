@@ -271,11 +271,8 @@ if l and tk and cm:
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
     df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
-
-# --- TAB 1: TIMELINE (GANTT) ---
-with tabs[0]:
-    if not df.empty:
-        c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
+    # --- AREA CONTROLLI ---
+    c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
         with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1)
@@ -287,10 +284,17 @@ with tabs[0]:
         if b2.button("📑 Task", use_container_width=True): modal_task()
         if b3.button("⏱️ Log", use_container_width=True): modal_log()
         if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+    # Applicazione filtri al DataFrame
+    df_p = df.copy()
+    if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
+    if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
+    
+# --- TAB 1: TIMELINE (GANTT) ---
+with tabs[0]:
+    if not df.empty:
+        
         oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        df_p = df.copy()
-        if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
-        if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
+
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         elif scala == "Personalizzato": st.warning("Seleziona data inizio e fine."); st.stop()
         else:
@@ -306,13 +310,12 @@ with tabs[0]:
 # --- TAB 2: CALENDARIO (VERSIONE REVISIONATA) ---
 with tabs[1]:
     if not df.empty:
-        st.subheader("Pianificazione Mensile")
-        
+               
         # 1. Preparazione Eventi (Formato ISO rigoroso)
         cal_events = []
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
         
-        for _, row in df.iterrows():
+        for _, row in df_p.iterrows():
             try:
                 # Trasformiamo in stringa pura YYYY-MM-DD
                 s_date = row["Inizio"].strftime("%Y-%m-%d")
