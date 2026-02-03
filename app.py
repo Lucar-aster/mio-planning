@@ -43,6 +43,7 @@ if 'chart_key' not in st.session_state:
 def modal_edit_log(log_item, operatori, current_start, current_end):
     # Estraiamo l'ID in modo sicuro
     log_id = log_item['id'] if isinstance(log_item, dict) else log_item
+    ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     st.write(f"Modifica Log ID: {log_id}")
     
     nomi_operatori = [op['nome'] if isinstance(op, dict) else op for op in operatori]
