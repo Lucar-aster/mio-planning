@@ -364,7 +364,7 @@ with tabs[1]:
                 /* 1. Riduce lo spazio tra i mesi */
                 .fc .fc-multimonth-month {padding: 0px !important; margin-bottom: 2px !important;}
                 /* 2. Riduce l'altezza minima della cella del giorno */
-                .fc .fc-daygrid-day-frame {min-height: 35px !important; height: 35px !important;}
+                .fc .fc-daygrid-day-frame {min-height: 35px !important; height: 35px !important; max-height: 40px !important;}
                 /* 3. Riduce lo spazio sopra il numero del giorno */
                 .fc .fc-daygrid-day-top {flex-direction: row !important; font-size: 0.85em !important;}
                 /* 4. Comprime gli eventi all'interno delle celle */
