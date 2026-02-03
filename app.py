@@ -39,32 +39,21 @@ if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
 # --- MODALI ---
-@st.dialog("📝 Modifica Log")
 def modal_edit_log(log_item, operatori, current_start, current_end):
-    # log_item è il dizionario del log selezionato (es. data[0])
-    st.write(f"Modifica Log ID: {log_item['id']}")
+    # Estraiamo l'ID in modo sicuro
+    log_id = log_item['id'] if isinstance(log_item, dict) else log_item
+    st.write(f"Modifica Log ID: {log_id}")
     
-    # --- 1. Gestione sicura dei nomi operatori ---
-    nomi_operatori = []
-    for op in operatori:
-        if isinstance(op, dict):
-            nomi_operatori.append(op['nome'])
-        else:
-            nomi_operatori.append(op)
+    nomi_operatori = [op['nome'] if isinstance(op, dict) else op for op in operatori]
     
-    # --- 2. Ricerca indice operatore attuale ---
+    # Cerchiamo l'operatore attuale in modo sicuro
+    op_attuale = log_item.get('operatore') if isinstance(log_item, dict) else ""
+    
     idx_att = 0
-    op_attuale = log_item.get('operatore', '')
     if op_attuale in nomi_operatori:
         idx_att = nomi_operatori.index(op_attuale)
     
-    # --- 3. Unica Selectbox con chiave corretta ---
-    new_op = st.selectbox(
-        "Cambia Operatore", 
-        options=nomi_operatori, 
-        index=idx_att,
-        key=f"edit_op_log_{log_item['id']}" # Usiamo log_item['id']
-    )
+    new_op = st.selectbox("Cambia Operatore", options=nomi_operatori, index=idx_att, key=f"edit_op_{log_id}")
     
     # Esempio di campi per date (già che ci sei)
     # new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
