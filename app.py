@@ -40,43 +40,20 @@ if 'chart_key' not in st.session_state:
 
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
-def modal_edit_log(log_item, operatori_nomi, current_start, current_end):
-    # log_item è il dizionario del log, operatori_nomi è la tua ops_list di stringhe
-    log_id = log_item['id'] if isinstance(log_item, dict) else log_item
+def modal_edit_log(log_id, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
-
-    # 1. Recuperiamo il nome dell'operatore attuale salvato nel log
-    valore_attuale = ""
-    if isinstance(log_item, dict):
-        valore_attuale = log_item.get('operatore', '')
-        
-    # 2. Calcoliamo l'indice (posizione) del valore attuale nella lista
-    try:
-        # Se il nome è nella lista, prendiamo la sua posizione
-        idx_att = operatori_nomi.index(valore_attuale)
-    except ValueError:
-        # Se non lo trova (magari l'operatore è stato rinominato o rimosso), usa il primo (0)
-        idx_att = 0
-
-    # 3. La Selectbox caricata con il valore attuale
-    op_scelto = st.selectbox(
-        "Operatore", 
-        options=operatori_nomi, 
-        index=idx_att,
-        key=f"edit_op_select_{log_id}"
-    )
-    new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
-    new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
-
-    if st.button("Salva Modifiche"):
-        supabase.table("Log_Tempi").update({
-            "operatore": new_op,
-            "Inizio": str(new_start),
-            "Fine": str(new_end)
-        }).eq("id", log_item['id']).execute()
-        
+    new_op = st.text_input("Operatore", value=current_op)
+    c1, c2 = st.columns(2)
+    new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
+    new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
+    col1, col2 = st.columns(2)
+    if col1.button("Aggiorna", type="primary", use_container_width=True):
+        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
         get_cached_data.clear()
-        st.success("Log aggiornato!")
+        st.rerun()
+    if col2.button("Elimina", use_container_width=True):
+        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+        get_cached_data.clear()
         st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
