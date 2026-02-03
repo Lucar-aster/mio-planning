@@ -41,27 +41,44 @@ if 'chart_key' not in st.session_state:
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_item, operatori, current_start, current_end):
+    # log_item è il dizionario del log selezionato (es. data[0])
     st.write(f"Modifica Log ID: {log_item['id']}")
     
-    nomi_operatori = [op['nome'] for op in operatori]
-    # Cerchiamo l'indice attuale
-    idx_att = 0
-    if log_item['operatore'] in nomi_operatori:
-        idx_att = nomi_operatori.index(log_item['operatore'])
+    # --- 1. Gestione sicura dei nomi operatori ---
+    nomi_operatori = []
+    for op in operatori:
+        if isinstance(op, dict):
+            nomi_operatori.append(op['nome'])
+        else:
+            nomi_operatori.append(op)
     
-    new_op = st.selectbox("Cambia Operatore", options=nomi_operatori, index=idx_att)
+    # --- 2. Ricerca indice operatore attuale ---
+    idx_att = 0
+    op_attuale = log_item.get('operatore', '')
+    if op_attuale in nomi_operatori:
+        idx_att = nomi_operatori.index(op_attuale)
+    
+    # --- 3. Unica Selectbox con chiave corretta ---
+    new_op = st.selectbox(
+        "Cambia Operatore", 
+        options=nomi_operatori, 
+        index=idx_att,
+        key=f"edit_op_log_{log_item['id']}" # Usiamo log_item['id']
+    )
+    
+    # Esempio di campi per date (già che ci sei)
+    # new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
+    # new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
+
+    if st.button("Salva Modifiche"):
+        supabase.table("Log_Tempi").update({
+            "operatore": new_op
+            # "Inizio": str(new_start),
+            # "Fine": str(new_end)
+        }).eq("id", log_item['id']).execute()
         
-    c1, c2 = st.columns(2)
-    new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
-    new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
-    col1, col2 = st.columns(2)
-    if col1.button("Aggiorna", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
         get_cached_data.clear()
-        st.rerun()
-    if col2.button("Elimina", use_container_width=True):
-        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
-        get_cached_data.clear()
+        st.success("Log aggiornato!")
         st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
