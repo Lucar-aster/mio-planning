@@ -38,59 +38,59 @@ def get_cached_data(table):
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
-# --- MODALI ---
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_end):
-    st.write(f"Modifica Log ID: {log_id}")
+    # --- PROTEZIONE 1: Se operatori_nomi è None o non è una lista, creane una vuota ---
+    if not isinstance(operatori_nomi, list):
+        operatori_nomi = []
     
-    # --- 1. VALIDAZIONE LISTA ---
-    # Assicuriamoci che operatori_nomi sia una lista di stringhe
-    lista_pulita = [str(n) for n in operatori_nomi] if operatori_nomi else []
-    
-    # --- 2. RICERCA INDICE SICURA ---
-    # Cerchiamo l'indice di current_op. Se non c'è, o se current_op è None, usiamo 0
-    idx_att = 0
-    if current_op and str(current_op) in lista_pulita:
-        idx_att = lista_pulita.index(str(current_op))
-    
-    # Se la lista è vuota, aggiungiamo almeno l'operatore attuale per non far crashare la selectbox
-    if not lista_pulita:
-        lista_pulita = [str(current_op)] if current_op else ["Nessun Operatore"]
+    # Assicuriamoci che siano tutte stringhe
+    lista_nomi = [str(n) for n in operatori_nomi]
 
-    # --- 3. WIDGET SELECTBOX ---
+    # --- PROTEZIONE 2: Gestione Operatore Corrente ---
+    # Se current_op è None o non è una stringa, lo rendiamo stringa vuota
+    curr_op_str = str(current_op) if current_op is not None else ""
+    
+    # Cerchiamo l'indice solo se l'operatore esiste nella lista
+    idx_att = 0
+    if curr_op_str in lista_nomi:
+        idx_att = lista_nomi.index(curr_op_str)
+    
+    st.write(f"Modifica Log ID: {log_id}")
+
+    # --- WIDGET SELECTBOX ---
     new_op = st.selectbox(
         "Operatore",
-        options=lista_pulita, 
+        options=lista_nomi if lista_nomi else [curr_op_str], 
         index=idx_att,
         key=f"edit_op_select_{log_id}"
     )
     
     st.divider()
     
-    # --- 4. GESTIONE DATE SICURA ---
+    # --- PROTEZIONE 3: Gestione Date ---
     c1, c2 = st.columns(2)
     try:
-        val_start = pd.to_datetime(current_start)
-        val_end = pd.to_datetime(current_end)
+        # pd.to_datetime è robusto, ma se riceve valori assurdi crasha
+        d_start = pd.to_datetime(current_start) if current_start else datetime.now()
+        d_end = pd.to_datetime(current_end) if current_end else datetime.now()
     except:
-        val_start = datetime.now()
-        val_end = datetime.now()
+        d_start = datetime.now()
+        d_end = datetime.now()
 
-    new_start = c1.date_input("Inizio", value=val_start, format="DD/MM/YYYY")
-    new_end = c2.date_input("Fine", value=val_end, format="DD/MM/YYYY")
+    new_start = c1.date_input("Inizio", value=d_start, format="DD/MM/YYYY")
+    new_end = c2.date_input("Fine", value=d_end, format="DD/MM/YYYY")
     
     st.divider()
     
     col1, col2 = st.columns(2)
-    
     if col1.button("Aggiorna", type="primary", use_container_width=True):
-        # NOTA: Controlla se sul DB le colonne sono "Inizio" o "inizio"
+        # NOTA: Verifica se le colonne nel DB sono "Inizio" o "inizio"
         supabase.table("Log_Tempi").update({
             "operatore": new_op, 
             "Inizio": str(new_start), 
             "Fine": str(new_end)
         }).eq("id", log_id).execute()
-        
         get_cached_data.clear()
         st.rerun()
         
@@ -98,6 +98,7 @@ def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_en
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
         get_cached_data.clear()
         st.rerun()
+        
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
     n = st.text_input("Nome Commessa")
