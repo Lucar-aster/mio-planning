@@ -40,34 +40,27 @@ if 'chart_key' not in st.session_state:
 
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
-def modal_edit_log(log_item, operatori, current_start, current_end):
-    # ESTRAZIONE NOMI OPERATORI
-    # Questo ciclo gestisce sia se passi ops_list (dizionari) sia se passi solo nomi
-    nomi_per_selectbox = []
-    for op in operatori:
-        if isinstance(op, dict) and 'nome' in op:
-            nomi_per_selectbox.append(op['nome'])
-        elif isinstance(op, str):
-            nomi_per_selectbox.append(op)
-    
-    # Se la lista è ancora vuota, mettiamo un fallback per non far crashare il widget
-    if not nomi_per_selectbox:
-        nomi_per_selectbox = ["Nessun operatore trovato"]
+def modal_edit_log(log_item, operatori_nomi, current_start, current_end):
+    # log_item è il dizionario del log, operatori_nomi è la tua ops_list di stringhe
+    st.write(f"Modifica Log ID: {log_item['id']}")
 
-    # IDENTIFICAZIONE OPERATORE ATTUALE
-    op_attuale = log_item.get('operatore', '') if isinstance(log_item, dict) else ""
-    
+    # 1. Recuperiamo il nome dell'operatore attuale salvato nel log
+    valore_attuale = log_item.get('operatore', '')
+
+    # 2. Calcoliamo l'indice (posizione) del valore attuale nella lista
     try:
-        idx_att = nomi_per_selectbox.index(op_attuale)
+        # Se il nome è nella lista, prendiamo la sua posizione
+        idx_att = operatori_nomi.index(valore_attuale)
     except ValueError:
+        # Se non lo trova (magari l'operatore è stato rinominato o rimosso), usa il primo (0)
         idx_att = 0
 
-    # IL WIDGET
-    new_op = st.selectbox(
-        "Seleziona Operatore", 
-        options=nomi_per_selectbox, 
+    # 3. La Selectbox caricata con il valore attuale
+    op_scelto = st.selectbox(
+        "Operatore", 
+        options=operatori_nomi, 
         index=idx_att,
-        key=f"sb_op_{log_item['id'] if isinstance(log_item, dict) else 'new'}"
+        key=f"edit_op_select_{log_item['id']}"
     )
     new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
     new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
