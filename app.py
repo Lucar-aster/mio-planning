@@ -41,23 +41,34 @@ if 'chart_key' not in st.session_state:
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_item, operatori, current_start, current_end):
-    # Estraiamo l'ID in modo sicuro
-    log_id = log_item['id'] if isinstance(log_item, dict) else log_item
-    ops_list = [o['nome'] for o in get_cached_data("Operatori")]
-    st.write(f"Modifica Log ID: {log_id}")
+    # ESTRAZIONE NOMI OPERATORI
+    # Questo ciclo gestisce sia se passi ops_list (dizionari) sia se passi solo nomi
+    nomi_per_selectbox = []
+    for op in operatori:
+        if isinstance(op, dict) and 'nome' in op:
+            nomi_per_selectbox.append(op['nome'])
+        elif isinstance(op, str):
+            nomi_per_selectbox.append(op)
     
-    nomi_operatori = [op['nome'] if isinstance(op, dict) else op for op in operatori]
+    # Se la lista è ancora vuota, mettiamo un fallback per non far crashare il widget
+    if not nomi_per_selectbox:
+        nomi_per_selectbox = ["Nessun operatore trovato"]
+
+    # IDENTIFICAZIONE OPERATORE ATTUALE
+    op_attuale = log_item.get('operatore', '') if isinstance(log_item, dict) else ""
     
-    # Cerchiamo l'operatore attuale in modo sicuro
-    op_attuale = log_item.get('operatore') if isinstance(log_item, dict) else ""
-    
-    idx_att = 0
-    if op_attuale in nomi_operatori:
-        idx_att = nomi_operatori.index(op_attuale)
-    
-    new_op = st.selectbox("Cambia Operatore", options=nomi_operatori, index=idx_att, key=f"edit_op_{log_id}")
-    
-    # Esempio di campi per date (già che ci sei)
+    try:
+        idx_att = nomi_per_selectbox.index(op_attuale)
+    except ValueError:
+        idx_att = 0
+
+    # IL WIDGET
+    new_op = st.selectbox(
+        "Seleziona Operatore", 
+        options=nomi_per_selectbox, 
+        index=idx_att,
+        key=f"sb_op_{log_item['id'] if isinstance(log_item, dict) else 'new'}"
+    )
     new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
     new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
 
