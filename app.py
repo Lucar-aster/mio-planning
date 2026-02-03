@@ -342,8 +342,11 @@ with tabs[1]:
                 }
             },
             "height": "auto",
+            "contentHeight": "auto",
             "locale": "it",
             "firstDay": 1,           # Inizia da Lunedì
+            "weekNumbers": True,
+            "weekText": "Sett.",
             "headerToolbar": {
                 "left": "prev,next today",
                 "center": "title",
@@ -358,11 +361,11 @@ with tabs[1]:
             <style>
                 .fc-multimonth-month { border: 1px solid #ddd; padding: 0px !important; margin-bottom: 5px !important; }
                 iframe[title="streamlit_calendar.calendar"] {
-                    min-height: 2000px;
+                    min-height: 500px;
                 }
                 /* Riduce lo spazio interno alle celle dei giorni per compattare */
                 .fc .fc-daygrid-day-frame {
-                    min-height: 50px !important;
+                    min-height: 300px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
