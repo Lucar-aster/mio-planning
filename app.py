@@ -341,6 +341,7 @@ with tabs[1]:
                     "duration": {"months": 2} # LIMITA LA VISTA A SOLI 2 MESI
                 }
             },
+            "height": 1200,
             "locale": "it",
             "firstDay": 1,           # Inizia da Lunedì
             "headerToolbar": {
