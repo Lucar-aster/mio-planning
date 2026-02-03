@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import textwrap
+from streamlit_calendar import calendar  # <--- Nuova libreria
 
 # --- 1. CONFIGURAZIONE PAGINA ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
@@ -259,9 +260,19 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
 # --- 6. MAIN UI ---
-tabs = st.tabs(["📊 Timeline", "📋 Dati", "⚙️ Setup"])
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Dati", "⚙️ Setup"])
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
+df = pd.DataFrame()
+if l and tk and cm:
+    tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
+    cm_m = {c['id']: c['nome_commessa'] for c in cm}
+    df = pd.DataFrame(l)
+    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
+    df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
+    df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
+    df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
+# --- TAB 1: TIMELINE (GANTT) ---
 with tabs[0]:
     if l and tk and cm:
         tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
@@ -299,8 +310,55 @@ with tabs[0]:
             curr += timedelta(days=1)
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
 
-# --- TAB 2: GESTIONE ATTIVITÀ (DATA EDITOR) ---
+# --- TAB 2: CALENDARIO (NUOVO) ---
 with tabs[1]:
+    if not df.empty:
+        st.subheader("📅 Calendario Interventi")
+        
+        # Mappa colori operatori
+        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
+        
+        # Trasformazione dati per FullCalendar
+        cal_events = []
+        for _, row in df.iterrows():
+            cal_events.append({
+                "id": str(row["id"]),
+                "title": f"{row['operatore']} | {row['Commessa']}",
+                "start": row["Inizio"].strftime("%Y-%m-%d"),
+                "end": (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d"), # FullCalendar esclude il giorno finale
+                "backgroundColor": color_map.get(row["operatore"], "#3D85C6"),
+                "borderColor": color_map.get(row["operatore"], "#3D85C6"),
+                "extendedProps": {
+                    "op": row["operatore"],
+                    "start_orig": row["Inizio"],
+                    "end_orig": row["Fine"]
+                }
+            })
+
+        cal_options = {
+            "headerToolbar": {
+                "left": "prev,next today",
+                "center": "title",
+                "right": "dayGridMonth,timeGridWeek,listWeek",
+            },
+            "initialView": "dayGridMonth",
+            "firstDay": 1, # Lunedì
+            "locale": "it",
+        }
+
+        # Rendering del componente calendario
+        cal_data = calendar(events=cal_events, options=cal_options, key="st_calendar_main")
+
+        # Integrazione con la modale di modifica esistente
+        if cal_data.get("eventClick"):
+            eid = cal_data["eventClick"]["event"]["id"]
+            sel_row = df[df["id"] == int(eid)].iloc[0]
+            modal_edit_log(sel_row["id"], sel_row["operatore"], sel_row["Inizio"], sel_row["Fine"])
+    else:
+        st.info("Nessun dato disponibile per il calendario.")
+
+# --- TAB 3: GESTIONE ATTIVITÀ (DATA EDITOR) ---
+with tabs[2]:
     st.header("📝 Gestione Attività")
     if l is not None and cm and tk:
         df_edit = pd.DataFrame(l)
@@ -337,8 +395,8 @@ with tabs[1]:
             st.success("Database aggiornato!")
             st.rerun()
 
-# --- TAB 3: CONFIGURAZIONE SISTEMA ---
-with tabs[2]:
+# --- TAB 4: CONFIGURAZIONE SISTEMA ---
+with tabs[3]:
     st.header("⚙️ Configurazione")
     c_admin1, c_admin2, c_admin3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
 
