@@ -241,7 +241,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         clickmode='event+select' # Click per modale OK
     )
     
-    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43.200.000, line_width=2, line_color="red")
+    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
     # --- Plotly Chart ---
     selected = st.plotly_chart(
