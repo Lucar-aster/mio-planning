@@ -40,9 +40,15 @@ if 'chart_key' not in st.session_state:
 
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
-def modal_edit_log(log_id, current_op, current_start, current_end):
+def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
-    new_op = st.text_input("Operatore", value=current_op)
+    opzioni_selectbox = current_op + operatori_nomi
+    new_op = st.selectbox(
+        options=opzioni_selectbox, 
+        index=0,
+        key=f"edit_op_select_{log_id}"
+    )
+    st.divider()
     c1, c2 = st.columns(2)
     new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
     new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
