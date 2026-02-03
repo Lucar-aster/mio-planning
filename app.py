@@ -303,52 +303,51 @@ with tabs[0]:
             curr += timedelta(days=1)
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
 
-# --- TAB 2: CALENDARIO (NUOVO) ---
+# --- TAB 2: CALENDARIO ---
 with tabs[1]:
     if not df.empty:
-        st.subheader("📅 Calendario Interventi")
-        
-        # Mappa colori operatori
+        st.subheader("Pianificazione Mensile")
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
-        
-        # Trasformazione dati per FullCalendar
         cal_events = []
+        
         for _, row in df.iterrows():
-            cal_events.append({
-                "id": str(row["id"]),
-                "title": f"{row['operatore']} | {row['Commessa']}",
-                "start": row["Inizio"].strftime("%Y-%m-%d"),
-                "end": (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d"), # FullCalendar esclude il giorno finale
-                "backgroundColor": color_map.get(row["operatore"], "#3D85C6"),
-                "borderColor": color_map.get(row["operatore"], "#3D85C6"),
-                "extendedProps": {
-                    "op": row["operatore"],
-                    "start_orig": row["Inizio"],
-                    "end_orig": row["Fine"]
-                }
-            })
+            # Protezione: trasformiamo le date in stringhe pure ISO (YYYY-MM-DD)
+            # gestendo eventuali valori nulli
+            try:
+                s_str = row["Inizio"].strftime("%Y-%m-%d") if pd.notnull(row["Inizio"]) else None
+                # FullCalendar vuole il giorno di fine ESCLUSO, quindi aggiungiamo 1 giorno
+                e_str = (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d") if pd.notnull(row["Fine"]) else None
+                
+                if s_str and e_str:
+                    cal_events.append({
+                        "id": str(row["id"]),
+                        "title": str(f"{row['operatore']} - {row['Task']}"),
+                        "start": s_str,
+                        "end": e_str,
+                        "backgroundColor": str(color_map.get(row["operatore"], "#3D85C6")),
+                        "borderColor": str(color_map.get(row["operatore"], "#3D85C6")),
+                        "allDay": True
+                    })
+            except Exception as e:
+                continue # Salta i log corrotti invece di far crashare tutto
 
         cal_options = {
-            "headerToolbar": {
-                "left": "prev,next today",
-                "center": "title",
-                "right": "dayGridMonth,timeGridWeek,listWeek",
-            },
-            "initialView": "dayGridMonth",
-            "firstDay": 1, # Lunedì
+            "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridMonth,timeGridWeek"},
+            "initialView": "dayGridMonth", 
+            "firstDay": 1, 
             "locale": "it",
         }
-
-        # Rendering del componente calendario
-        cal_data = calendar(events=cal_events, options=cal_options, key="st_calendar_main")
-
-        # Integrazione con la modale di modifica esistente
-        if cal_data.get("eventClick"):
-            eid = cal_data["eventClick"]["event"]["id"]
-            sel_row = df[df["id"] == int(eid)].iloc[0]
-            modal_edit_log(sel_row["id"], sel_row["operatore"], sel_row["Inizio"], sel_row["Fine"])
-    else:
-        st.info("Nessun dato disponibile per il calendario.")
+        
+        # Ora i dati sono "JSON-safe"
+        cal_res = calendar(events=cal_events, options=cal_options, key="main_calendar_v2")
+        
+        if cal_res and cal_res.get("eventClick"):
+            try:
+                eid = int(cal_res["eventClick"]["event"]["id"])
+                sel = df[df['id'] == eid].iloc[0]
+                modal_edit_log(sel['id'], sel['operatore'], sel['Inizio'], sel['Fine'])
+            except:
+                st.error("Errore nel recupero del log selezionato.")
 
 # --- TAB 3: GESTIONE ATTIVITÀ (DATA EDITOR) ---
 with tabs[2]:
