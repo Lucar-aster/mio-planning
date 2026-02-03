@@ -42,10 +42,18 @@ if 'chart_key' not in st.session_state:
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
-    opzioni_selectbox = current_op + operatori_nomi
+    
+    try:
+        # Se current_op è nella lista, idx_att sarà la sua posizione (es. 0, 1, 2...)
+        idx_att = operatori_nomi.index(current_op)
+    except ValueError:
+        # Se non lo trova (magari l'operatore è stato rimosso o rinominato), usa il primo
+        idx_att = 0
+        
     new_op = st.selectbox(
-        options=opzioni_selectbox, 
-        index=0,
+        "Operatore",
+        options=operatori_nomi, 
+        index=idx_att,
         key=f"edit_op_select_{log_id}"
     )
     st.divider()
