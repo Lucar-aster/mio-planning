@@ -39,61 +39,17 @@ if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
 @st.dialog("📝 Modifica Log")
-def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_end):
-    # --- PROTEZIONE 1: Se operatori_nomi è None o non è una lista, creane una vuota ---
-    if not isinstance(operatori_nomi, list):
-        operatori_nomi = []
-    
-    # Assicuriamoci che siano tutte stringhe
-    lista_nomi = [str(n) for n in operatori_nomi]
-
-    # --- PROTEZIONE 2: Gestione Operatore Corrente ---
-    # Se current_op è None o non è una stringa, lo rendiamo stringa vuota
-    curr_op_str = str(current_op) if current_op is not None else ""
-    
-    # Cerchiamo l'indice solo se l'operatore esiste nella lista
-    idx_att = 0
-    if curr_op_str in lista_nomi:
-        idx_att = lista_nomi.index(curr_op_str)
-    
+def modal_edit_log(log_id, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
-
-    # --- WIDGET SELECTBOX ---
-    new_op = st.selectbox(
-        "Operatore",
-        options=lista_nomi if lista_nomi else [curr_op_str], 
-        index=idx_att,
-        key=f"edit_op_select_{log_id}"
-    )
-    
-    st.divider()
-    
-    # --- PROTEZIONE 3: Gestione Date ---
+    new_op = st.text_input("Operatore", value=current_op)
     c1, c2 = st.columns(2)
-    try:
-        # pd.to_datetime è robusto, ma se riceve valori assurdi crasha
-        d_start = pd.to_datetime(current_start) if current_start else datetime.now()
-        d_end = pd.to_datetime(current_end) if current_end else datetime.now()
-    except:
-        d_start = datetime.now()
-        d_end = datetime.now()
-
-    new_start = c1.date_input("Inizio", value=d_start, format="DD/MM/YYYY")
-    new_end = c2.date_input("Fine", value=d_end, format="DD/MM/YYYY")
-    
-    st.divider()
-    
+    new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
+    new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
     col1, col2 = st.columns(2)
     if col1.button("Aggiorna", type="primary", use_container_width=True):
-        # NOTA: Verifica se le colonne nel DB sono "Inizio" o "inizio"
-        supabase.table("Log_Tempi").update({
-            "operatore": new_op, 
-            "Inizio": str(new_start), 
-            "Fine": str(new_end)
-        }).eq("id", log_id).execute()
+        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
         get_cached_data.clear()
         st.rerun()
-        
     if col2.button("Elimina", use_container_width=True):
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
         get_cached_data.clear()
