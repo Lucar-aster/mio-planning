@@ -43,28 +43,44 @@ if 'chart_key' not in st.session_state:
 def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
     
+    # --- FIX: Trova la posizione dell'operatore attuale nella lista ---
     try:
         # Se current_op è nella lista, idx_att sarà la sua posizione (es. 0, 1, 2...)
         idx_att = operatori_nomi.index(current_op)
     except ValueError:
         # Se non lo trova (magari l'operatore è stato rimosso o rinominato), usa il primo
         idx_att = 0
-        
+
+    # Ora la selectbox mostrerà di default l'operatore attuale
     new_op = st.selectbox(
         "Operatore",
         options=operatori_nomi, 
         index=idx_att,
         key=f"edit_op_select_{log_id}"
     )
+    
     st.divider()
+    
     c1, c2 = st.columns(2)
+    # Nota: assicurati che le date siano in formato datetime per date_input
     new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
     new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
+    
+    st.divider()
+    
     col1, col2 = st.columns(2)
+    
     if col1.button("Aggiorna", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
+        # Verifica i nomi delle colonne sul tuo DB (Inizio/Fine o inizio/fine?)
+        supabase.table("Log_Tempi").update({
+            "operatore": new_op, 
+            "Inizio": str(new_start), 
+            "Fine": str(new_end)
+        }).eq("id", log_id).execute()
+        
         get_cached_data.clear()
         st.rerun()
+        
     if col2.button("Elimina", use_container_width=True):
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
         get_cached_data.clear()
