@@ -43,35 +43,48 @@ if 'chart_key' not in st.session_state:
 def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
     
-    # --- FIX: Trova la posizione dell'operatore attuale nella lista ---
-    try:
-        # Se current_op è nella lista, idx_att sarà la sua posizione (es. 0, 1, 2...)
-        idx_att = operatori_nomi.index(current_op)
-    except ValueError:
-        # Se non lo trova (magari l'operatore è stato rimosso o rinominato), usa il primo
-        idx_att = 0
+    # --- 1. VALIDAZIONE LISTA ---
+    # Assicuriamoci che operatori_nomi sia una lista di stringhe
+    lista_pulita = [str(n) for n in operatori_nomi] if operatori_nomi else []
+    
+    # --- 2. RICERCA INDICE SICURA ---
+    # Cerchiamo l'indice di current_op. Se non c'è, o se current_op è None, usiamo 0
+    idx_att = 0
+    if current_op and str(current_op) in lista_pulita:
+        idx_att = lista_pulita.index(str(current_op))
+    
+    # Se la lista è vuota, aggiungiamo almeno l'operatore attuale per non far crashare la selectbox
+    if not lista_pulita:
+        lista_pulita = [str(current_op)] if current_op else ["Nessun Operatore"]
 
-    # Ora la selectbox mostrerà di default l'operatore attuale
+    # --- 3. WIDGET SELECTBOX ---
     new_op = st.selectbox(
         "Operatore",
-        options=operatori_nomi, 
+        options=lista_pulita, 
         index=idx_att,
         key=f"edit_op_select_{log_id}"
     )
     
     st.divider()
     
+    # --- 4. GESTIONE DATE SICURA ---
     c1, c2 = st.columns(2)
-    # Nota: assicurati che le date siano in formato datetime per date_input
-    new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
-    new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
+    try:
+        val_start = pd.to_datetime(current_start)
+        val_end = pd.to_datetime(current_end)
+    except:
+        val_start = datetime.now()
+        val_end = datetime.now()
+
+    new_start = c1.date_input("Inizio", value=val_start, format="DD/MM/YYYY")
+    new_end = c2.date_input("Fine", value=val_end, format="DD/MM/YYYY")
     
     st.divider()
     
     col1, col2 = st.columns(2)
     
     if col1.button("Aggiorna", type="primary", use_container_width=True):
-        # Verifica i nomi delle colonne sul tuo DB (Inizio/Fine o inizio/fine?)
+        # NOTA: Controlla se sul DB le colonne sono "Inizio" o "inizio"
         supabase.table("Log_Tempi").update({
             "operatore": new_op, 
             "Inizio": str(new_start), 
@@ -85,7 +98,6 @@ def modal_edit_log(log_id, operatori_nomi, current_op, current_start, current_en
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
         get_cached_data.clear()
         st.rerun()
-
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
     n = st.text_input("Nome Commessa")
