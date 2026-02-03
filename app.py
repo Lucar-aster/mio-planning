@@ -44,9 +44,9 @@ def modal_edit_log(log_id, current_op, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
 
     try:
-    idx_att = ops_list.index(current_op)
+        idx_att = ops_list.index(current_op)
     except ValueError:
-    idx_att = 0  # Se non lo trova, parte dal primo
+        idx_att = 0  # Se non lo trova, parte dal primo
     
     new_op = st.selectbox("Operatore", options=ops_list, index=idx_att)
     c1, c2 = st.columns(2)
