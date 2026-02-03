@@ -62,7 +62,7 @@ def modal_edit_log(log_item, operatori, current_start, current_end):
 
     if st.button("Salva Modifiche"):
         supabase.table("Log_Tempi").update({
-            "operatore": new_op
+            "operatore": new_op,
             "Inizio": str(new_start),
             "Fine": str(new_end)
         }).eq("id", log_item['id']).execute()
