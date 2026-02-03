@@ -46,8 +46,10 @@ def modal_edit_log(log_item, operatori_nomi, current_start, current_end):
     st.write(f"Modifica Log ID: {log_id}")
 
     # 1. Recuperiamo il nome dell'operatore attuale salvato nel log
-    valore_attuale = log_item.get('operatore', '')
-
+    valore_attuale = ""
+    if isinstance(log_item, dict):
+        valore_attuale = log_item.get('operatore', '')
+        
     # 2. Calcoliamo l'indice (posizione) del valore attuale nella lista
     try:
         # Se il nome è nella lista, prendiamo la sua posizione
