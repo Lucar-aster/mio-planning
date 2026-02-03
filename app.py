@@ -277,13 +277,14 @@ if l and tk and cm:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1)
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
-        f_c, f_o = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique())), c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
-        st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b4 = st.columns(4)
-        if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
-        if b2.button("📑 Task", use_container_width=True): modal_task()
-        if b3.button("⏱️ Log", use_container_width=True): modal_log()
-        if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+    f_c, f_o = c_f1.multiselect("Progetti", sorted(df['Commessa'].unique())), c_f2.multiselect("Operatori", sorted(df['operatore'].unique()))
+    st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
+    b1, b2, b3, b4 = st.columns(4)
+    if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
+    if b2.button("📑 Task", use_container_width=True): modal_task()
+    if b3.button("⏱️ Log", use_container_width=True): modal_log()
+    if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+    
     # Applicazione filtri al DataFrame
     df_p = df.copy()
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
