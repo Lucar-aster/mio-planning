@@ -63,7 +63,7 @@ def modal_edit_log(log_item, operatori_nomi, current_start, current_end):
         "Operatore", 
         options=operatori_nomi, 
         index=idx_att,
-        key=f"edit_op_select_{log_item['id']}"
+        key=f"edit_op_select_{log_id}"
     )
     new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
     new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
