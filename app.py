@@ -40,8 +40,8 @@ if 'chart_key' not in st.session_state:
 
 # --- MODALI ---
 @st.dialog("📝 Modifica Log")
-def modal_edit_log(log_id, operatori, current_start, current_end):
-    st.write(f"Modifica Log ID: {log_id}")
+def modal_edit_log(log_item, operatori, current_start, current_end):
+    st.write(f"Modifica Log ID: {log_item['id']}")
     
     nomi_operatori = [op['nome'] for op in operatori]
     # Cerchiamo l'indice attuale
@@ -51,9 +51,6 @@ def modal_edit_log(log_id, operatori, current_start, current_end):
     
     new_op = st.selectbox("Cambia Operatore", options=nomi_operatori, index=idx_att)
         
-    new_op = st.selectbox("Operatore", options=nomi_operatori, 
-        index=indx_att,
-        key=f"edit_op_log_{log_da_modificare['id']}")
     c1, c2 = st.columns(2)
     new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
     new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
