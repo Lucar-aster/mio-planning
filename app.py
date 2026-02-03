@@ -336,7 +336,7 @@ with tabs[1]:
 
         # 2. Opzioni con ALTEZZA FISSA (Indispensabile per la visibilità)
         cal_options = {
-            "initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 350, "views": {
+            "initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 500, "views": {
                 "multiMonthYear": {
                     "duration": {"months": 2} # LIMITA LA VISTA A SOLI 2 MESI
                 }
@@ -372,7 +372,7 @@ with tabs[1]:
                 /* 5. Rimuove padding in eccesso dal contenitore del mese */
                 .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;}
                 /* 6. Forza l'altezza dell'iframe di Streamlit per evitare scroll interni */
-                iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 500px !important;}
+                iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 1500px !important; height: 1500px !important;}
             </style>
         """, unsafe_allow_html=True)
 
