@@ -336,14 +336,17 @@ with tabs[1]:
 
         # 2. Opzioni con ALTEZZA FISSA (Indispensabile per la visibilità)
         cal_options = {
-            "initialView": "dayGridMonth",
-            "height": 650,           # Forza l'altezza in pixel
+            "initialView": "multiMonthYear", "multiMonthMaxColumns": 1, "views": {
+                "multiMonthYear": {
+                    "duration": {"months": 2} # LIMITA LA VISTA A SOLI 2 MESI
+                }
+            },
             "locale": "it",
             "firstDay": 1,           # Inizia da Lunedì
             "headerToolbar": {
                 "left": "prev,next today",
                 "center": "title",
-                "right": "dayGridMonth,timeGridWeek"
+                "right": "multiMonthYear,dayGridMonth,timeGridWeek"
             },
             "editable": False,
             "selectable": True,
@@ -352,6 +355,7 @@ with tabs[1]:
         # 3. Custom CSS per forzare la visibilità del componente
         st.markdown("""
             <style>
+                .fc-multimonth-month { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
                 iframe[title="streamlit_calendar.calendar"] {
                     min-height: 650px;
                 }
