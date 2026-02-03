@@ -274,14 +274,7 @@ if l and tk and cm:
 
 # --- TAB 1: TIMELINE (GANTT) ---
 with tabs[0]:
-    if l and tk and cm:
-        tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
-        cm_m = {c['id']: c['nome_commessa'] for c in cm}
-        df = pd.DataFrame(l)
-        df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
-        df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
-        df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
-        df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
+    if not df.empty:
         c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
         with c_f3:
             cs, cd = st.columns([1, 1])
