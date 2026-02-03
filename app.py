@@ -357,7 +357,7 @@ with tabs[1]:
         }
         
         # 3. Custom CSS per forzare la visibilità del componente
-st.markdown("""
+    st.markdown("""
     <style>
         /* 1. Riduce lo spazio tra i mesi */
         .fc .fc-multimonth-month {
