@@ -343,7 +343,7 @@ with tabs[1]:
             },
             "height": "auto",
             "contentHeight": "auto",
-            "aspectRatio": 1.6,
+            "aspectRatio": 1.3,
             "expandRows": False,
             "locale": "it",
             "firstDay": 1,           # Inizia da Lunedì
