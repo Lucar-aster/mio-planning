@@ -372,7 +372,7 @@ with tabs[1]:
                 /* 5. Rimuove padding in eccesso dal contenitore del mese */
                 .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;}
                 /* 6. Forza l'altezza dell'iframe di Streamlit per evitare scroll interni */
-                iframe[title="streamlit_calendar.calendar"] {min-height: 1500px !important;}
+                iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 500px !important;}
             </style>
         """, unsafe_allow_html=True)
 
