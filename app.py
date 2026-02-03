@@ -336,6 +336,7 @@ with tabs[1]:
             "initialView": "dayGridMonth", 
             "firstDay": 1, 
             "locale": "it",
+            "height": "600px",
         }
         
         # Ora i dati sono "JSON-safe"
