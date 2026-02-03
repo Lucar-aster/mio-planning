@@ -260,7 +260,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
 # --- 6. MAIN UI ---
-tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Dati", "⚙️ Setup"])
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
 if l and tk and cm:
@@ -290,6 +289,7 @@ if l and tk and cm:
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Dati", "⚙️ Setup"])    
 # --- TAB 1: TIMELINE (GANTT) ---
 with tabs[0]:
     if not df.empty:
