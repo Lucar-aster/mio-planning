@@ -223,8 +223,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             range=x_range, 
             fixedrange=False, 
             tickmode="array",
-            tickvals=tick_range,
-            ticktext=tick_text + pd.Timedelta(hours=12),
+            tickvals=tick_range + pd.Timedelta(hours=12),
+            ticktext=tick_text,
             showgrid=False, 
             zeroline=False,
             anchor="y"
