@@ -273,7 +273,7 @@ if l and tk and cm:
     df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
     # --- AREA CONTROLLI ---
     c_f1, c_f2, c_f3 = st.columns([2, 2, 4])
-        with c_f3:
+    with c_f3:
             cs, cd = st.columns([1, 1])
             scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1)
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
