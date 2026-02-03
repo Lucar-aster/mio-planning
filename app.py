@@ -341,7 +341,7 @@ with tabs[1]:
                     "duration": {"months": 2} # LIMITA LA VISTA A SOLI 2 MESI
                 }
             },
-            "height": 2500,
+            "height": "auto",
             "locale": "it",
             "firstDay": 1,           # Inizia da Lunedì
             "headerToolbar": {
@@ -356,9 +356,13 @@ with tabs[1]:
         # 3. Custom CSS per forzare la visibilità del componente
         st.markdown("""
             <style>
-                .fc-multimonth-month { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+                .fc-multimonth-month { border: 1px solid #ddd; padding: 0px !important; margin-bottom: 5px !important; }
                 iframe[title="streamlit_calendar.calendar"] {
                     min-height: 2000px;
+                }
+                /* Riduce lo spazio interno alle celle dei giorni per compattare */
+                .fc .fc-daygrid-day-frame {
+                    min-height: 50px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
