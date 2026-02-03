@@ -39,6 +39,7 @@ if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
 # --- MODALI ---
+@st.dialog("📝 Modifica Log")
 def modal_edit_log(log_item, operatori, current_start, current_end):
     # Estraiamo l'ID in modo sicuro
     log_id = log_item['id'] if isinstance(log_item, dict) else log_item
