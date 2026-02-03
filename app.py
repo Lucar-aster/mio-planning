@@ -303,52 +303,75 @@ with tabs[0]:
             curr += timedelta(days=1)
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
 
-# --- TAB 2: CALENDARIO ---
+# --- TAB 2: CALENDARIO (VERSIONE REVISIONATA) ---
 with tabs[1]:
     if not df.empty:
         st.subheader("Pianificazione Mensile")
-        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
+        
+        # 1. Preparazione Eventi (Formato ISO rigoroso)
         cal_events = []
+        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
         
         for _, row in df.iterrows():
-            # Protezione: trasformiamo le date in stringhe pure ISO (YYYY-MM-DD)
-            # gestendo eventuali valori nulli
             try:
-                s_str = row["Inizio"].strftime("%Y-%m-%d") if pd.notnull(row["Inizio"]) else None
-                # FullCalendar vuole il giorno di fine ESCLUSO, quindi aggiungiamo 1 giorno
-                e_str = (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d") if pd.notnull(row["Fine"]) else None
+                # Trasformiamo in stringa pura YYYY-MM-DD
+                s_date = row["Inizio"].strftime("%Y-%m-%d")
+                # FullCalendar vuole la fine esclusiva (+1 giorno)
+                e_date = (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d")
                 
-                if s_str and e_str:
-                    cal_events.append({
-                        "id": str(row["id"]),
-                        "title": str(f"{row['operatore']} - {row['Task']}"),
-                        "start": s_str,
-                        "end": e_str,
-                        "backgroundColor": str(color_map.get(row["operatore"], "#3D85C6")),
-                        "borderColor": str(color_map.get(row["operatore"], "#3D85C6")),
-                        "allDay": True
-                    })
-            except Exception as e:
-                continue # Salta i log corrotti invece di far crashare tutto
+                cal_events.append({
+                    "id": str(row["id"]),
+                    "title": f"{row['operatore']} | {row['Task']}",
+                    "start": s_date,
+                    "end": e_date,
+                    "color": color_map.get(row["operatore"], "#3D85C6"),
+                    "allDay": True
+                })
+            except:
+                continue
 
+        # 2. Opzioni con ALTEZZA FISSA (Indispensabile per la visibilità)
         cal_options = {
-            "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridMonth,timeGridWeek"},
-            "initialView": "dayGridMonth", 
-            "firstDay": 1, 
+            "initialView": "dayGridMonth",
+            "height": 650,           # Forza l'altezza in pixel
             "locale": "it",
-            "height": "600px",
+            "firstDay": 1,           # Inizia da Lunedì
+            "headerToolbar": {
+                "left": "prev,next today",
+                "center": "title",
+                "right": "dayGridMonth,timeGridWeek"
+            },
+            "editable": False,
+            "selectable": True,
         }
         
-        # Ora i dati sono "JSON-safe"
-        cal_res = calendar(events=cal_events, options=cal_options, key="main_calendar_v2")
-        
-        if cal_res and cal_res.get("eventClick"):
-            try:
-                eid = int(cal_res["eventClick"]["event"]["id"])
+        # 3. Custom CSS per forzare la visibilità del componente
+        st.markdown("""
+            <style>
+                iframe[title="streamlit_calendar.calendar"] {
+                    min-height: 650px;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # 4. Rendering con gestione dei dati di ritorno
+        try:
+            state = calendar(
+                events=cal_events,
+                options=cal_options,
+                key="v_calendar_final" # Cambia la chiave se avevi errori prima
+            )
+            
+            # Gestione click (stessa logica della tua modale)
+            if state and "eventClick" in state:
+                eid = int(state["eventClick"]["event"]["id"])
                 sel = df[df['id'] == eid].iloc[0]
                 modal_edit_log(sel['id'], sel['operatore'], sel['Inizio'], sel['Fine'])
-            except:
-                st.error("Errore nel recupero del log selezionato.")
+                
+        except Exception as e:
+            st.error(f"Errore nel caricamento del componente: {e}")
+    else:
+        st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
 # --- TAB 3: GESTIONE ATTIVITÀ (DATA EDITOR) ---
 with tabs[2]:
