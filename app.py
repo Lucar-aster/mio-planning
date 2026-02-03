@@ -57,14 +57,14 @@ def modal_edit_log(log_item, operatori, current_start, current_end):
     new_op = st.selectbox("Cambia Operatore", options=nomi_operatori, index=idx_att, key=f"edit_op_{log_id}")
     
     # Esempio di campi per date (già che ci sei)
-    # new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
-    # new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
+    new_start = st.date_input("Inizio", value=pd.to_datetime(current_start))
+    new_end = st.date_input("Fine", value=pd.to_datetime(current_end))
 
     if st.button("Salva Modifiche"):
         supabase.table("Log_Tempi").update({
             "operatore": new_op
-            # "Inizio": str(new_start),
-            # "Fine": str(new_end)
+            "Inizio": str(new_start),
+            "Fine": str(new_end)
         }).eq("id", log_item['id']).execute()
         
         get_cached_data.clear()
