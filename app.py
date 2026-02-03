@@ -357,7 +357,7 @@ with tabs[1]:
             <style>
                 .fc-multimonth-month { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
                 iframe[title="streamlit_calendar.calendar"] {
-                    min-height: 650px;
+                    min-height: 1000px;
                 }
             </style>
         """, unsafe_allow_html=True)
