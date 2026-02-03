@@ -42,7 +42,8 @@ if 'chart_key' not in st.session_state:
 @st.dialog("📝 Modifica Log")
 def modal_edit_log(log_item, operatori_nomi, current_start, current_end):
     # log_item è il dizionario del log, operatori_nomi è la tua ops_list di stringhe
-    st.write(f"Modifica Log ID: {log_item['id']}")
+    log_id = log_item['id'] if isinstance(log_item, dict) else log_item
+    st.write(f"Modifica Log ID: {log_id}")
 
     # 1. Recuperiamo il nome dell'operatore attuale salvato nel log
     valore_attuale = log_item.get('operatore', '')
