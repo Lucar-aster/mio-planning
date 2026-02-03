@@ -336,7 +336,7 @@ with tabs[1]:
 
         # 2. Opzioni con ALTEZZA FISSA (Indispensabile per la visibilità)
         cal_options = {
-            "initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 950, "views": {
+            "initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 350, "views": {
                 "multiMonthYear": {
                     "duration": {"months": 2} # LIMITA LA VISTA A SOLI 2 MESI
                 }
