@@ -308,6 +308,21 @@ with tabs[0]:
             curr += timedelta(days=1)
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
 
+        st.markdown("""
+    <style>
+        /* Individua il contenitore del grafico e lo rende gestibile */
+        div[data-testid="stPlotlyChart"] {
+            position: relative;
+        }
+        
+        /* Forza l'asse X (se posizionato in alto) a rimanere visibile */
+        /* Nota: funziona meglio se il grafico ha un'altezza definita */
+        .js-plotly-plot .main-svg:first-child {
+            background: white !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- TAB 2: CALENDARIO (VERSIONE REVISIONATA) ---
 with tabs[1]:
     if not df.empty:
