@@ -19,10 +19,11 @@ st.markdown(f"""
     .compact-title h1 {{ font-size: 26px !important; color: #1E3A8A; margin: 0; }}
     .spacer-btns {{ margin-top: 15px; margin-bottom: 10px; }}
     /* Individua il contenitore del grafico e lo rende gestibile */
-     div[data-testid="stPlotlyChart"] {{position: relative;}}
+    [data-testid="stContainer"] {{overflow: auto;}}
     /* Forza l'asse X (se posizionato in alto) a rimanere visibile */
     /* Nota: funziona meglio se il grafico ha un'altezza definita */
-    .js-plotly-plot .main-svg:first-child {{background: white !important;}}
+    .js-plotly-plot .xaxislayer-above {{position: sticky !important; top: 0; z-index: 1000 !important; background: white !important;}}
+    .js-plotly-plot .gridlayer {{z-index: 1;}}
     </style>
     <div class="compact-title">
         <img src="{LOGO_URL}" width="40">
