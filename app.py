@@ -18,6 +18,11 @@ st.markdown(f"""
     .compact-title {{ display: flex; align-items: center; gap: 12px; padding-top: 10px; }}
     .compact-title h1 {{ font-size: 26px !important; color: #1E3A8A; margin: 0; }}
     .spacer-btns {{ margin-top: 15px; margin-bottom: 10px; }}
+    /* Individua il contenitore del grafico e lo rende gestibile */
+     div[data-testid="stPlotlyChart"] {position: relative;}
+    /* Forza l'asse X (se posizionato in alto) a rimanere visibile */
+    /* Nota: funziona meglio se il grafico ha un'altezza definita */
+    .js-plotly-plot .main-svg:first-child {background: white !important;}
     </style>
     <div class="compact-title">
         <img src="{LOGO_URL}" width="40">
@@ -307,21 +312,6 @@ with tabs[0]:
             if curr.weekday() >= 5: shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="rgba(200,200,200,0.15)", layer="below", line_width=0))
             curr += timedelta(days=1)
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, shapes)
-
-        st.markdown("""
-    <style>
-        /* Individua il contenitore del grafico e lo rende gestibile */
-        div[data-testid="stPlotlyChart"] {
-            position: relative;
-        }
-        
-        /* Forza l'asse X (se posizionato in alto) a rimanere visibile */
-        /* Nota: funziona meglio se il grafico ha un'altezza definita */
-        .js-plotly-plot .main-svg:first-child {
-            background: white !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # --- TAB 2: CALENDARIO (VERSIONE REVISIONATA) ---
 with tabs[1]:
