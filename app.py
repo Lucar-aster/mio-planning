@@ -420,9 +420,6 @@ with tabs[2]:
         task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk}
         commessa_map = {c['id']: c['nome_commessa'] for c in cm}
         
-        df_edit['nome_task'] = df_edit['task_id'].map(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
-        df_edit['nome_commessa'] = df_edit['task_id'].map(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
-        
         st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
 
         edited_df = st.data_editor(df_edit, column_config={"id": None, "nome_commessa": "Commessa",
