@@ -62,7 +62,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_note=
     
     col1, col2 = st.columns(2)
     if col1.button("Aggiorna", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}), "note": new_note.eq("id", log_id).execute()
+        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end), "note": new_note}).eq("id", log_id).execute()
         get_cached_data.clear()
         st.rerun()
     if col2.button("Elimina", use_container_width=True):
