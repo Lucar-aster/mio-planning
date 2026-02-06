@@ -415,7 +415,7 @@ with tabs[2]:
     if l is not None and cm and tk:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
-        df_edit['Fine'] = pd.to_datetime(df_edit['fine']).dt.date
+        df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
         
         task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk}
         commessa_map = {c['id']: c['nome_commessa'] for c in cm}
