@@ -425,7 +425,7 @@ with tabs[2]:
         
         st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
 
-        edited_df = st.data_editor(df_edit, column_config={"id": None, , "commessa_nome": "Commessa",
+        edited_df = st.data_editor(df_edit, column_config={"id": None, "commessa_nome": "Commessa",
                 "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk], required=True),
                 "operatore": st.column_config.TextColumn("Operatore", required=True), "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
                 "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),"note": st.column_config.TextColumn("Note", width="large")}
