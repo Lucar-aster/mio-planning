@@ -46,22 +46,23 @@ if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 
 @st.dialog("📝 Modifica Log")
-def modal_edit_log(log_id, current_op, current_start, current_end):
+def modal_edit_log(log_id, current_op, current_start, current_end, current_note=""):
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     st.write(f"Modifica Log ID: {log_id}")
 
     try:
         idx_att = ops_list.index(current_op)
-    except ValueError:
-        idx_att = 0  # Se non lo trova, parte dal primo
+    except ValueError: idx_att = 0 
     
     new_op = st.selectbox("Operatore", options=ops_list, index=idx_att)
     c1, c2 = st.columns(2)
     new_start = c1.date_input("Inizio", value=pd.to_datetime(current_start), format="DD/MM/YYYY")
     new_end = c2.date_input("Fine", value=pd.to_datetime(current_end), format="DD/MM/YYYY")
+    new_note = st.text_area("Note", value=current_note if current_note else "")
+    
     col1, col2 = st.columns(2)
     if col1.button("Aggiorna", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}).eq("id", log_id).execute()
+        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_start), "fine": str(new_end)}), "note": new_note.eq("id", log_id).execute()
         get_cached_data.clear()
         st.rerun()
     if col2.button("Elimina", use_container_width=True):
@@ -103,6 +104,9 @@ def modal_log():
     new_task_name = st.text_input("Inserisci nome nuovo task") if sel_task == "➕ Aggiungi nuovo task..." else ""
     c1, c2 = st.columns(2)
     i, f = c1.date_input("Inizio"), c2.date_input("Fine")
+
+    nota = st.text_area("Note", placeholder="Dettagli attività...")
+    
     if st.button("Registra Log", use_container_width=True):
         target_task_id = None
         if sel_task == "➕ Aggiungi nuovo task...":
@@ -112,7 +116,7 @@ def modal_log():
             else: st.error("Inserisci nome task"); return
         else: target_task_id = task_opts[sel_task]
         if target_task_id:
-            supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f)}).execute()
+            supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f), "note": nota}).execute()
             get_cached_data.clear()
             st.rerun()
 
@@ -124,13 +128,17 @@ def merge_consecutive_logs(df):
     for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
         current_row = None
         for _, row in group.iterrows():
-            if current_row is None: current_row = row.to_dict()
+            if current_row is None: 
+                current_row = row.to_dict()
+                current_row['note_html'] = nota_formattata
             else:
                 if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
                     current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
                     current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
                 else:
-                    merged.append(current_row); current_row = row.to_dict()
+                    merged.append(current_row)
+                        current_row = row.to_dict()
+                        current_row['note_html'] = nota_formattata
         if current_row: merged.append(current_row)
     return pd.DataFrame(merged)
 
@@ -147,10 +155,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         st.info("Nessun dato trovato.")
         return
      # Controllo e validazione delta_giorni
-    try:
-        delta_giorni = int(delta_giorni)
-    except:
-        delta_giorni = 20 # Default di sicurezza
+    try: delta_giorni = int(delta_giorni)
+    except: delta_giorni = 20 # Default di sicurezza
         
     df_merged = merge_consecutive_logs(df_plot)
     fig = go.Figure()
@@ -160,6 +166,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         df_op = df_merged[df_merged['operatore'] == op]
         c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
+
+        # Gestione dinamica del separatore nell'hover
+        hovers = []
+        for n_h in df_op['note_html']:
+            sep = "--------------------<br>" if n_h else ""
+            hovers.append(sep + n_h)
         
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], 
@@ -171,15 +183,13 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             offsetgroup=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), 
             width=0.4, 
-            customdata=df_op[['id', 'operatore', 'Inizio', 'Fine', 'Commessa', 'Task']],
-            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<extra></extra>"
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], hovers)),
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
     # --- GENERAZIONE DINAMICA WEEKEND E GRIGLIA ---
     all_shapes = []
-    # Estendiamo il range di 6 mesi per coprire il PAN
     start_pan = x_range[0] - timedelta(days=180)
     end_pan = x_range[1] + timedelta(days=180)
-    
     curr = start_pan
     while curr <= end_pan:
         # 1. Linea giornaliera (Griglia)
@@ -205,14 +215,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     # Scegliamo la frequenza in base alla scala
     if delta_giorni > 60:
-        # Vista ampia: un tick ogni Lunedì
         tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
     elif delta_giorni >20:
-        
        full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
        tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
     else:
-        # Vista stretta: un tick ogni giorno
         tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
 
     # 3. Generiamo i testi solo per i giorni filtrati
@@ -251,19 +258,15 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
     # --- Plotly Chart ---
-    selected = st.plotly_chart(
-        fig, 
-        use_container_width=True, 
-        key=f"gantt_{st.session_state.chart_key}", 
-        on_select="rerun", 
-        config={'scrollZoom': False, 'displayModeBar': False}
-    )
+    selected = st.plotly_chart(fig, use_container_width=True, 
+        key=f"gantt_{st.session_state.chart_key}", on_select="rerun", 
+        config={'scrollZoom': False, 'displayModeBar': False})
     
     # --- Logica di selezione per Modifica ---
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
         if p and "customdata" in p[0]:
-            modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
+            modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3], p[0]["customdata"][4])
 
 # --- 6. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
@@ -335,7 +338,8 @@ with tabs[1]:
                     "start": s_date,
                     "end": e_date,
                     "color": color_map.get(row["operatore"], "#3D85C6"),
-                    "allDay": True
+                    "allDay": True,
+                    "extendedProps": {"nota": row.get('note', '')}
                 })
             except:
                 continue
@@ -427,13 +431,14 @@ with tabs[2]:
                 "operatore": st.column_config.TextColumn("Operatore", required=True),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
                 "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
+                "note": st.column_config.TextColumn("Note", width="large")
             }, hide_index=True, use_container_width=True
         )
 
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
             inv_tk = {t['nome_task']: t['id'] for t in tk}
             for _, row in edited_df.iterrows():
-                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['inizio']), "fine": str(row['fine'])}
+                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['inizio']), "fine": str(row['fine']),"note": row['note']}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
             get_cached_data.clear()
             st.success("Database aggiornato!")
@@ -618,3 +623,18 @@ with tabs[3]:
             if st.form_submit_button("Aggiungi Task"):
                 supabase.table("Task").insert({"nome_task": nt_n, "commessa_id": nt_c['id']}).execute()
                 get_cached_data.clear(); st.rerun()
+# --- TAB 4: STATISTICHE ---
+with tabs[4]:
+    if not df_p.empty:
+        st.header("📈 Analisi Attività")
+        s_c = df_p.groupby('Commessa').size().reset_index(name='Giornate')
+        s_o = df_p.groupby('operatore').size().reset_index(name='Giornate')
+        c1, c2 = st.columns(2)
+        c1.subheader("Distribuzione per Commessa")
+        c1.bar_chart(s_c, x='Commessa', y='Giornate')
+        c2.subheader("Carico Lavoro Operatori")
+        c2.bar_chart(s_o, x='operatore', y='Giornate')
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Totale Giornate", len(df_p))
+        m2.metric("Commesse Attive", df_p['Commessa'].nunique())
+        m3.metric("Operatori", df_p['operatore'].nunique())
