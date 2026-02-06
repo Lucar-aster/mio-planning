@@ -413,7 +413,7 @@ with tabs[1]:
 with tabs[2]:
     st.header("📝 Gestione Attività")
     if l is not None and cm and tk:
-        df_edit = pd.DataFrame(l)
+        df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
         df_edit['inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
         df_edit['fine'] = pd.to_datetime(df_edit['fine']).dt.date
         
@@ -423,21 +423,13 @@ with tabs[2]:
         df_edit['task_nome'] = df_edit['task_id'].map(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
         df_edit['commessa_nome'] = df_edit['task_id'].map(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
         
-        df_display = df_edit[['id', 'commessa_nome', 'task_nome', 'operatore', 'inizio', 'fine']].copy()
         st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
 
-        edited_df = st.data_editor(
-            df_display, key="log_editor_v3", num_rows="dynamic",
-            disabled=["id", "commessa_nome"],
-            column_config={
-                "id": None, "commessa_nome": "Commessa",
+        edited_df = st.data_editor(df_edit, column_config={"id": None, , "commessa_nome": "Commessa",
                 "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk], required=True),
-                "operatore": st.column_config.TextColumn("Operatore", required=True),
-                "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
-                "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
-                "note": st.column_config.TextColumn("Note", width="large")
-            }, hide_index=True, use_container_width=True
-        )
+                "operatore": st.column_config.TextColumn("Operatore", required=True), "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
+                "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),"note": st.column_config.TextColumn("Note", width="large")}
+                , hide_index=True, use_container_width=True)
 
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
             inv_tk = {t['nome_task']: t['id'] for t in tk}
