@@ -420,12 +420,12 @@ with tabs[2]:
         task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk}
         commessa_map = {c['id']: c['nome_commessa'] for c in cm}
         
-        df_edit['task_nome'] = df_edit['task_id'].map(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
-        df_edit['commessa_nome'] = df_edit['task_id'].map(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
+        df_edit['nome_task'] = df_edit['task_id'].map(lambda x: task_info[x]['nome'] if x in task_info else "N/A")
+        df_edit['nome_commessa'] = df_edit['task_id'].map(lambda x: commessa_map[task_info[x]['c_id']] if x in task_info else "N/A")
         
         st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
 
-        edited_df = st.data_editor(df_edit, column_config={"id": None, "commessa_nome": "Commessa",
+        edited_df = st.data_editor(df_edit, column_config={"id": None, "nome_commessa": "Commessa",
                 "Task": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk], required=True),
                 "Operatore": st.column_config.TextColumn("Operatore", required=True), "Inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
                 "Fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),"Note": st.column_config.TextColumn("Note", width="large")}
@@ -434,7 +434,7 @@ with tabs[2]:
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
             inv_tk = {t['nome_task']: t['id'] for t in tk}
             for _, row in edited_df.iterrows():
-                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['Inizio']), "fine": str(row['fine']),"note": row['note']}
+                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['nome_task']), "inizio": str(row['Inizio']), "fine": str(row['fine']),"note": row['note']}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
             get_cached_data.clear()
             st.success("Database aggiornato!")
