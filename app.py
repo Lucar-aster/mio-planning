@@ -139,6 +139,8 @@ def merge_consecutive_logs(df):
                 if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
                     current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
                     current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
+                    if nota_formattata:
+                        current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
                 else:
                     merged.append(current_row)
                     current_row = row.to_dict()
