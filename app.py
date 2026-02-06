@@ -279,7 +279,7 @@ if l and tk and cm:
     tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
     cm_m = {c['id']: c['nome_commessa'] for c in cm}
     df = pd.DataFrame(l)
-    df['Inizio'], df['Fine'] = pd.to_datetime(df['Inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
+    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
     df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
