@@ -128,6 +128,10 @@ def merge_consecutive_logs(df):
     for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
         current_row = None
         for _, row in group.iterrows():
+            # Prepariamo la nota formattata (Data: Nota)
+            nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
+            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m')}</i>: {nota_testo}" if nota_testo else ""
+
             if current_row is None: 
                 current_row = row.to_dict()
                 current_row['note_html'] = nota_formattata
