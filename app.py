@@ -414,8 +414,8 @@ with tabs[2]:
     st.header("📝 Gestione Attività")
     if l is not None and cm and tk:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
-        df_edit['inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
-        df_edit['fine'] = pd.to_datetime(df_edit['fine']).dt.date
+        df_edit['Inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
+        df_edit['Fine'] = pd.to_datetime(df_edit['fine']).dt.date
         
         task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk}
         commessa_map = {c['id']: c['nome_commessa'] for c in cm}
@@ -426,9 +426,9 @@ with tabs[2]:
         st.info("💡 Modifica i dati direttamente in tabella e premi il tasto Salva.")
 
         edited_df = st.data_editor(df_edit, column_config={"id": None, "commessa_nome": "Commessa",
-                "task_nome": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk], required=True),
-                "operatore": st.column_config.TextColumn("Operatore", required=True), "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
-                "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),"note": st.column_config.TextColumn("Note", width="large")}
+                "Task": st.column_config.SelectboxColumn("Task", options=[t['nome_task'] for t in tk], required=True),
+                "Operatore": st.column_config.TextColumn("Operatore", required=True), "Inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
+                "Fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),"Note": st.column_config.TextColumn("Note", width="large")}
                 , hide_index=True, use_container_width=True)
 
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
