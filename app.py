@@ -279,7 +279,7 @@ if l and tk and cm:
     tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id']} for t in tk}
     cm_m = {c['id']: c['nome_commessa'] for c in cm}
     df = pd.DataFrame(l)
-    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
+    df['Inizio'], df['Fine'] = pd.to_datetime(df['Inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
     df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
@@ -414,7 +414,7 @@ with tabs[2]:
     st.header("📝 Gestione Attività")
     if l is not None and cm and tk:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
-        df_edit['Inizio'] = pd.to_datetime(df_edit['inizio']).dt.date
+        df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['fine']).dt.date
         
         task_info = {t['id']: {'nome': t['nome_task'], 'c_id': t['commessa_id']} for t in tk}
@@ -434,7 +434,7 @@ with tabs[2]:
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
             inv_tk = {t['nome_task']: t['id'] for t in tk}
             for _, row in edited_df.iterrows():
-                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['inizio']), "fine": str(row['fine']),"note": row['note']}
+                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['task_nome']), "inizio": str(row['Inizio']), "fine": str(row['fine']),"note": row['note']}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
             get_cached_data.clear()
             st.success("Database aggiornato!")
