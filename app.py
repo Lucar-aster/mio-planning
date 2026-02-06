@@ -302,7 +302,7 @@ if l and tk and cm:
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     
-tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Dati", "⚙️ Setup"], "📈 Statistiche"])    
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Dati", "⚙️ Setup", "📈 Statistiche"])    
 # --- TAB 1: TIMELINE (GANTT) ---
 with tabs[0]:
     if not df.empty:
