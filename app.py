@@ -431,7 +431,7 @@ with tabs[2]:
         if st.button("💾 Salva modifiche", type="primary", use_container_width=True):
             inv_tk = {t['nome_task']: t['id'] for t in tk}
             for _, row in edited_df.iterrows():
-                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['nome_task']), "inizio": str(row['Inizio']), "fine": str(row['fine']),"note": row['note']}
+                payload = {"operatore": row['operatore'], "task_id": inv_tk.get(row['nome_task']), "inizio": str(row['Inizio']), "fine": str(row['Fine']),"note": row['note']}
                 supabase.table("Log_Tempi").update(payload).eq("id", row['id']).execute()
             get_cached_data.clear()
             st.success("Database aggiornato!")
