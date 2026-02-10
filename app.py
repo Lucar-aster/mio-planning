@@ -126,7 +126,7 @@ def modal_log():
             st.rerun()
 
 @st.dialog("📂 Clona Commessa")
-def modal_clona_commessa():
+def modal_clona_avanzata():
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
     log_data = get_cached_data("Log_Tempi")
@@ -159,10 +159,11 @@ def modal_clona_commessa():
             st.warning("Non ci sono log da copiare per questa commessa.")
             copia_log = False
 
-    if st.button("🚀 Avvia Clonazione", use_container_width=True, type="primary"):
-            old_cm_id = cms_dict[sel_cm_nome]
-            
-            res_cm = supabase.table("Commesse").insert({"nome_commessa": nuovo_nome}).execute()
+    if st.button("🚀 Avvia Clonazione Totale", type="primary", use_container_width=True):
+        old_cm_id = cms_dict[sel_cm_nome]
+        
+        # 1. Crea la nuova Commessa
+        res_cm = supabase.table("Commesse").insert({"nome_commessa": nuovo_nome}).execute()
         if not res_cm.data: return
         new_cm_id = res_cm.data[0]['id']
         
