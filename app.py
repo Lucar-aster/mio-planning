@@ -125,6 +125,46 @@ def modal_log():
             get_cached_data.clear()
             st.rerun()
 
+@st.dialog("📂 Clona Commessa")
+def modal_clona_commessa():
+    cm_data = get_cached_data("Commesse")
+    tk_data = get_cached_data("Task")
+    
+    cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+    sel_cm_nome = st.selectbox("Seleziona la Commessa da copiare", list(cms_dict.keys()))
+    
+    st.divider()
+    nuovo_nome = st.text_input("Nome della nuova Commessa", value=f"{sel_cm_nome} (COPIA)")
+    
+    st.info("Questa operazione copierà la commessa e tutti i suoi task associati. I log tempi non verranno copiati.")
+
+    if st.button("🚀 Avvia Clonazione", use_container_width=True, type="primary"):
+        if nuovo_nome.strip():
+            old_cm_id = cms_dict[sel_cm_nome]
+            
+            # 1. Crea la nuova Commessa
+            res_cm = supabase.table("Commesse").insert({"nome_commessa": nuovo_nome}).execute()
+            
+            if res_cm.data:
+                new_cm_id = res_cm.data[0]['id']
+                
+                # 2. Filtra i task della vecchia commessa
+                tasks_da_copiare = [t for t in tk_data if t['commessa_id'] == old_cm_id]
+                
+                # 3. Crea i nuovi task associati alla nuova commessa
+                if tasks_da_copiare:
+                    nuovi_tasks = [
+                        {"nome_task": t['nome_task'], "commessa_id": new_cm_id} 
+                        for t in tasks_da_copiare
+                    ]
+                    supabase.table("Task").insert(nuovi_tasks).execute()
+                
+                st.success(f"Commessa '{nuovo_nome}' creata con {len(tasks_da_copiare)} task!")
+                get_cached_data.clear()
+                st.rerun()
+        else:
+            st.error("Inserisci un nome valido per la nuova commessa.")
+
 # --- 4. LOGICA MERGE E ETICHETTE ---
 def merge_consecutive_logs(df):
     if df.empty: return df
@@ -518,6 +558,11 @@ with tabs[3]:
                         st.rerun()
                     else:
                         st.error("Inserisci un nome!")
+                        
+            c1, c2 = st.columns(2)
+    
+            if c1.button("📂 Clona Commessa Esistente", use_container_width=True):
+                modal_clona_commessa()
 
     with c_admin2:
         st.subheader("Elenco Operatori")
