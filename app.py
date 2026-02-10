@@ -120,8 +120,8 @@ def modal_log():
             else: st.error("Inserisci nome task"); return
         else: target_task_id = task_opts[sel_task]
         if target_task_id:
-            for op in selected_ops:
-                supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f), "note": nota}).execute()
+            for operatore_selezionato in selected_ops:
+                supabase.table("Log_Tempi").insert({"operatore": operatore_selezionato, "task_id": target_task_id, "inizio": str(i), "fine": str(f), "note": nota}).execute()
             get_cached_data.clear()
             st.rerun()
 
