@@ -91,76 +91,67 @@ def modal_task():
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     # 1. Recupero dati necessari
-    ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
+    ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     
-    # 2. Definizione esplicita della variabile
-    # Usiamo un nome univoco e una chiave per Streamlit
-    selected_ops = st.multiselect("Operatore", options=ops_list, key="log_op_select")
+    # 2. DEFINIZIONE VARIABILE (Deve essere definita qui!)
+    # Usiamo una key univoca per evitare conflitti di stato
+    selected_ops = st.multiselect("Operatore", options=ops_list, key="new_log_ops_ms")
     
     # 3. Logica Commessa
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-    sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="log_cm_select")
+    sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="new_log_cm_sb")
     
-    # 4. Logica Task filtrati
+    # 4. Logica Task
     sel_cm_id = cms_dict[sel_cm_nome]
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
     task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
-    
-    sel_task = st.selectbox("Task", options=task_list, key="log_tk_select")
+    sel_task = st.selectbox("Task", options=task_list, key="new_log_tk_sb")
     
     new_task_name = ""
     if sel_task == "➕ Aggiungi nuovo task...":
-        new_task_name = st.text_input("Inserisci nome nuovo task", key="log_new_tk")
+        new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti")
     
     # 5. Date e Note
     c1, c2 = st.columns(2)
-    data_odierna = datetime.now().date()
-    data_inizio = c1.date_input("Inizio", value=data_odierna, key="log_start")
-    data_fine = c2.date_input("Fine", value=data_odierna, key="log_end")
-    
-    nota_testo = st.text_area("Note", placeholder="Dettagli attività...", key="log_note")
+    oggi = datetime.now().date()
+    data_i = c1.date_input("Inizio", value=oggi, key="new_log_start_di")
+    data_f = c2.date_input("Fine", value=oggi, key="new_log_end_di")
+    nota = st.text_area("Note", placeholder="Dettagli attività...", key="new_log_note_ta")
     
     st.divider()
     
-    # 6. Pulsante di salvataggio con controllo variabile
+    # 6. Pulsante di salvataggio
     if st.button("Registra Log", use_container_width=True, type="primary"):
-        # Controllo che la variabile esista e non sia vuota
+        # VERIFICA: Ora selected_ops è sicuramente definita sopra
         if not selected_ops:
-            st.error("⚠️ Seleziona almeno un operatore!")
+            st.error("⚠️ Errore: Seleziona almeno un operatore!")
             return
             
-        target_task_id = None
-        
-        # Gestione nuovo task
+        target_id = None
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
-                res = supabase.table("Task").insert({
-                    "nome_task": new_task_name.strip(), 
-                    "commessa_id": sel_cm_id
-                }).execute()
-                if res.data:
-                    target_task_id = res.data[0]['id']
+                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id}).execute()
+                if res.data: target_id = res.data[0]['id']
             else:
-                st.error("Per favore, inserisci un nome per il nuovo task.")
+                st.error("Inserisci il nome del nuovo task")
                 return
         else:
-            target_task_id = task_opts[sel_task]
+            target_id = task_opts[sel_task]
             
-        # Inserimento log nel database
-        if target_task_id:
-            for operatore_selezionato in selected_ops:
+        if target_id:
+            # Creiamo i record per ogni operatore selezionato
+            for op_name in selected_ops:
                 supabase.table("Log_Tempi").insert({
-                    "operatore": operatore_selezionato, 
-                    "task_id": target_task_id, 
-                    "inizio": str(data_inizio), 
-                    "fine": str(data_fine), 
-                    "note": nota_testo
+                    "operatore": op_name, 
+                    "task_id": target_id, 
+                    "inizio": str(data_i), 
+                    "fine": str(data_f), 
+                    "note": nota
                 }).execute()
             
-            # Reset cache e refresh
             get_cached_data.clear()
             st.rerun()
 
