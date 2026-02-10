@@ -93,7 +93,7 @@ def modal_log():
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
-    op = st.selectbox("Operatore", ops_list)
+    op = st.multiselect("Operatore", ops_list)
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
     sel_cm_id = cms_dict[sel_cm_nome]
@@ -108,6 +108,10 @@ def modal_log():
     nota = st.text_area("Note", placeholder="Dettagli attività...")
     
     if st.button("Registra Log", use_container_width=True):
+        if not selected_ops:
+            st.error("Seleziona almeno un operatore")
+            return
+            
         target_task_id = None
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
@@ -116,7 +120,8 @@ def modal_log():
             else: st.error("Inserisci nome task"); return
         else: target_task_id = task_opts[sel_task]
         if target_task_id:
-            supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f), "note": nota}).execute()
+            for op in selected_ops:
+                supabase.table("Log_Tempi").insert({"operatore": op, "task_id": target_task_id, "inizio": str(i), "fine": str(f), "note": nota}).execute()
             get_cached_data.clear()
             st.rerun()
 
