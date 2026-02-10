@@ -129,41 +129,74 @@ def modal_log():
 def modal_clona_commessa():
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
+    log_data = get_cached_data("Log_Tempi")
     
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-    sel_cm_nome = st.selectbox("Seleziona la Commessa da copiare", list(cms_dict.keys()))
+    sel_cm_nome = st.selectbox("Seleziona la Commessa sorgente", list(cms_dict.keys()))
     
     st.divider()
     nuovo_nome = st.text_input("Nome della nuova Commessa", value=f"{sel_cm_nome} (COPIA)")
     
-    st.info("Questa operazione copierà la commessa e tutti i suoi task associati. I log tempi non verranno copiati.")
+    # Opzione per i log
+    copia_log = st.checkbox("Copia anche i log tempi (Pianificazione)", value=False)
+    
+    if copia_log:
+        # Troviamo la data più vecchia della commessa originale per calcolare l'offset
+        old_cm_id = cms_dict[sel_cm_nome]
+        # Filtriamo i task e poi i log di quella commessa
+        ids_task_vecchi = [t['id'] for t in tk_data if t['commessa_id'] == old_cm_id]
+        logs_vecchi = [l for l in log_data if l['task_id'] in ids_task_vecchi]
+        
+        if logs_vecchi:
+            data_min_originale = pd.to_datetime([l['inizio'] for l in logs_vecchi]).min().date()
+            st.info(f"Data inizio originale rilevata: {data_min_originale.strftime('%d/%m/%Y')}")
+            nuova_data_inizio = st.date_input("Nuova data di inizio commessa", value=datetime.date.today())
+            
+            # Calcolo dei giorni di differenza (offset)
+            offset = (nuova_data_inizio - data_min_originale).days
+            st.success(f"Tutte le date verranno traslate di {offset} giorni.")
+        else:
+            st.warning("Non ci sono log da copiare per questa commessa.")
+            copia_log = False
 
     if st.button("🚀 Avvia Clonazione", use_container_width=True, type="primary"):
-        if nuovo_nome.strip():
             old_cm_id = cms_dict[sel_cm_nome]
             
-            # 1. Crea la nuova Commessa
             res_cm = supabase.table("Commesse").insert({"nome_commessa": nuovo_nome}).execute()
+        if not res_cm.data: return
+        new_cm_id = res_cm.data[0]['id']
+        
+        # 2. Clona i Task e crea una mappatura {VecchioID: NuovoID}
+        old_to_new_tasks = {}
+        tasks_da_copiare = [t for t in tk_data if t['commessa_id'] == old_cm_id]
+        
+        for t in tasks_da_copiare:
+            res_tk = supabase.table("Task").insert({"nome_task": t['nome_task'], "commessa_id": new_cm_id}).execute()
+            if res_tk.data:
+                old_to_new_tasks[t['id']] = res_tk.data[0]['id']
+        
+        # 3. Clona i Log con traslazione date
+        if copia_log and logs_vecchi:
+            nuovi_logs = []
+            for l in logs_vecchi:
+                # Traslazione date
+                nuovo_inizio = pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)
+                nuovo_fine = pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)
+                
+                nuovi_logs.append({
+                    "operatore": l['operatore'],
+                    "task_id": old_to_new_tasks[l['task_id']],
+                    "inizio": nuovo_inizio.strftime('%Y-%m-%d'),
+                    "fine": nuovo_fine.strftime('%Y-%m-%d'),
+                    "note": l.get('note', "")
+                })
             
-            if res_cm.data:
-                new_cm_id = res_cm.data[0]['id']
-                
-                # 2. Filtra i task della vecchia commessa
-                tasks_da_copiare = [t for t in tk_data if t['commessa_id'] == old_cm_id]
-                
-                # 3. Crea i nuovi task associati alla nuova commessa
-                if tasks_da_copiare:
-                    nuovi_tasks = [
-                        {"nome_task": t['nome_task'], "commessa_id": new_cm_id} 
-                        for t in tasks_da_copiare
-                    ]
-                    supabase.table("Task").insert(nuovi_tasks).execute()
-                
-                st.success(f"Commessa '{nuovo_nome}' creata con {len(tasks_da_copiare)} task!")
-                get_cached_data.clear()
-                st.rerun()
-        else:
-            st.error("Inserisci un nome valido per la nuova commessa.")
+            if nuovi_logs:
+                supabase.table("Log_Tempi").insert(nuovi_logs).execute()
+        
+        st.success("Clonazione completata con successo!")
+        get_cached_data.clear()
+        st.rerun()
 
 # --- 4. LOGICA MERGE E ETICHETTE ---
 def merge_consecutive_logs(df):
