@@ -360,7 +360,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             fixedrange=True
         ),
         legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="center", x=0.5, font=dict(size=10)),
-        clickmode='event+select' # Click per modale OK
+        clickmode='event' # Click per modale OK
     )
     
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
@@ -373,13 +373,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     # --- Logica di selezione per Modifica ---
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"][0]
-        if "customdata" in p and p["customdata"][0] == "NEW":
+        c_data = p.get("customdata", [])
+        if not c_data: return
+        if c_data[0] == "NEW":
             # Calcoliamo la data cliccata approssimativa
-            data_cliccata = pd.to_datetime(p.get('x', oggi_dt)).date()
-            modal_log(pre_comm=p["customdata"][1], pre_task=p["customdata"][2], pre_start=data_cliccata)
+            data_cliccata = pd.to_datetime(p.get('x')).date()
+            modal_log(pre_comm=c_data[1], pre_task=c_data[2], pre_start=data_cliccata)
         
-        # Se abbiamo cliccato su un log esistente (Modifica)
-        elif "customdata" in p:
+        else:
             modal_edit_log(p["customdata"][0], p["customdata"][1], p["customdata"][2], p["customdata"][3])
 
 # --- 6. MAIN UI ---
