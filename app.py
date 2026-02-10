@@ -597,7 +597,7 @@ with tabs[3]:
             c1, c2 = st.columns(2)
     
             if c1.button("📂 Clona Commessa Esistente", use_container_width=True):
-                modal_clona_commessa()
+                modal_clona_avanzata()
 
     with c_admin2:
         st.subheader("Elenco Operatori")
