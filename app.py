@@ -93,7 +93,7 @@ def modal_log():
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
-    op = st.multiselect("Operatore", ops_list)
+    selected_ops = st.multiselect("Operatore", ops_list)
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
     sel_cm_id = cms_dict[sel_cm_nome]
