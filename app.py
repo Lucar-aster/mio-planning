@@ -125,9 +125,7 @@ def modal_log():
             get_cached_data.clear()
             st.rerun()
 
-import datetime
-
-@st.dialog("📂 Clona Commessa")
+@st.dialog("📂 Clona Commessa con Date")
 def modal_clona_avanzata():
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
@@ -139,48 +137,50 @@ def modal_clona_avanzata():
     st.divider()
     nuovo_nome = st.text_input("Nome della nuova Commessa", value=f"{sel_cm_nome} (COPIA)")
     
-    copia_log = st.checkbox("Copia anche i log (Pianificazione)", value=True)
+    # Opzione per i log
+    copia_log = st.checkbox("Copia anche i log tempi (Pianificazione)", value=False)
     
-    offset = 0
-    logs_vecchi = []
-    old_cm_id = cms_dict[sel_cm_nome]
-    ids_task_vecchi = [t['id'] for t in tk_data if t['commessa_id'] == old_cm_id]
-
     if copia_log:
+        # Troviamo la data più vecchia della commessa originale per calcolare l'offset
+        old_cm_id = cms_dict[sel_cm_nome]
+        # Filtriamo i task e poi i log di quella commessa
+        ids_task_vecchi = [t['id'] for t in tk_data if t['commessa_id'] == old_cm_id]
         logs_vecchi = [l for l in log_data if l['task_id'] in ids_task_vecchi]
+        
         if logs_vecchi:
-            # Calcolo data minima per l'offset
             data_min_originale = pd.to_datetime([l['inizio'] for l in logs_vecchi]).min().date()
-            st.info(f"📅 Inizio originale: {data_min_originale.strftime('%d/%m/%Y')}")
+            st.info(f"Data inizio originale rilevata: {data_min_originale.strftime('%d/%m/%Y')}")
+            nuova_data_inizio = st.date_input("Nuova data di inizio commessa", value=datetime.date.today())
             
-            nuova_data_inizio = st.date_input("Nuova data di inizio", value=datetime.date.today())
+            # Calcolo dei giorni di differenza (offset)
             offset = (nuova_data_inizio - data_min_originale).days
-            st.success(f"Le date verranno traslate di {offset} giorni.")
+            st.success(f"Tutte le date verranno traslate di {offset} giorni.")
         else:
-            st.warning("Nessun log trovato per questa commessa.")
+            st.warning("Non ci sono log da copiare per questa commessa.")
+            copia_log = False
 
-    if st.button("🚀 Avvia Clonazione", type="primary", use_container_width=True):
-        # 1. Crea la Nuova Commessa
+    if st.button("🚀 Avvia Clonazione Totale", type="primary", use_container_width=True):
+        old_cm_id = cms_dict[sel_cm_nome]
+        
+        # 1. Crea la nuova Commessa
         res_cm = supabase.table("Commesse").insert({"nome_commessa": nuovo_nome}).execute()
         if not res_cm.data: return
         new_cm_id = res_cm.data[0]['id']
         
-        # 2. Clona Task e mappa ID
+        # 2. Clona i Task e crea una mappatura {VecchioID: NuovoID}
         old_to_new_tasks = {}
         tasks_da_copiare = [t for t in tk_data if t['commessa_id'] == old_cm_id]
         
         for t in tasks_da_copiare:
-            res_tk = supabase.table("Task").insert({
-                "nome_task": t['nome_task'], 
-                "commessa_id": new_cm_id
-            }).execute()
+            res_tk = supabase.table("Task").insert({"nome_task": t['nome_task'], "commessa_id": new_cm_id}).execute()
             if res_tk.data:
                 old_to_new_tasks[t['id']] = res_tk.data[0]['id']
         
-        # 3. Clona Log con traslazione date
+        # 3. Clona i Log con traslazione date
         if copia_log and logs_vecchi:
             nuovi_logs = []
             for l in logs_vecchi:
+                # Traslazione date
                 nuovo_inizio = pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)
                 nuovo_fine = pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)
                 
@@ -192,11 +192,10 @@ def modal_clona_avanzata():
                     "note": l.get('note', "")
                 })
             
-            # Inserimento massivo per evitare troppe chiamate al server
             if nuovi_logs:
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
         
-        st.success("Operazione completata!")
+        st.success("Clonazione completata con successo!")
         get_cached_data.clear()
         st.rerun()
 
