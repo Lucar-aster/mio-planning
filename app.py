@@ -89,25 +89,22 @@ def modal_task():
         st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
-def modal_log(pre_comm=None, pre_task=None, pre_start=None, pre_end=None):
+def modal_log():
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
     op = st.multiselect("Operatore", ops_list)
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-    idx_cm = list(cms_dict.keys()).index(pre_comm) if pre_comm in cms_dict else 0
-    sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()), index=idx_cm)
+    sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
     sel_cm_id = cms_dict[sel_cm_nome]
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
     task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
-    idx_tk = task_list.index(pre_task) if pre_task in task_list else 0
-    sel_task = st.selectbox("Task", task_list, index=idx_tk)
+    sel_task = st.selectbox("Task", task_list)
     new_task_name = st.text_input("Inserisci nome nuovo task") if sel_task == "➕ Aggiungi nuovo task..." else ""
     c1, c2 = st.columns(2)
-    i = c1.date_input("Inizio", value=pre_start if pre_start else datetime.now())
-    f = c2.date_input("Fine", value=pre_end if pre_end else datetime.now())
-    
+    i, f = c1.date_input("Inizio"), c2.date_input("Fine")
+
     nota = st.text_area("Note", placeholder="Dettagli attività...")
     
     if st.button("Registra Log", use_container_width=True):
@@ -248,26 +245,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         
     df_merged = merge_consecutive_logs(df_plot)
     fig = go.Figure()
-
-    # --- TRUCCO: BARRA INVISIBILE PER IL CLIC SUL VUOTO ---
-    # Creiamo una lista di tutte le combinazioni Commessa/Task presenti
-    categorie = df_merged[['Commessa', 'Task']].drop_duplicates()
-    
-    for _, cat in categorie.iterrows():
-        c_w = "<br>".join(textwrap.wrap(str(cat['Commessa']), 15))
-        t_w = "<br>".join(textwrap.wrap(str(cat['Task']), 20))
-        
-        # Questa barra copre tutto il range visibile ma è trasparente
-        fig.add_trace(go.Bar(
-            base=x_range[0],
-            x=[(x_range[1] - x_range[0]).total_seconds() * 1000],
-            y=[[c_w], [t_w]],
-            orientation='h',
-            marker=dict(color='rgba(0,0,0,0)'), # Completamente invisibile
-            showlegend=False,
-            hoverinfo='skip', # Non mostra nulla al passaggio del mouse
-            customdata=[["NEW", cat['Commessa'], cat['Task']]], # Segnale per nuovo log
-        ))
     
     # --- Rendering Barre ---
     for op in df_merged['operatore'].unique():
@@ -360,7 +337,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             fixedrange=True
         ),
         legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="center", x=0.5, font=dict(size=10)),
-        clickmode='event' # Click per modale OK
+        clickmode='event+select' # Click per modale OK
     )
     
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
@@ -372,16 +349,9 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     # --- Logica di selezione per Modifica ---
     if selected and "selection" in selected and "points" in selected["selection"]:
-        p = selected["selection"]["points"][0]
-        c_data = p.get("customdata", [])
-        if not c_data: return
-        if c_data[0] == "NEW":
-            # Calcoliamo la data cliccata approssimativa
-            data_cliccata = pd.to_datetime(p.get('x')).date()
-            modal_log(pre_comm=c_data[1], pre_task=c_data[2], pre_start=data_cliccata)
-        
-        else:
-            modal_edit_log(p["customdata"][0], p["customdata"][1], p["customdata"][2], p["customdata"][3])
+        p = selected["selection"]["points"]
+        if p and "customdata" in p[0]:
+            modal_edit_log(p[0]["customdata"][0], p[0]["customdata"][1], p[0]["customdata"][2], p[0]["customdata"][3])
 
 # --- 6. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
