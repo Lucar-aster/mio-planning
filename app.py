@@ -150,7 +150,7 @@ def modal_clona_avanzata():
         if logs_vecchi:
             data_min_originale = pd.to_datetime([l['inizio'] for l in logs_vecchi]).min().date()
             st.info(f"Data inizio originale rilevata: {data_min_originale.strftime('%d/%m/%Y')}")
-            nuova_data_inizio = st.date_input("Nuova data di inizio commessa", value=datetime.date.today())
+            nuova_data_inizio = st.date_input("Nuova data di inizio commessa", value=datetime.now().date())
             
             # Calcolo dei giorni di differenza (offset)
             offset = (nuova_data_inizio - data_min_originale).days
