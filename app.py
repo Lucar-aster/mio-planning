@@ -90,38 +90,77 @@ def modal_task():
 
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
+    # 1. Recupero dati necessari
     ops_list = [o['nome'] for o in get_cached_data("Operatori")]
     cm_data = get_cached_data("Commesse")
     tk_data = get_cached_data("Task")
-    selected_ops = st.multiselect("Operatore", ops_list, key="ms_ops")
+    
+    # 2. Definizione esplicita della variabile
+    # Usiamo un nome univoco e una chiave per Streamlit
+    selected_ops = st.multiselect("Operatore", options=ops_list, key="log_op_select")
+    
+    # 3. Logica Commessa
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-    sel_cm_nome = st.selectbox("Commessa", list(cms_dict.keys()))
+    sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="log_cm_select")
+    
+    # 4. Logica Task filtrati
     sel_cm_id = cms_dict[sel_cm_nome]
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
     task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
-    sel_task = st.selectbox("Task", task_list)
-    new_task_name = st.text_input("Inserisci nome nuovo task") if sel_task == "➕ Aggiungi nuovo task..." else ""
-    c1, c2 = st.columns(2)
-    i, f = c1.date_input("Inizio"), c2.date_input("Fine")
-
-    nota = st.text_area("Note", placeholder="Dettagli attività...")
     
-    if st.button("Registra Log", use_container_width=True):
+    sel_task = st.selectbox("Task", options=task_list, key="log_tk_select")
+    
+    new_task_name = ""
+    if sel_task == "➕ Aggiungi nuovo task...":
+        new_task_name = st.text_input("Inserisci nome nuovo task", key="log_new_tk")
+    
+    # 5. Date e Note
+    c1, c2 = st.columns(2)
+    data_odierna = datetime.now().date()
+    data_inizio = c1.date_input("Inizio", value=data_odierna, key="log_start")
+    data_fine = c2.date_input("Fine", value=data_odierna, key="log_end")
+    
+    nota_testo = st.text_area("Note", placeholder="Dettagli attività...", key="log_note")
+    
+    st.divider()
+    
+    # 6. Pulsante di salvataggio con controllo variabile
+    if st.button("Registra Log", use_container_width=True, type="primary"):
+        # Controllo che la variabile esista e non sia vuota
         if not selected_ops:
-            st.error("Seleziona almeno un operatore")
+            st.error("⚠️ Seleziona almeno un operatore!")
             return
             
         target_task_id = None
+        
+        # Gestione nuovo task
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
-                res = supabase.table("Task").insert({"nome_task": new_task_name, "commessa_id": sel_cm_id}).execute()
-                if res.data: target_task_id = res.data[0]['id']
-            else: st.error("Inserisci nome task"); return
-        else: target_task_id = task_opts[sel_task]
+                res = supabase.table("Task").insert({
+                    "nome_task": new_task_name.strip(), 
+                    "commessa_id": sel_cm_id
+                }).execute()
+                if res.data:
+                    target_task_id = res.data[0]['id']
+            else:
+                st.error("Per favore, inserisci un nome per il nuovo task.")
+                return
+        else:
+            target_task_id = task_opts[sel_task]
+            
+        # Inserimento log nel database
         if target_task_id:
             for operatore_selezionato in selected_ops:
-                supabase.table("Log_Tempi").insert({"operatore": operatore_selezionato, "task_id": target_task_id, "inizio": str(i), "fine": str(f), "note": nota}).execute()
+                supabase.table("Log_Tempi").insert({
+                    "operatore": operatore_selezionato, 
+                    "task_id": target_task_id, 
+                    "inizio": str(data_inizio), 
+                    "fine": str(data_fine), 
+                    "note": nota_testo
+                }).execute()
+            
+            # Reset cache e refresh
             get_cached_data.clear()
             st.rerun()
 
