@@ -29,7 +29,7 @@ st.markdown(f"""
         <img src="{LOGO_URL}" width="40">
         <h1>Progetti Aster Contract</h1>
     </div>
-    <hr style="margin-top: 5px; margin-bottom: 15px; border: 0; border-top: 1px solid #eee;">
+    <hr style="margin-top: 5px; margin-bottom: 5px; border: 0; border-top: 1px solid #eee;">
 """, unsafe_allow_html=True)
 
 # --- 3. CONNESSIONE E CACHING ---
