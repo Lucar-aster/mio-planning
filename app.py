@@ -82,39 +82,78 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
     st.write(f"Operatore: **{current_op}**")
+    
+    # 1. Recupero log e informazioni sul Task (per lo stato)
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
+    task_info = supabase.table("Task").select("stato").eq("id", current_task_id).execute().data
+    current_task_stato = task_info[0]['stato'] if task_info else "In programma"
+    
+    # 2. Trasformazione in DataFrame e filtro temporale
     df_sub = pd.DataFrame(all_logs)
     if not df_sub.empty:
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
         df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
-        mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
+        mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & \
+               (df_sub['inizio'] <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].sort_values("inizio")
     
     if df_sub.empty:
-        st.warning("Nessun dato trovato.")
+        st.warning("Nessun dato trovato per questo intervallo.")
+        if st.button("Chiudi"): st.rerun()
         return
 
+    # 3. UI: Gestione Stato del Task (Globale per la barra cliccata)
+    st.info(f"Stato attuale del Task: **{current_task_stato}**")
+    nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_task_stato) if current_task_stato in STATI_TASK else 0)
+
+    # Aggiungiamo colonna selezione eliminazione
     df_sub["Elimina"] = False
+    
+    # 4. DATA EDITOR per i singoli log
+    st.write("Modifica i log o seleziona 'Elimina':")
     edited_df = st.data_editor(
         df_sub,
         column_config={
-            "id": None, "task_id": None,
+            "id": None, 
+            "task_id": None,
             "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
             "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
-        disabled=["id", "task_id"], use_container_width=True, hide_index=True, key="editor_log_multi"
+        disabled=["id", "task_id"],
+        use_container_width=True,
+        hide_index=True,
+        key="editor_log_multi_v7"
     )
 
+    st.divider()
+    
+    # 5. PULSANTI DI AZIONE
     c1, c2 = st.columns(2)
-    if c1.button("Salva Modifiche", type="primary", use_container_width=True):
+    
+    if c1.button("Salva Tutto", type="primary", use_container_width=True):
+        # A. Aggiorna lo stato del Task
+        supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", current_task_id).execute()
+        
+        # B. Gestione Log (Elimina o Aggiorna)
         for _, row in edited_df.iterrows():
             if row["Elimina"]:
                 supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
             else:
-                supabase.table("Log_Tempi").update({"operatore": row["operatore"], "inizio": str(row["inizio"]), "fine": str(row["fine"]), "note": row["note"]}).eq("id", row["id"]).execute()
-        get_cached_data.clear(); st.rerun()
-    if c2.button("Annulla", use_container_width=True): st.rerun()
+                supabase.table("Log_Tempi").update({
+                    "operatore": row["operatore"],
+                    "inizio": str(row["inizio"]),
+                    "fine": str(row["fine"]),
+                    "note": row["note"]
+                }).eq("id", row["id"]).execute()
+            
+        st.success("Dati salvati!")
+        get_cached_data.clear()
+        st.rerun() # Chiude la modale e aggiorna la pagina
+
+    # Fix per il pulsante Annulla: forziamo il rerun senza fare nulla
+    if c2.button("Annulla ed Esci", use_container_width=True):
+        st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
