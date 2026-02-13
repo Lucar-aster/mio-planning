@@ -352,54 +352,66 @@ with tabs[2]: # DATI
 with tabs[3]: # SETUP
     st.header("⚙️ Setup di Sistema")
     s1, s2, s3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
+    
     with s1:
-        df_cm_edit = pd.DataFrame(cm)
-        ed_cm = st.data_editor(df_cm_edit, column_config={"id": None, "stato": st.column_config.SelectboxColumn("Stato", options=STATI_COMMESSA)}, use_container_width=True, num_rows="dynamic")
-        if st.button("Aggiorna Commesse"): aggiorna_database_setup("Commesse", ed_cm, cm)
+        df_cm_setup = pd.DataFrame(cm)
+        if not df_cm_setup.empty:
+            # Pulizia preventiva: assicurati che lo stato sia una stringa valida
+            df_cm_setup['stato'] = df_cm_setup['stato'].fillna("Pianificata").astype(str)
+            
+            ed_cm = st.data_editor(
+                df_cm_setup, 
+                column_config={
+                    "id": None, 
+                    "stato": st.column_config.SelectboxColumn("Stato", options=STATI_COMMESSA)
+                }, 
+                use_container_width=True, 
+                num_rows="dynamic",
+                key="setup_cm_editor_v4"
+            )
+            if st.button("Aggiorna Commesse", key="btn_cm_v4"): 
+                aggiorna_database_setup("Commesse", ed_cm, cm)
+
     with s2:
-        df_op_edit = pd.DataFrame(ops_list)
-        ed_op = st.data_editor(df_op_edit, column_config={"id": None}, use_container_width=True, num_rows="dynamic")
-        if st.button("Aggiorna Operatori"): aggiorna_database_setup("Operatori", ed_op, ops_list)
-with s3:
-        st.subheader("Gestione Task")
-        df_tk_edit = pd.DataFrame(tk)
-        
-        if not df_tk_edit.empty:
-            # --- PULIZIA DATI PRE-EDITOR ---
-            # 1. Gestione Commessa ID: Forza a numerico, riempi i nulli con 0 (Nessuna Commessa)
-            df_tk_edit['commessa_id'] = pd.to_numeric(df_tk_edit['commessa_id'], errors='coerce').fillna(0).astype(int)
+        df_op_setup = pd.DataFrame(ops_list)
+        ed_op = st.data_editor(df_op_setup, column_config={"id": None}, use_container_width=True, num_rows="dynamic", key="setup_op_editor_v4")
+        if st.button("Aggiorna Operatori", key="btn_op_v4"): 
+            aggiorna_database_setup("Operatori", ed_op, ops_list)
+
+    with s3:
+        df_tk_setup = pd.DataFrame(tk)
+        if not df_tk_setup.empty:
+            # --- PROTEZIONE TOTALE PER I TASK ---
+            # 1. Forza commessa_id a intero e gestisci i nulli (ID 0)
+            df_tk_setup['commessa_id'] = pd.to_numeric(df_tk_setup['commessa_id'], errors='coerce').fillna(0).astype(int)
             
-            # 2. Gestione Stato: Se nullo, imposta il primo valore della lista
-            df_tk_edit['stato'] = df_tk_edit['stato'].fillna(STATI_TASK[0])
+            # 2. Forza stato a stringa e gestisci i nulli
+            df_tk_setup['stato'] = df_tk_setup['stato'].fillna("In programma").astype(str)
             
-            # 3. Mappa delle opzioni Commesse
+            # 3. Prepara le opzioni delle commesse (ID come Chiavi, Nome come Formato)
+            # Usiamo int() esplicito per le chiavi per matchare il DataFrame
             cm_opts = {int(c['id']): str(c['nome_commessa']) for c in cm}
             if 0 not in cm_opts: 
                 cm_opts[0] = "⚠️ Seleziona Commessa"
 
-            # --- DATA EDITOR ---
             ed_tk = st.data_editor(
-                df_tk_edit,
+                df_tk_setup, 
                 column_config={
-                    "id": None, # Nasconde l'ID
+                    "id": None, 
                     "commessa_id": st.column_config.SelectboxColumn(
-                        "Commessa",
-                        options=list(cm_opts.keys()),
-                        format=lambda x: cm_opts.get(x, "Sconosciuta"),
-                        # Rimuoviamo required=True se crea conflitti con i nulli residui
+                        "Commessa", 
+                        options=list(cm_opts.keys()), 
+                        format=lambda x: cm_opts.get(int(x), "Sconosciuta"),
+                        help="Seleziona la commessa di appartenenza"
                     ),
-                    "stato": st.column_config.SelectboxColumn(
-                        "Stato", 
-                        options=STATI_TASK
-                    )
-                },
-                use_container_width=True,
+                    "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
+                }, 
+                use_container_width=True, 
                 num_rows="dynamic",
                 hide_index=True,
-                key="editor_setup_task_v3"
+                key="setup_tk_editor_v4"
             )
-            
-            if st.button("Aggiorna Task", key="save_tk_v3"):
+            if st.button("Aggiorna Task", key="btn_tk_v4"): 
                 aggiorna_database_setup("Task", ed_tk, tk)
 
 with tabs[4]: # STATS
