@@ -365,24 +365,28 @@ with s3:
         df_tk_edit = pd.DataFrame(tk)
         
         if not df_tk_edit.empty:
-            # 1. Pulizia dati: assicuriamoci che gli ID siano numeri interi e gestiamo i nulli
+            # --- PULIZIA DATI PRE-EDITOR ---
+            # 1. Gestione Commessa ID: Forza a numerico, riempi i nulli con 0 (Nessuna Commessa)
             df_tk_edit['commessa_id'] = pd.to_numeric(df_tk_edit['commessa_id'], errors='coerce').fillna(0).astype(int)
             
-            # 2. Creazione opzioni: forziamo le chiavi a int
+            # 2. Gestione Stato: Se nullo, imposta il primo valore della lista
+            df_tk_edit['stato'] = df_tk_edit['stato'].fillna(STATI_TASK[0])
+            
+            # 3. Mappa delle opzioni Commesse
             cm_opts = {int(c['id']): str(c['nome_commessa']) for c in cm}
-            # Aggiungiamo un'opzione di default per ID 0 se necessario
-            if 0 not in cm_opts:
-                cm_opts[0] = "Seleziona Commessa..."
+            if 0 not in cm_opts: 
+                cm_opts[0] = "⚠️ Seleziona Commessa"
 
+            # --- DATA EDITOR ---
             ed_tk = st.data_editor(
                 df_tk_edit,
                 column_config={
-                    "id": None, 
+                    "id": None, # Nasconde l'ID
                     "commessa_id": st.column_config.SelectboxColumn(
                         "Commessa",
                         options=list(cm_opts.keys()),
                         format=lambda x: cm_opts.get(x, "Sconosciuta"),
-                        required=True
+                        # Rimuoviamo required=True se crea conflitti con i nulli residui
                     ),
                     "stato": st.column_config.SelectboxColumn(
                         "Stato", 
@@ -392,10 +396,10 @@ with s3:
                 use_container_width=True,
                 num_rows="dynamic",
                 hide_index=True,
-                key="editor_setup_task_final"
+                key="editor_setup_task_v3"
             )
             
-            if st.button("Aggiorna Task", key="save_tk_final"):
+            if st.button("Aggiorna Task", key="save_tk_v3"):
                 aggiorna_database_setup("Task", ed_tk, tk)
 
 with tabs[4]: # STATS
