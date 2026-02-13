@@ -360,15 +360,30 @@ with tabs[3]: # SETUP
         df_op_edit = pd.DataFrame(ops_list)
         ed_op = st.data_editor(df_op_edit, column_config={"id": None}, use_container_width=True, num_rows="dynamic")
         if st.button("Aggiorna Operatori"): aggiorna_database_setup("Operatori", ed_op, ops_list)
-    with s3:
+with s3:
         df_tk_edit = pd.DataFrame(tk)
-        cm_opts = {c['id']: c['nome_commessa'] for c in cm}
-        ed_tk = st.data_editor(df_tk_edit, column_config={
-            "id": None, 
-            "commessa_id": st.column_config.SelectboxColumn("Commessa", options=list(cm_opts.keys()), format=lambda x: cm_opts.get(x)),
-            "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
-        }, use_container_width=True, num_rows="dynamic")
-        if st.button("Aggiorna Task"): aggiorna_database_setup("Task", ed_tk, tk)
+        if not df_tk_edit.empty:
+            # Creiamo la lista delle opzioni assicurandoci che siano Integer (o il tipo usato nel DB)
+            cm_opts = {int(c['id']): str(c['nome_commessa']) for c in cm}
+            
+            ed_tk = st.data_editor(
+                df_tk_edit, 
+                column_config={
+                    "id": None, 
+                    # Usiamo i valori (nomi) o le chiavi castate correttamente
+                    "commessa_id": st.column_config.SelectboxColumn(
+                        "Commessa", 
+                        options=list(cm_opts.keys()), 
+                        format=lambda x: cm_opts.get(x, "Sconosciuta")
+                    ),
+                    "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
+                }, 
+                use_container_width=True, 
+                num_rows="dynamic",
+                key="editor_task_setup"
+            )
+            if st.button("Aggiorna Task", key="btn_save_tk_setup"): 
+                aggiorna_database_setup("Task", ed_tk, tk)
 
 with tabs[4]: # STATS
     if not df_p.empty:
