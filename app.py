@@ -379,40 +379,47 @@ with tabs[3]: # SETUP
             aggiorna_database_setup("Operatori", ed_op, ops_list)
 
     with s3:
-        df_tk_setup = pd.DataFrame(tk)
-        if not df_tk_setup.empty:
-            # --- PROTEZIONE TOTALE PER I TASK ---
-            # 1. Forza commessa_id a intero e gestisci i nulli (ID 0)
-            df_tk_setup['commessa_id'] = pd.to_numeric(df_tk_setup['commessa_id'], errors='coerce').fillna(0).astype(int)
+        st.subheader("Gestione Task")
+        # 1. Creiamo una copia pulita dei dati
+        raw_tk = get_cached_data("Task")
+        if raw_tk:
+            df_tk_setup = pd.DataFrame(raw_tk)
             
-            # 2. Forza stato a stringa e gestisci i nulli
-            df_tk_setup['stato'] = df_tk_setup['stato'].fillna("In programma").astype(str)
-            
-            # 3. Prepara le opzioni delle commesse (ID come Chiavi, Nome come Formato)
-            # Usiamo int() esplicito per le chiavi per matchare il DataFrame
-            cm_opts = {int(c['id']): str(c['nome_commessa']) for c in cm}
-            if 0 not in cm_opts: 
-                cm_opts[0] = "⚠️ Seleziona Commessa"
+            # 2. Prepariamo le opzioni delle commesse (ID: Nome)
+            # Fondamentale: le chiavi DEVONO essere int
+            cm_map = {int(c['id']): str(c['nome_commessa']) for c in cm}
+            # Aggiungiamo l'opzione 0 per gestire i casi orfani o nuovi
+            if 0 not in cm_map:
+                cm_map[0] = "⚠️ Seleziona Commessa"
 
+            # 3. PULIZIA TOTALE DEI DATI PRIMA DELL'EDITOR
+            # Forza commessa_id a numerico, metti 0 dove è vuoto, e converti in int
+            df_tk_setup['commessa_id'] = pd.to_numeric(df_tk_setup['commessa_id'], errors='coerce').fillna(0).astype(int)
+            # Forza stato a stringa, metti il primo valore della lista se vuoto
+            df_tk_setup['stato'] = df_tk_setup['stato'].fillna(STATI_TASK[0]).astype(str)
+            # Assicuriamoci che tutti i commessa_id esistano nella mappa (se no, mettiamo 0)
+            df_tk_setup['commessa_id'] = df_tk_setup['commessa_id'].apply(lambda x: x if x in cm_map else 0)
+
+            # 4. DATA EDITOR
             ed_tk = st.data_editor(
-                df_tk_setup, 
+                df_tk_setup,
                 column_config={
                     "id": None, 
                     "commessa_id": st.column_config.SelectboxColumn(
-                        "Commessa", 
-                        options=list(cm_opts.keys()), 
-                        format=lambda x: cm_opts.get(int(x), "Sconosciuta"),
-                        help="Seleziona la commessa di appartenenza"
+                        "Commessa",
+                        options=list(cm_map.keys()),
+                        format=lambda x: cm_map.get(int(x), "Sconosciuta")
                     ),
                     "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
-                }, 
-                use_container_width=True, 
+                },
+                use_container_width=True,
                 num_rows="dynamic",
                 hide_index=True,
-                key="setup_tk_editor_v4"
+                key="setup_tk_editor_final_v5" # Cambia chiave per resettare la cache di Streamlit
             )
-            if st.button("Aggiorna Task", key="btn_tk_v4"): 
-                aggiorna_database_setup("Task", ed_tk, tk)
+            
+            if st.button("Aggiorna Task", key="btn_save_tk_final"):
+                aggiorna_database_setup("Task", ed_tk, raw_tk)
 
 with tabs[4]: # STATS
     if not df_p.empty:
