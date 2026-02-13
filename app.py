@@ -361,28 +361,41 @@ with tabs[3]: # SETUP
         ed_op = st.data_editor(df_op_edit, column_config={"id": None}, use_container_width=True, num_rows="dynamic")
         if st.button("Aggiorna Operatori"): aggiorna_database_setup("Operatori", ed_op, ops_list)
 with s3:
+        st.subheader("Gestione Task")
         df_tk_edit = pd.DataFrame(tk)
+        
         if not df_tk_edit.empty:
-            # Creiamo la lista delle opzioni assicurandoci che siano Integer (o il tipo usato nel DB)
-            cm_opts = {int(c['id']): str(c['nome_commessa']) for c in cm}
+            # 1. Pulizia dati: assicuriamoci che gli ID siano numeri interi e gestiamo i nulli
+            df_tk_edit['commessa_id'] = pd.to_numeric(df_tk_edit['commessa_id'], errors='coerce').fillna(0).astype(int)
             
+            # 2. Creazione opzioni: forziamo le chiavi a int
+            cm_opts = {int(c['id']): str(c['nome_commessa']) for c in cm}
+            # Aggiungiamo un'opzione di default per ID 0 se necessario
+            if 0 not in cm_opts:
+                cm_opts[0] = "Seleziona Commessa..."
+
             ed_tk = st.data_editor(
-                df_tk_edit, 
+                df_tk_edit,
                 column_config={
                     "id": None, 
-                    # Usiamo i valori (nomi) o le chiavi castate correttamente
                     "commessa_id": st.column_config.SelectboxColumn(
-                        "Commessa", 
-                        options=list(cm_opts.keys()), 
-                        format=lambda x: cm_opts.get(x, "Sconosciuta")
+                        "Commessa",
+                        options=list(cm_opts.keys()),
+                        format=lambda x: cm_opts.get(x, "Sconosciuta"),
+                        required=True
                     ),
-                    "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
-                }, 
-                use_container_width=True, 
+                    "stato": st.column_config.SelectboxColumn(
+                        "Stato", 
+                        options=STATI_TASK
+                    )
+                },
+                use_container_width=True,
                 num_rows="dynamic",
-                key="editor_task_setup"
+                hide_index=True,
+                key="editor_setup_task_final"
             )
-            if st.button("Aggiorna Task", key="btn_save_tk_setup"): 
+            
+            if st.button("Aggiorna Task", key="save_tk_final"):
                 aggiorna_database_setup("Task", ed_tk, tk)
 
 with tabs[4]: # STATS
