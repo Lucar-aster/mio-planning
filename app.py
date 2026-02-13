@@ -378,48 +378,52 @@ with tabs[3]: # SETUP
         if st.button("Aggiorna Operatori", key="btn_op_v4"): 
             aggiorna_database_setup("Operatori", ed_op, ops_list)
 
-    with s3:
+with s3:
         st.subheader("Gestione Task")
-        # 1. Creiamo una copia pulita dei dati
         raw_tk = get_cached_data("Task")
         if raw_tk:
+            # 1. Creiamo il DataFrame e le mappe di conversione
             df_tk_setup = pd.DataFrame(raw_tk)
+            cm_data = get_cached_data("Commesse")
             
-            # 2. Prepariamo le opzioni delle commesse (ID: Nome)
-            # Fondamentale: le chiavi DEVONO essere int
-            cm_map = {int(c['id']): str(c['nome_commessa']) for c in cm}
-            # Aggiungiamo l'opzione 0 per gestire i casi orfani o nuovi
-            if 0 not in cm_map:
-                cm_map[0] = "⚠️ Seleziona Commessa"
+            # Mappa ID -> Nome e Nome -> ID
+            id_to_name = {c['id']: str(c['nome_commessa']) for c in cm_data}
+            name_to_id = {str(c['nome_commessa']): c['id'] for c in cm_data}
+            lista_nomi_commesse = sorted(list(name_to_id.keys()))
 
-            # 3. PULIZIA TOTALE DEI DATI PRIMA DELL'EDITOR
-            # Forza commessa_id a numerico, metti 0 dove è vuoto, e converti in int
-            df_tk_setup['commessa_id'] = pd.to_numeric(df_tk_setup['commessa_id'], errors='coerce').fillna(0).astype(int)
-            # Forza stato a stringa, metti il primo valore della lista se vuoto
-            df_tk_setup['stato'] = df_tk_setup['stato'].fillna(STATI_TASK[0]).astype(str)
-            # Assicuriamoci che tutti i commessa_id esistano nella mappa (se no, mettiamo 0)
-            df_tk_setup['commessa_id'] = df_tk_setup['commessa_id'].apply(lambda x: x if x in cm_map else 0)
+            # 2. TRASFORMAZIONE: Usiamo i NOMI nell'editor, non gli ID
+            # Creiamo una colonna temporanea 'Commessa' basata sui nomi
+            df_tk_setup['commessa_nome'] = df_tk_setup['commessa_id'].map(id_to_name).fillna(lista_nomi_commesse[0] if lista_nomi_commesse else "")
+            df_tk_setup['stato'] = df_tk_setup['stato'].fillna(STATI_TASK[0])
 
-            # 4. DATA EDITOR
+            # 3. DATA EDITOR (Mostriamo il nome della commessa come stringa)
             ed_tk = st.data_editor(
                 df_tk_setup,
                 column_config={
                     "id": None, 
-                    "commessa_id": st.column_config.SelectboxColumn(
+                    "commessa_id": None, # Nascondiamo l'ID numerico che crasha
+                    "commessa_nome": st.column_config.SelectboxColumn(
                         "Commessa",
-                        options=list(cm_map.keys()),
-                        format=lambda x: cm_map.get(int(x), "Sconosciuta")
+                        options=lista_nomi_commesse,
+                        help="Seleziona la commessa dal menu"
                     ),
                     "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
                 },
                 use_container_width=True,
                 num_rows="dynamic",
                 hide_index=True,
-                key="setup_tk_editor_final_v5" # Cambia chiave per resettare la cache di Streamlit
+                key="editor_tk_string_v6"
             )
             
-            if st.button("Aggiorna Task", key="btn_save_tk_final"):
-                aggiorna_database_setup("Task", ed_tk, raw_tk)
+            if st.button("Aggiorna Task", key="btn_save_tk_v6"):
+                # 4. RICONVERSIONE: Prima di salvare, riportiamo i nomi in ID
+                df_da_salvare = ed_tk.copy()
+                df_da_salvare['commessa_id'] = df_da_salvare['commessa_nome'].map(name_to_id)
+                
+                # Rimuoviamo la colonna temporanea dei nomi prima di inviare a Supabase
+                df_da_salvare = df_da_salvare.drop(columns=['commessa_nome'])
+                
+                aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
 with tabs[4]: # STATS
     if not df_p.empty:
