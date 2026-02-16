@@ -38,7 +38,7 @@ st.markdown(f"""
         z-index: 999;
         padding-top: 0px !important;
         padding-bottom: 2px !important;
-        margin-top: -15px !important;
+        margin-top: -10px !important;
         border-bottom: 1px solid #f0f2f6;
     }}
 
