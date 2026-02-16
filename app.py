@@ -17,28 +17,40 @@ STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-    .block-container {{ padding-top: 0rem !important; }}
-    .compact-title {{ display: flex; align-items: center; gap: 12px; padding-top: 10px; }}
-    .compact-title h1 {{ font-size: 26px !important; color: #1E3A8A; margin: 0; }}
-    .spacer-btns {{ margin-top: 15px; margin-bottom: 10px; }}
-    [data-testid="stContainer"] {{overflow: auto;}}
-    .js-plotly-plot .xaxislayer-above {{position: sticky !important; top: 0; z-index: 1000 !important; background: white !important;}}
-    .js-plotly-plot .gridlayer {{z-index: 1;}}
-    /* Sticky Header per i filtri */
+    .block-container {{ padding-top: 0.5rem !important; padding-bottom: 0rem !important; }}
+    
+    /* Riduce lo spazio tra gli elementi dei filtri */
+    [data-testid="stVerticalBlock"] > div {{
+        gap: 0.1rem !important;
+    }}
+    
+    .compact-title {{ display: flex; align-items: center; gap: 10px; padding-top: 5px; }}
+    .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; }}
+    
+    /* Header fisso ultra-compatto */
     div[data-testid="stVerticalBlock"] > div:has(.fixed-header) {{
         position: sticky;
         top: 0;
         background-color: white;
         z-index: 999;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #f0f2f6;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #f0f2f6;
+    }}
+
+    /* Riduce il margine superiore dei bottoni e dei widget */
+    .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{
+        margin-bottom: -10px !important;
+    }}
+    
+    /* Riduce lo spazio interno delle colonne */
+    [data-testid="column"] {{
+        padding: 0px 5px !important;
     }}
     </style>
     <div class="compact-title">
-        <img src="{LOGO_URL}" width="40">
-        <h1>Progetti Aster Contract</h1>
+        <img src="{LOGO_URL}" width="35">
+        <h1>Progetti Aster</h1>
     </div>
-    <hr style="margin-top: 0px; margin-bottom: 0px; border: 0; border-top: 0px solid #eee;">
 """, unsafe_allow_html=True)
 
 # --- 3. CONNESSIONE E CACHING ---
