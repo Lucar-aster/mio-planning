@@ -365,8 +365,8 @@ if l and tk and cm:
         
         # Riga 2: Stati
         s1, s2 = st.columns(2)
-        f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=["In corso", "Pianificata", "Quotazione", "Sospesa"], label_visibility="collapsed", placeholder="Stato Commesse")
-        f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=STATI_TASK, label_visibility="collapsed", placeholder="Stato Task")
+        f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=[], label_visibility="collapsed", placeholder="Stato Commesse")
+        f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
 
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
