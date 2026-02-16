@@ -17,18 +17,15 @@ STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-    .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; }}
+    .block-container {{ padding-top: 0.5rem !important; padding-bottom: 0rem !important; }}
     
     /* Riduce lo spazio tra gli elementi dei filtri */
     [data-testid="stVerticalBlock"] > div {{
         gap: 0.1rem !important;
     }}
     
-    .compact-title {{ display: flex; align-items: center; gap: 5px; padding-top: -10px; margin-bottom: -5px;}}
-    .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; padding-top: -10px;}}
-
-    [data-testid="stVerticalBlock"] {{
-        gap: 0rem !important;
+    .compact-title {{ display: flex; align-items: center; gap: 10px; padding-top: 5px; }}
+    .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; }}
     
     /* Header fisso ultra-compatto */
     div[data-testid="stVerticalBlock"] > div:has(.fixed-header) {{
@@ -36,24 +33,22 @@ st.markdown(f"""
         top: 0;
         background-color: white;
         z-index: 999;
-        padding-top: 0px !important;
-        padding-bottom: 2px !important;
-        margin-top: 0px !important;
+        padding-bottom: 5px;
         border-bottom: 1px solid #f0f2f6;
     }}
 
     /* Riduce il margine superiore dei bottoni e dei widget */
     .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{
-        margin-bottom: -2px !important;
+        margin-bottom: -10px !important;
     }}
     
     /* Riduce lo spazio interno delle colonne */
     [data-testid="column"] {{
-        padding: 0px !important; margin-bottom: -10px !important;
+        padding: 0px 5px !important;
     }}
     </style>
     <div class="compact-title">
-        <img src="{LOGO_URL}" width="25">
+        <img src="{LOGO_URL}" width="35">
         <h1>Progetti Aster</h1>
     </div>
 """, unsafe_allow_html=True)
@@ -352,17 +347,17 @@ if l and tk and cm:
         st.markdown('<div class="fixed-header">', unsafe_allow_html=True)
         # Riga 1: Progetti, Operatori, Scala
         c1, c2, c3 = st.columns([3, 3, 4])
-        f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()))
-        f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()))
+        f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()), label_visibility="collapsed", placeholder="Progetti")
+        f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()), label_visibility="collapsed", placeholder="Operatori")
         with c3:
             cs, cd = st.columns(2)
-            scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1)
-            f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)]) if scala == "Personalizzato" else None
+            scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1, label_visibility="collapsed")
+            f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)], label_visibility="collapsed") if scala == "Personalizzato" else None
         
         # Riga 2: Stati
         s1, s2 = st.columns(2)
-        f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=["In corso", "Pianificata", "Quotazione", "Sospesa"])
-        f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=STATI_TASK)
+        f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=["In corso", "Pianificata", "Quotazione", "Sospesa"], label_visibility="collapsed", placeholder="Stato Commesse")
+        f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=STATI_TASK, label_visibility="collapsed", placeholder="Stato Task")
 
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
