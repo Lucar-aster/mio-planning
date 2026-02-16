@@ -24,7 +24,7 @@ st.markdown(f"""
         gap: 0rem !important;
     }}
     
-    .compact-title {{ display: flex; align-items: center; gap: 10px; padding-top: 5px; }}
+    .compact-title {{ display: flex; align-items: center; gap: 0px; padding-top: 0px; }}
     .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; }}
     
     /* Header fisso ultra-compatto */
