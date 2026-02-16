@@ -15,6 +15,11 @@ STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 
 # --- 2. CSS ---
 st.markdown(f"""
+    <head>
+        <link rel="icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" type="image/png">
+        <link rel="shortcut icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" type="image/png">
+        <link rel="apple-touch-icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png">
+    </head>
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
     .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; }}
