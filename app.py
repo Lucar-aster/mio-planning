@@ -442,28 +442,31 @@ with tabs[3]: # SETUP
                 aggiorna_database_setup("Commesse", ed_cm, cm)
 
     with s2:
-        st.subheader("Gestione Operatori")
+       st.subheader("Gestione Operatori")
         raw_op = get_cached_data("Operatori")
         if raw_op:
             df_op_setup = pd.DataFrame(raw_op)
             
-            # Editor con ColorColumn
             ed_op = st.data_editor(
                 df_op_setup,
                 column_config={
-                    "id": None, # Nasconde l'ID
-                    "nome": st.column_config.TextColumn("Nome Operatore", width="medium", required=True),
-                    "colore": st.column_config.ColorColumn(
-                        "Colore Label",
-                        help="Clicca per scegliere il colore dell'operatore nel Gantt",
-                        width="small"
-                    ),
+                    "id": None,
+                    "nome": st.column_config.TextColumn("Nome Operatore", required=True),
+                    "colore": st.column_config.TextColumn(
+                        "Colore (HEX)", 
+                        help="Inserisci il codice esadecimale (es. #8dbad2)",
+                        placeholder="#000000"
+                    )
                 },
                 use_container_width=True,
                 num_rows="dynamic",
                 hide_index=True,
-                key="setup_operatori_v2"
+                key="setup_operatori_v3"
             )
+
+            st.write("🎨 **Aiuto Colori**")
+            col_helper = st.color_picker("Scegli un colore e copia il codice HEX nella tabella sopra", "#8dbad2")
+            st.code(col_helper) # Mostra il codice da copiare e incollare nella cella
             
             if st.button("Salva Operatori"):
                 # La funzione aggiorna_database_setup gestirà i codici HEX (es. #FF0000)
