@@ -443,8 +443,8 @@ with tabs[3]: # SETUP
 
     with s2:
        st.subheader("Gestione Operatori")
-        raw_op = get_cached_data("Operatori")
-        if raw_op:
+       raw_op = get_cached_data("Operatori")
+       if raw_op:
             df_op_setup = pd.DataFrame(raw_op)
             
             ed_op = st.data_editor(
