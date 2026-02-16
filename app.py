@@ -53,7 +53,7 @@ st.markdown(f"""
     }}
     </style>
     <div class="compact-title">
-        <img src="{LOGO_URL}" width="35">
+        <img src="{LOGO_URL}" width="25">
         <h1>Progetti Aster</h1>
     </div>
 """, unsafe_allow_html=True)
