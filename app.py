@@ -457,7 +457,7 @@ with tabs[3]: # SETUP
                         "Colore Label",
                         help="Clicca per scegliere il colore dell'operatore nel Gantt",
                         width="small"
-                    )
+                    ),
                 },
                 use_container_width=True,
                 num_rows="dynamic",
