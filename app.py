@@ -174,6 +174,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
 
     # Fix per il pulsante Annulla: forziamo il rerun senza fare nulla
     if c2.button("Annulla ed Esci", use_container_width=True):
+        st.session_state["force_close"] = True
         st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
