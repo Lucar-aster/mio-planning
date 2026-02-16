@@ -16,9 +16,9 @@ STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 # --- 2. CSS ---
 st.markdown(f"""
     <head>
-        <link rel="icon" href="https://tuo-url-logo.png" type="image/png">
-        <link rel="shortcut icon" href="https://tuo-url-logo.png" type="image/png">
-        <link rel="apple-touch-icon" href="https://tuo-url-logo.png">
+        <link rel="icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" type="image/png">
+        <link rel="shortcut icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" type="image/png">
+        <link rel="apple-touch-icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png">
     </head>
 """, unsafe_allow_html=True)
 st.markdown(f"""
