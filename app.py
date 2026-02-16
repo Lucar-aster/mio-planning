@@ -17,11 +17,11 @@ STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-    .block-container {{ padding-top: -5rem !important; padding-bottom: 0rem !important; }}
+    .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; }}
     
     /* Riduce lo spazio tra gli elementi dei filtri */
     [data-testid="stVerticalBlock"] > div {{
-        gap: 0.1rem !important;
+        gap: 0rem !important;
     }}
     
     .compact-title {{ display: flex; align-items: center; gap: 10px; padding-top: 5px; }}
