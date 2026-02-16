@@ -44,7 +44,7 @@ st.markdown(f"""
 
     /* Riduce il margine superiore dei bottoni e dei widget */
     .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{
-        margin-bottom: -10px !important;
+        margin-bottom: -5px !important;
     }}
     
     /* Riduce lo spazio interno delle colonne */
