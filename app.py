@@ -442,26 +442,25 @@ with tabs[3]: # SETUP
                 aggiorna_database_setup("Commesse", ed_cm, cm)
 
     with s2:
-       st.subheader("Gestione Operatori")
-       raw_op = get_cached_data("Operatori")
-       if raw_op:
+        st.subheader("Gestione Operatori")
+        raw_op = get_cached_data("Operatori")
+        if raw_op:
             df_op_setup = pd.DataFrame(raw_op)
+            
+            # Configurazione colonne definita separatamente per chiarezza
+            config_colonne = {
+                "id": None,
+                "nome": st.column_config.TextColumn("Nome Operatore", required=True),
+                "colore": st.column_config.TextColumn("Colore (HEX)")
+            }
             
             ed_op = st.data_editor(
                 df_op_setup,
-                column_config={
-                    "id": None,
-                    "nome": st.column_config.TextColumn("Nome Operatore", required=True),
-                    "colore": st.column_config.TextColumn(
-                        "Colore (HEX)", 
-                        help="Inserisci il codice esadecimale (es. #8dbad2)",
-                        placeholder="#000000"
-                    )
-                },
+                column_config=config_colonne,
                 use_container_width=True,
                 num_rows="dynamic",
                 hide_index=True,
-                key="setup_operatori_v3"
+                key="setup_operatori_vfinal"
             )
 
             st.write("🎨 **Aiuto Colori**")
