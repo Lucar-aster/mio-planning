@@ -33,7 +33,7 @@ st.markdown(f"""
         top: 0;
         background-color: white;
         z-index: 999;
-        padding-bottom: 5px;
+        padding-bottom: 0px;
         border-bottom: 1px solid #f0f2f6;
     }}
 
