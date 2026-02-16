@@ -397,14 +397,91 @@ with tabs[0]: # TIMELINE
 
 with tabs[1]: # CALENDARIO
     if not df.empty:
+               
+        # 1. Preparazione Eventi (Formato ISO rigoroso)
         cal_events = []
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
+        
         for _, row in df_p.iterrows():
-            cal_events.append({"id": str(row["id"]), "title": f"{row['operatore']} | {row['Task']}", "start": row["Inizio"].strftime("%Y-%m-%d"), "end": (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d"), "color": color_map.get(row["operatore"], "#3D85C6"), "allDay": True})
-        state = calendar(events=cal_events, options={"locale": "it", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridMonth,multiMonthYear"}}, key="v_cal")
-        if state and "eventClick" in state:
-            sel = df[df['id'] == int(state["eventClick"]["event"]["id"])].iloc[0]
-            modal_edit_log(sel['id'], sel['operatore'], sel['Inizio'], sel['Fine'], sel['task_id'])
+            try:
+                # Trasformiamo in stringa pura YYYY-MM-DD
+                s_date = row["Inizio"].strftime("%Y-%m-%d")
+                # FullCalendar vuole la fine esclusiva (+1 giorno)
+                e_date = (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d")
+                
+                cal_events.append({
+                    "id": str(row["id"]),
+                    "title": f"{row['operatore']} | {row['Task']}",
+                    "start": s_date,
+                    "end": e_date,
+                    "color": color_map.get(row["operatore"], "#3D85C6"),
+                    "allDay": True,
+                    "extendedProps": {"nota": row.get('note', '')}
+                })
+            except:
+                continue
+
+        # 2. Opzioni con ALTEZZA FISSA (Indispensabile per la visibilità)
+        cal_options = {
+            "initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 500, "views": {
+                "multiMonthYear": {
+                    "duration": {"months": 2} # LIMITA LA VISTA A SOLI 2 MESI
+                }
+            },
+            "height": "auto",
+            "contentHeight": "auto",
+            "aspectRatio": 1.3,
+            "expandRows": False,
+            "locale": "it",
+            "firstDay": 1,           # Inizia da Lunedì
+            "weekNumbers": True,
+            "weekText": "Sett.",
+            "headerToolbar": {
+                "left": "prev,next today",
+                "center": "title",
+                "right": "multiMonthYear,dayGridMonth,timeGridWeek"
+            },
+            "editable": False,
+            "selectable": True,
+        }
+        
+        # 3. Custom CSS per forzare la visibilità del componente
+        st.markdown("""
+            <style>
+                /* 1. Riduce lo spazio tra i mesi */
+                .fc .fc-multimonth-month {padding: 0px !important; margin-bottom: 2px !important;}
+                /* 2. Riduce l'altezza minima della cella del giorno */
+                .fc .fc-daygrid-day-frame {min-height: 35px !important; max-height: 120px !important;}
+                /* 3. Riduce lo spazio sopra il numero del giorno */
+                .fc .fc-daygrid-day-top {flex-direction: row !important; font-size: 0.85em !important;}
+                /* 4. Comprime gli eventi all'interno delle celle */
+                .fc-daygrid-event {margin-top: 0px !important; margin-bottom: 1px !important; padding: 0px 2px !important; font-size: 0.8em !important;}
+                /* 5. Rimuove padding in eccesso dal contenitore del mese */
+                .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;}
+                /* 6. Forza l'altezza dell'iframe di Streamlit per evitare scroll interni */
+                iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 1500px !important; height: 1500px !important;}
+            </style>
+        """, unsafe_allow_html=True)
+
+        # 4. Rendering con gestione dei dati di ritorno
+        try:
+            state = calendar(
+                events=cal_events,
+                options=cal_options,
+                key="v_calendar_final" # Cambia la chiave se avevi errori prima
+            )
+            
+            # Gestione click (stessa logica della tua modale)
+            if state and "eventClick" in state:
+                eid = int(state["eventClick"]["event"]["id"])
+                sel = df[df['id'] == eid].iloc[0]
+                modal_edit_log(sel['id'], sel['operatore'], sel['Inizio'], sel['Fine'])
+                
+        except Exception as e:
+            st.error(f"Errore nel caricamento del componente: {e}")
+    else:
+        st.info("Nessun dato presente. Registra un log per vedere il calendario.")
+
 
 with tabs[2]: # DATI
     st.header("📋 Gestione Log Esistenti")
