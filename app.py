@@ -24,7 +24,7 @@ st.markdown(f"""
         gap: 0.1rem !important;
     }}
     
-    .compact-title {{ display: flex; align-items: center; gap: 5px; padding-top: -20px; margin-bottom: -5px;}}
+    .compact-title {{ display: flex; align-items: center; gap: 5px; padding-top: -10px; margin-bottom: -5px;}}
     .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; }}
 
     [data-testid="stVerticalBlock"] {{
