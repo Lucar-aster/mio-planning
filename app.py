@@ -17,15 +17,18 @@ STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-    .block-container {{ padding-top: 0.5rem !important; padding-bottom: 0rem !important; }}
+    .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; }}
     
     /* Riduce lo spazio tra gli elementi dei filtri */
     [data-testid="stVerticalBlock"] > div {{
         gap: 0.1rem !important;
     }}
     
-    .compact-title {{ display: flex; align-items: center; gap: 10px; padding-top: 5px; }}
+    .compact-title {{ display: flex; align-items: center; gap: 5px; padding-top: 2px; margin-bottom: -10px;}}
     .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; }}
+
+    [data-testid="stVerticalBlock"] {{
+        gap: 0rem !important;
     
     /* Header fisso ultra-compatto */
     div[data-testid="stVerticalBlock"] > div:has(.fixed-header) {{
@@ -33,18 +36,20 @@ st.markdown(f"""
         top: 0;
         background-color: white;
         z-index: 999;
-        padding-bottom: 5px;
+        padding-top: 0px !important;
+        padding-bottom: 2px !important;
+        margin-top: -15px !important;
         border-bottom: 1px solid #f0f2f6;
     }}
 
     /* Riduce il margine superiore dei bottoni e dei widget */
     .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{
-        margin-bottom: -10px !important;
+        margin-bottom: -15px !important;
     }}
     
     /* Riduce lo spazio interno delle colonne */
     [data-testid="column"] {{
-        padding: 0px 5px !important;
+        padding: 0px !important; margin-bottom: -10px !important;
     }}
     </style>
     <div class="compact-title">
