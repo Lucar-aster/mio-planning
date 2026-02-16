@@ -81,6 +81,15 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 # --- 5. MODALI ---
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
+    st.markdown("""
+        <style>
+            div[data-testid="stDialog"] div[role="dialog"] {
+                width: 80vw !important;
+                max-width: 1200px !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.write(f"Operatore: **{current_op}**")
     
     # 1. Recupero log e informazioni sul Task (per lo stato)
