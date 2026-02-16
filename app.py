@@ -443,7 +443,14 @@ with tabs[3]: # SETUP
 
     with s2:
         df_op_setup = pd.DataFrame(ops_list)
-        ed_op = st.data_editor(df_op_setup, column_config={"id": None}, use_container_width=True, num_rows="dynamic", key="setup_op_editor_v4")
+        ed_op = st.data_editor(df_op_setup, column_config={"id": None,
+        "nome": st.column_config.TextColumn("Nome Operatore", width="medium", required=True),
+        "colore": st.column_config.ColorColumn("Colore Label", help="Clicca per scegliere il colore dell'operatore nel Gantt", width="small")},
+        use_container_width=True,
+        num_rows="dynamic",
+        hide_index=True,
+        key="setup_operatori_v2")
+        
         if st.button("Aggiorna Operatori", key="btn_op_v4"): 
             aggiorna_database_setup("Operatori", ed_op, ops_list)
 
