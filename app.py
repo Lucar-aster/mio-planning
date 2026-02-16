@@ -316,7 +316,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         xaxis=dict(type="date", side="top", range=x_range, tickvals=pd.date_range(x_range[0]-timedelta(days=30), x_range[1]+timedelta(days=30), freq='D'), 
                    ticktext=[get_it_date_label(d, delta_giorni) for d in pd.date_range(x_range[0]-timedelta(days=30), x_range[1]+timedelta(days=30), freq='D')]),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True),
-        legend=dict(orientation="h", y=1.13, x=0.5, xanchor="center")
+        legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
