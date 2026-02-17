@@ -325,7 +325,9 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     else:
         tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
 
-
+     # 3. Generiamo i testi solo per i giorni filtrati
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
+    
     all_shapes = []
     curr = x_range[0] - timedelta(days=60)
     while curr <= x_range[1] + timedelta(days=60):
