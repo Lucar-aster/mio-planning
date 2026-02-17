@@ -368,28 +368,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         height=300 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 25),
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
-        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True),
+        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,showline=True,linewidth=0,linecolor='black',mirror=True),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
-    
-    # Contiamo quante task ci sono per ogni commessa nell'ordine in cui appaiono
-    counts = df_merged.groupby('Commessa', sort=False).size().tolist()
-
-    current_pos = -0.5
-    for count in counts:
-        current_pos += count
-        fig.add_shape(
-            type="line",
-            # 'paper' per la X significa che va da sinistra a destra di tutto il grafico
-            xref="paper", x0=0, x1=1,
-            # 'y' significa che segue le coordinate delle barre
-            yref="y", y0=current_pos, y1=current_pos,
-            line=dict(color="Black", width=1),
-            layer="above"
-        )
-    
-    
+        
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
     
     if selected and "selection" in selected and "points" in selected["selection"]:
