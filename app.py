@@ -349,7 +349,22 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if curr.weekday() >= 5:
             all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
         curr += timedelta(days=1)
-
+    # Calcoliamo il numero totale di righe (task) presenti nel grafico
+    totale_righe = len(df_merged)
+    # Calcoliamo dove finisce ogni commessa
+    posizioni_linee = df_merged.groupby('Commessa', sort=False).size().cumsum()
+    
+    for pos in posizioni_linee:
+        # Sottraiamo 0.5 per posizionare la linea esattamente tra due celle
+        fig.add_hline(
+            y=pos - 0.5, 
+            line_width=1, 
+            line_color="#444444", # Un grigio molto scuro quasi nero
+            layer="above"         # Sopra le barre e sopra la griglia standard
+        )
+        
+    fig.add_hline(y=-0.5, line_width=1, line_color="#444444", layer="above")
+    
     fig.update_layout(
         height=300 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 25),
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
