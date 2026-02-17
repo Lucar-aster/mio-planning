@@ -10,7 +10,7 @@ from streamlit_calendar import calendar
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
-STATI_COMMESSA = ["Quotazione", "Pianificata", "In corso", "Completata", "Sospesa", "Cancellata"]
+STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
 
 # --- 2. CSS ---
@@ -299,10 +299,22 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
     fig = go.Figure()
+
+    mappa_emoji = {
+    "Quotazione 🟣": "🟣",
+    "Pianificata 🔵": "🔵",
+    "In corso 🟡": "🟡",
+    "Completata 🟢": "🟢",
+    "Sospesa 🟠": "🟠",
+    "Cancellata 🔴": "🔴"
+    }
     
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
-        c_w = ["<br>".join(textwrap.wrap(str(c), 15)) for c in df_op['Commessa']]
+        emoji = mappa_emoji.get(row['stato_commessa'], "⚫")
+        base_label = f"{emoji} {row['Commessa']}\n({row['cliente']})"
+        labels_finali.append(base_label)
+        c_w = ["<br>".join(textwrap.wrap(str(label), 15)) for label in labels_finali]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w], orientation='h', name=op,
