@@ -310,6 +310,21 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
+        
+    # --- Gestione Asse X Dinamica ---
+    # Definiamo i confini dell'area "cuscinetto" per il PAN
+    start_buffer = x_range[0] - timedelta(days=180)
+    end_buffer = x_range[1] + timedelta(days=180)
+    
+    # Scegliamo la frequenza in base alla scala
+    if delta_giorni > 60:
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
+    elif delta_giorni >20:
+       full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+       tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
+    else:
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+
 
     all_shapes = []
     curr = x_range[0] - timedelta(days=60)
@@ -322,8 +337,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     fig.update_layout(
         height=300 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 25),
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=pd.date_range(x_range[0]-timedelta(days=30), x_range[1]+timedelta(days=30), freq='D'), 
-                   ticktext=[get_it_date_label(d, delta_giorni) for d in pd.date_range(x_range[0]-timedelta(days=30), x_range[1]+timedelta(days=30), freq='D')]),
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
