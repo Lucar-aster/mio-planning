@@ -311,9 +311,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
-        emoji = mappa_emoji.get(row['stato_commessa'], "⚫")
-        base_label = f"{emoji} {row['Commessa']}\n({row['cliente']})"
-        labels_finali.append(base_label)
+        labels_finali = []
+        for _, row in df_op.iterrows():
+            emoji = mappa_emoji.get(row['stato_commessa'], "⚫")
+            base_label = f"{emoji} {row['Commessa']}\n({row['cliente']})"
+            labels_finali.append(base_label)
         c_w = ["<br>".join(textwrap.wrap(str(label), 15)) for label in labels_finali]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
         fig.add_trace(go.Bar(
