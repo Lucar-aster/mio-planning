@@ -11,7 +11,7 @@ LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/ic
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
-STATI_TASK = ["In programma", "In corso", "Completato", "Sospeso"]
+STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "Completato 🟢", "Sospeso 🟠"]
 
 # --- 2. CSS ---
 st.markdown(f"""
@@ -114,7 +114,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     # 1. Recupero log e informazioni sul Task (per lo stato)
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
     task_info = supabase.table("Task").select("stato").eq("id", current_task_id).execute().data
-    current_task_stato = task_info[0]['stato'] if task_info else "In programma"
+    current_task_stato = task_info[0]['stato'] if task_info else "Pianificato 🔵"
     
     # 2. Trasformazione in DataFrame e filtro temporale
     df_sub = pd.DataFrame(all_logs)
@@ -224,7 +224,7 @@ def modal_log():
         target_id = None
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
-                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": "In corso"}).execute()
+                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": "In corso 🟡"}).execute()
                 if res.data: target_id = res.data[0]['id']
             else: st.error("Nome task mancante"); return
         else: target_id = task_opts[sel_task]
@@ -257,7 +257,7 @@ def modal_clona_avanzata():
             new_cm_id = res_cm.data[0]['id']
             old_to_new_tasks = {}
             for t in [t for t in tk_data if t['commessa_id'] == old_cm_id]:
-                res_tk = supabase.table("Task").insert({"nome_task": t['nome_task'], "commessa_id": new_cm_id, "stato": t.get('stato', 'In programma')}).execute()
+                res_tk = supabase.table("Task").insert({"nome_task": t['nome_task'], "commessa_id": new_cm_id, "stato": t.get('stato', 'Pianificato 🔵')}).execute()
                 if res_tk.data: old_to_new_tasks[t['id']] = res_tk.data[0]['id']
             if copia_log and logs_vecchi:
                 nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "note": l.get('note', "")} for l in logs_vecchi]
@@ -371,14 +371,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
 if l and tk and cm:
-    tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'In programma')} for t in tk}
-    cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso')} for c in cm}
+    tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'Pianificato 🔵')} for t in tk}
+    cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
     df = pd.DataFrame(l)
     df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('n', "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
-    df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso"))
-    df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "In programma"))
+    df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
+    df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "Pianificato 🔵"))
     df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
     # --- AREA CONTROLLI (FIXED HEADER) ---
