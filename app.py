@@ -557,10 +557,10 @@ with tabs[3]: # SETUP
                 num_rows="dynamic",
                 key="setup_cm_editor_v4"
             )
-            c1, c2 = st.columns([1,1])
+            
             if st.button("Aggiorna Commesse", key="btn_cm_v4"): 
                 aggiorna_database_setup("Commesse", ed_cm, cm)
-            if b1.button("Clona Commessa", use_container_width=True): modal_clona_avanzata()
+            if st.button("Clona Commessa"): modal_clona_avanzata()
 
     with s2:
         st.subheader("Gestione Operatori")
