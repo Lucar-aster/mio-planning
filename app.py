@@ -426,7 +426,7 @@ if l and tk and cm:
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
 
-tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Dati", "⚙️ Setup", "📈 Statistiche"])    
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: # TIMELINE
     if not df.empty:
