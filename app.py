@@ -308,16 +308,28 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     "Sospesa 🟠": "🟠",
     "Cancellata 🔴": "🔴"
     }
+
+    mappa_emoji_task = {
+    "Pianificato 🔵": "🔵",
+    "In corso 🟡": "🟡",
+    "Completato 🟢": "🟢",
+    "Sospeso 🟠": "🟠",
+    }
     
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
-        labels_finali = []
+        labels_commesse = []
+        labels_task = []
         for _, row in df_op.iterrows():
             emoji = mappa_emoji.get(row['stato_commessa'], "⚫")
+            emoji_t = mappa_emoji_task.get(row.get('stato_task'), "⚫")
             base_label = f"{emoji} {row['Commessa']}"
-            labels_finali.append(base_label)
-        c_w = ["<br>".join(textwrap.wrap(str(label), 15)) for label in labels_finali]
-        t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in df_op['Task']]
+            base_t = f"{emoji_t} {row['Task']}"
+            labels_commesse.append(base_label)
+            labels_task.append(base_t)
+        c_w = ["<br>".join(textwrap.wrap(str(label), 15)) for label in labels_commesse]
+        t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in labels_task]
+        
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w], orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
