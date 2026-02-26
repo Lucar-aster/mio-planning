@@ -206,34 +206,75 @@ def modal_task():
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     cm_data, tk_data, ops_list = get_cached_data("Commesse"), get_cached_data("Task"), [o['nome'] for o in get_cached_data("Operatori")]
+    
     op_ms = st.multiselect("Operatore", options=ops_list, key="new_log_ops_ms")
+    
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="new_log_cm_sb")
     sel_cm_id = cms_dict[sel_cm_nome]
+    
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
     task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
+    # Creiamo una mappa inversa per recuperare lo stato attuale se il task esiste
+    task_status_map = {t['nome_task']: t.get('stato', STATI_TASK[1]) for t in tasks_filtrati}
+    
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
     sel_task = st.selectbox("Task", options=task_list, key="new_log_tk_sb")
-    new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti") if sel_task == "➕ Aggiungi nuovo task..." else ""
-    new_task_status = st.selectbox("Stato", options=STATI_TASK, index=1) if sel_task == "➕ Aggiungi nuovo task..." else ""
+    
+    new_task_name = ""
+    default_status_index = 1 # "In Corso" o quello definito in STATI_TASK
+    
+    if sel_task == "➕ Aggiungi nuovo task...":
+        new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti")
+    else:
+        # Se il task esiste, cerchiamo di pre-selezionare il suo stato attuale nella selectbox
+        current_status = task_status_map.get(sel_task, STATI_TASK[1])
+        if current_status in STATI_TASK:
+            default_status_index = STATI_TASK.index(current_status)
+
+    # Il campo stato è ora fuori dall'if: sempre visibile
+    new_task_status = st.selectbox("Stato Task", options=STATI_TASK, index=default_status_index)
+    
     c1, c2 = st.columns(2)
     oggi = datetime.now().date()
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
     nota = st.text_area("Note")
+    
     if st.button("Registra Log", use_container_width=True, type="primary"):
         if not op_ms: st.error("⚠️ Seleziona operatore!"); return
+        
         target_id = None
+        
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
-                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": new_task_status.strip()}).execute()
+                # Inserimento nuovo Task con lo stato scelto
+                res = supabase.table("Task").insert({
+                    "nome_task": new_task_name.strip(), 
+                    "commessa_id": sel_cm_id, 
+                    "stato": new_task_status.strip()
+                }).execute()
                 if res.data: target_id = res.data[0]['id']
-            else: st.error("Nome task mancante"); return
-        else: target_id = task_opts[sel_task]
+            else:
+                st.error("Nome task mancante"); return
+        else:
+            # Task esistente: aggiorniamo lo stato sul DB prima di procedere
+            target_id = task_opts[sel_task]
+            supabase.table("Task").update({"stato": new_task_status.strip()}).eq("id", target_id).execute()
+        
         if target_id:
+            # Creazione dei log per ogni operatore selezionato
             for op_name in op_ms:
-                supabase.table("Log_Tempi").insert({"operatore": op_name, "task_id": target_id, "inizio": str(data_i), "fine": str(data_f), "note": nota}).execute()
-            get_cached_data.clear(); st.rerun()
-
+                supabase.table("Log_Tempi").insert({
+                    "operatore": op_name, 
+                    "task_id": target_id, 
+                    "inizio": str(data_i), 
+                    "fine": str(data_f), 
+                    "note": nota
+                }).execute()
+            
+            get_cached_data.clear()
+            st.rerun()
+            
 @st.dialog("📂 Clona Commessa con Date")
 def modal_clona_avanzata():
     cm_data, tk_data, log_data = get_cached_data("Commesse"), get_cached_data("Task"), get_cached_data("Log_Tempi")
