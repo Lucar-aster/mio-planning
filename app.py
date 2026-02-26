@@ -198,7 +198,7 @@ def modal_task():
     cms = {c['nome_commessa']: c['id'] for c in get_cached_data("Commesse")}
     n = st.text_input("Nome Task")
     c = st.selectbox("Commessa", options=list(cms.keys()))
-    s = st.selectbox("Stato", options=STATI_TASK, index=0)
+    s = st.selectbox("Stato", options=STATI_TASK, index=1)
     if st.button("Crea", use_container_width=True):
         supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c], "stato": s}).execute()
         get_cached_data.clear(); st.rerun()
@@ -215,6 +215,7 @@ def modal_log():
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
     sel_task = st.selectbox("Task", options=task_list, key="new_log_tk_sb")
     new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti") if sel_task == "➕ Aggiungi nuovo task..." else ""
+    new_task_status = st.selectbox("Stato", options=STATI_TASK, index=1)
     c1, c2 = st.columns(2)
     oggi = datetime.now().date()
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
@@ -224,7 +225,7 @@ def modal_log():
         target_id = None
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
-                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": "In corso 🟡"}).execute()
+                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": new_task_status.strip()}).execute()
                 if res.data: target_id = res.data[0]['id']
             else: st.error("Nome task mancante"); return
         else: target_id = task_opts[sel_task]
