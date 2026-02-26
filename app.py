@@ -215,7 +215,7 @@ def modal_log():
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
     sel_task = st.selectbox("Task", options=task_list, key="new_log_tk_sb")
     new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti") if sel_task == "➕ Aggiungi nuovo task..." else ""
-    new_task_status = st.selectbox("Stato", options=STATI_TASK, index=1)
+    new_task_status = st.selectbox("Stato", options=STATI_TASK, index=1) if sel_task == "➕ Aggiungi nuovo task..." else ""
     c1, c2 = st.columns(2)
     oggi = datetime.now().date()
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
