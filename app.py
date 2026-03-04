@@ -13,6 +13,389 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "Completato 🟢", "Sospeso 🟠"]
 
+# --- 2. CONNESSIONE SUPABASE E CACHING ---
+URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
+KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
+supabase = create_client(URL, KEY)
+
+@st.cache_data(ttl=60)
+def get_cached_data(table_name):
+    try:
+        res = supabase.table(table_name).select("*").execute()
+        return res.data
+    except Exception as e:
+        st.error(f"Errore caricamento {table_name}: {e}")
+        return []
+
+# Inizializzazione Session State
+if 'chart_key' not in st.session_state: st.session_state.chart_key = 0
+if 'vista_compressa' not in st.session_state: st.session_state.vista_compressa = False
+
+# --- 3. CSS PERSONALIZZATO ---
+st.markdown(f"""
+    <style>
+    header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
+    .block-container {{ padding-top: 1rem !important; }}
+    
+    .compact-title {{ display: flex; align-items: center; gap: 10px; }}
+    .compact-title h1 {{ font-size: 22px !important; margin: 0; color: #1E3A8A; }}
+
+    /* Container Legenda nell'header */
+    .legend-container {{
+        display: flex; flex-wrap: nowrap; gap: 8px; align-items: center;
+        font-size: 11px; color: #444; overflow-x: auto; white-space: nowrap;
+        padding: 5px 0;
+    }}
+    .legend-pill {{
+        display: flex; align-items: center; gap: 4px;
+        background: #f8f9fa; padding: 2px 8px; border-radius: 12px; border: 1px solid #ddd;
+    }}
+    .dot {{ height: 8px; width: 8px; border-radius: 50%; display: inline-block; }}
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 4. HEADER (Titolo + Legende in riga) ---
+h_col1, h_col2 = st.columns([1.5, 4])
+with h_col1:
+    st.markdown(f"""
+        <div class="compact-title">
+            <img src="{LOGO_URL}" width="35">
+            <h1>Aster Planning</h1>
+        </div>
+    """, unsafe_allow_html=True)
+
+with h_col2:
+    # Generazione dinamica delle legende
+    ops_data = get_cached_data("Operatori")
+    op_html = "".join([f'<div class="legend-pill"><span class="dot" style="background-color:{o.get("colore", "#8dbad2")}"></span>{o["nome"]}</div>' for o in ops_data])
+    cm_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_COMMESSA])
+    tk_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_TASK])
+    
+    st.markdown(f"""
+        <div class="legend-container">
+            <b style="color:#888; font-size:10px;">OPERATORI</b> {op_html}
+            <span style="border-left:1px solid #ccc; height:15px; margin:0 5px;"></span>
+            <b style="color:#888; font-size:10px;">PROGETTI</b> {cm_html}
+            <span style="border-left:1px solid #ccc; height:15px; margin:0 5px;"></span>
+            <b style="color:#888; font-size:10px;">TASK</b> {tk_html}
+        </div>
+    """, unsafe_allow_html=True)
+
+# --- 5. FUNZIONI DI LOGICA E UTILITY ---
+
+def merge_consecutive_logs(df):
+    if df.empty: return df
+    df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
+    merged = []
+    for (op, comm, task), group in df.groupby(['operatore', 'Commessa', 'Task']):
+        current_row = None
+        for _, row in group.iterrows():
+            nota_testo = str(row['note']).strip() if pd.notnull(row['note']) and str(row['note']).strip() != "" else ""
+            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m')}</i>: {nota_testo}" if nota_testo else ""
+            if current_row is None:
+                current_row = row.to_dict()
+                current_row['note_html'] = nota_formattata
+            else:
+                if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
+                    current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
+                    current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
+                    if nota_formattata:
+                        current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
+                else:
+                    merged.append(current_row)
+                    current_row = row.to_dict()
+                    current_row['note_html'] = nota_formattata
+        if current_row: merged.append(current_row)
+    return pd.DataFrame(merged)
+
+def aggiorna_database_setup(tabella, df_nuovo, df_vecchio):
+    df_vecchio = pd.DataFrame(df_vecchio)
+    ids_nuovi = set(df_nuovo['id'].dropna()) if 'id' in df_nuovo.columns else set()
+    ids_vecchi = set(df_vecchio['id']) if not df_vecchio.empty else set()
+    
+    # Delete
+    to_delete = ids_vecchi - ids_nuovi
+    for id_del in to_delete:
+        supabase.table(tabella).delete().eq("id", id_del).execute()
+        
+    # Update/Insert
+    for _, row in df_nuovo.iterrows():
+        data = row.dropna().to_dict()
+        if pd.notnull(row.get('id')):
+            supabase.table(tabella).update(data).eq("id", row['id']).execute()
+        else:
+            supabase.table(tabella).insert(data).execute()
+    get_cached_data.clear()
+    st.success(f"Dati {tabella} aggiornati!")
+    st.rerun()
+
+# --- 6. MODALI ---
+
+@st.dialog("📝 Modifica Log")
+def modal_edit_log(log_id, op_nome, inizio, fine, task_id, note_html):
+    st.markdown(f"Stai modificando il log di: **{op_nome}**")
+    c1, c2 = st.columns(2)
+    nuovo_i = c1.date_input("Inizio", value=pd.to_datetime(inizio))
+    nuovo_f = c2.date_input("Fine", value=pd.to_datetime(fine))
+    st.markdown(f"<div style='font-size:12px; color:gray;'>{note_html}</div>", unsafe_allow_html=True)
+    
+    col_btn1, col_btn2 = st.columns(2)
+    if col_btn1.button("🗑️ Elimina", use_container_width=True):
+        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
+        get_cached_data.clear(); st.rerun()
+    if col_btn2.button("💾 Salva", type="primary", use_container_width=True):
+        supabase.table("Log_Tempi").update({"inizio": str(nuovo_i), "fine": str(nuovo_f)}).eq("id", log_id).execute()
+        get_cached_data.clear(); st.rerun()
+
+@st.dialog("🏗️ Nuova Commessa")
+def modal_commessa():
+    nome = st.text_input("Nome Commessa")
+    stato = st.selectbox("Stato", options=STATI_COMMESSA)
+    if st.button("Salva Progetto"):
+        supabase.table("Commesse").insert({"nome_commessa": nome, "stato_commessa": stato}).execute()
+        get_cached_data.clear(); st.rerun()
+
+@st.dialog("📋 Nuovo Task")
+def modal_task():
+    cms = get_cached_data("Commesse")
+    scelta = st.selectbox("Associa a Commessa", options=[c['nome_commessa'] for c in cms])
+    nome_t = st.text_input("Nome Task")
+    if st.button("Crea Task"):
+        c_id = next(c['id'] for c in cms if c['nome_commessa'] == scelta)
+        supabase.table("Task").insert({"nome_task": nome_t, "commessa_id": c_id, "stato": STATI_TASK[0]}).execute()
+        get_cached_data.clear(); st.rerun()
+
+@st.dialog("⏱️ Registra Log")
+def modal_log():
+    cms = get_cached_data("Commesse")
+    tks = get_cached_data("Task")
+    ops = [o['nome'] for o in get_cached_data("Operatori")]
+    
+    op_sel = st.multiselect("Operatori", options=ops)
+    cm_sel = st.selectbox("Commessa", options=[c['nome_commessa'] for c in cms])
+    
+    c_id = next(c['id'] for c in cms if c['nome_commessa'] == cm_sel)
+    t_filtrati = [t for t in tks if t['commessa_id'] == c_id]
+    
+    tk_sel = st.selectbox("Task", options=[t['nome_task'] for t in t_filtrati] + ["➕ Nuovo Task..."])
+    
+    nome_nuovo_t = ""
+    if tk_sel == "➕ Nuovo Task...":
+        nome_nuovo_t = st.text_input("Nome del nuovo Task")
+    
+    d1, d2 = st.columns(2)
+    i_dt = d1.date_input("Inizio", value=datetime.now())
+    f_dt = d2.date_input("Fine", value=datetime.now())
+    nota = st.text_area("Note")
+    
+    if st.button("Registra Log", type="primary", use_container_width=True):
+        if not op_sel: st.error("Seleziona almeno un operatore"); return
+        
+        target_tk_id = None
+        if tk_sel == "➕ Nuovo Task...":
+            if nome_nuovo_t.strip():
+                res = supabase.table("Task").insert({"nome_task": nome_nuovo_t, "commessa_id": c_id, "stato": STATI_TASK[1]}).execute()
+                if res.data: target_tk_id = res.data[0]['id']
+            else: st.error("Inserisci il nome del task"); return
+        else:
+            target_tk_id = next(t['id'] for t in t_filtrati if t['nome_task'] == tk_sel)
+            
+        if target_tk_id:
+            for o in op_sel:
+                supabase.table("Log_Tempi").insert({
+                    "operatore": o, "task_id": target_tk_id, 
+                    "inizio": str(i_dt), "fine": str(f_dt), "note": nota
+                }).execute()
+            get_cached_data.clear(); st.rerun()
+
+# --- 7. FRAGMENT GANTT ---
+
+@st.fragment(run_every=60)
+def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range):
+    if df_plot.empty:
+        st.info("Nessun dato da visualizzare."); return
+
+    df_merged = merge_consecutive_logs(df_plot)
+    fig = go.Figure()
+
+    # Mappatura emoji per gli assi
+    m_cm = {s: s.split()[-1] for s in STATI_COMMESSA}
+    m_tk = {s: s.split()[-1] for s in STATI_TASK}
+
+    for op in df_merged['operatore'].unique():
+        df_op = df_merged[df_merged['operatore'] == op]
+        y_labels = []
+        
+        for _, row in df_op.iterrows():
+            e_cm = m_cm.get(row['stato_commessa'], "🏗️")
+            e_tk = m_tk.get(row['stato_task'], "📋")
+            
+            l_cm = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+            l_tk = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+            
+            if st.session_state.vista_compressa:
+                y_labels.append(l_cm)
+            else:
+                y_labels.append([l_cm, l_tk])
+
+        y_axis_final = y_labels if st.session_state.vista_compressa else list(zip(*y_labels))
+
+        fig.add_trace(go.Bar(
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_axis_final,
+            orientation='h', name=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12),
+            width=0.7 if st.session_state.vista_compressa else 0.4,
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            hovertemplate="<b>%{customdata[4]}</b><br>%{customdata[5]}<br>Op: %{customdata[1]}<extra></extra>"
+        ))
+
+    # Altezza dinamica del grafico
+    n_labels = len(df_merged['Commessa'].unique()) if st.session_state.vista_compressa else len(df_merged[['Commessa', 'Task']].drop_duplicates())
+    calc_h = 200 + (n_labels * (45 if st.session_state.vista_compressa else 30))
+
+    fig.update_layout(
+        height=calc_h, showlegend=False,
+        barmode='overlay' if st.session_state.vista_compressa else 'group',
+        margin=dict(l=10, r=10, t=40, b=0), dragmode='pan',
+        xaxis=dict(type="date", side="top", range=x_range, gridcolor="#eee"),
+        yaxis=dict(autorange="reversed", showgrid=True, fixedrange=True),
+        plot_bgcolor="white"
+    )
+    
+    # Linea Oggi
+    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red", line_dash="dot")
+
+    selezione = st.plotly_chart(fig, use_container_width=True, key=f"gantt_v7_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
+
+    if selezione and "selection" in selezione and selezione["selection"]["points"]:
+        d = selezione["selection"]["points"][0]["customdata"]
+        modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+
+# --- 8. CARICAMENTO DATI E PRE-PROCESSING ---
+
+raw_log = get_cached_data("Log_Tempi")
+raw_tk = get_cached_data("Task")
+raw_cm = get_cached_data("Commesse")
+raw_op = get_cached_data("Operatori")
+
+if raw_log and raw_tk and raw_cm:
+    df_log = pd.DataFrame(raw_log)
+    df_tk = pd.DataFrame(raw_tk)
+    df_cm = pd.DataFrame(raw_cm)
+    
+    # Merge gerarchico
+    df = df_log.merge(df_tk, left_on="task_id", right_on="id", suffixes=('', '_tk'))
+    df = df.merge(df_cm, left_on="commessa_id", right_on="id", suffixes=('', '_cm'))
+    
+    df['Inizio'] = pd.to_datetime(df['inizio'])
+    df['Fine'] = pd.to_datetime(df['fine'])
+    df['Durata_ms'] = ((df['Fine'] + timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
+    df['Commessa'] = df['nome_commessa']
+    df['Task'] = df['nome_task']
+    df['stato_task'] = df['stato']
+    
+    color_map = {o['nome']: o.get('colore', '#8dbad2') for o in raw_op}
+
+    # --- UI FILTRI ---
+    st.markdown('<div style="margin-top:-10px;"></div>', unsafe_allow_html=True)
+    f_c1, f_c2, f_c3 = st.columns([2.5, 2.5, 4])
+    
+    sel_cm = f_c1.multiselect("Progetti", options=sorted(df['Commessa'].unique()), placeholder="Tutti i progetti")
+    sel_op = f_c2.multiselect("Operatori", options=sorted(df['operatore'].unique()), placeholder="Tutti gli operatori")
+    
+    with f_c3:
+        cc1, cc2 = st.columns(2)
+        scala = cc1.selectbox("Vista Temporale", ["Settimana", "2 Settimane", "Mese", "Trimestre"], index=1)
+        # Periodo personalizzato (opzionale)
+    
+    df_p = df.copy()
+    if sel_cm: df_p = df_p[df_p['Commessa'].isin(sel_cm)]
+    if sel_op: df_p = df_p[df_p['operatore'].isin(sel_op)]
+
+    oggi = datetime.now()
+    delta_days = {"Settimana": 7, "2 Settimane": 14, "Mese": 30, "Trimestre": 90}[scala]
+    x_range = [oggi - timedelta(days=2), oggi + timedelta(days=delta_days)]
+
+    # --- RIGA PULSANTI ---
+    st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+    b_col1, b_col2, b_col3, b_col4, b_col5 = st.columns([1, 1, 1, 1, 1.5])
+    
+    if b_col1.button("➕ Progetto", use_container_width=True): modal_commessa()
+    if b_col2.button("📑 Task", use_container_width=True): modal_task()
+    if b_col3.button("⏱️ Log", use_container_width=True): modal_log()
+    if b_col4.button("📍 Oggi", use_container_width=True): 
+        st.session_state.chart_key += 1; st.rerun()
+    
+    # Pulsante Toggle Vista
+    label_v = "↕️ Espandi Task" if st.session_state.vista_compressa else "↔️ Comprimi Commesse"
+    if b_col5.button(label_v, use_container_width=True, type="secondary"):
+        st.session_state.vista_compressa = not st.session_state.vista_compressa
+        st.rerun()
+
+    # --- TABS ---
+    tabs = st.tabs(["📊 Gantt", "📅 Calendario", "⚙️ Setup", "📈 Stats"])
+    
+    with tabs[0]:
+        render_gantt_fragment(df_p, color_map, oggi, x_range)
+        
+    with tabs[1]:
+        st.info("Funzionalità Calendario disponibile a breve.")
+
+    with tabs[2]:
+        # SETUP TAB (Originale)
+        st.subheader("Gestione Anagrafiche")
+        s_tabs = st.tabs(["Operatori", "Commesse", "Task"])
+        
+        with s_tabs[0]:
+            ed_op = st.data_editor(pd.DataFrame(raw_op), use_container_width=True, num_rows="dynamic", hide_index=True, key="ed_op")
+            if st.button("Aggiorna Operatori"): aggiorna_database_setup("Operatori", ed_op, raw_op)
+            
+        with s_tabs[1]:
+            ed_cm = st.data_editor(pd.DataFrame(raw_cm), 
+                                   column_config={"stato_commessa": st.column_config.SelectboxColumn("Stato", options=STATI_COMMESSA)},
+                                   use_container_width=True, num_rows="dynamic", hide_index=True, key="ed_cm")
+            if st.button("Aggiorna Commesse"): aggiorna_database_setup("Commesse", ed_cm, raw_cm)
+            
+        with s_tabs[2]:
+            df_tk_setup = pd.DataFrame(raw_tk)
+            n_to_id = {c['nome_commessa']: c['id'] for c in raw_cm}
+            id_to_n = {c['id']: c['nome_commessa'] for c in raw_cm}
+            df_tk_setup['commessa_nome'] = df_tk_setup['commessa_id'].map(id_to_n)
+            
+            ed_tk = st.data_editor(df_tk_setup,
+                                   column_config={
+                                       "id": None, "commessa_id": None,
+                                       "commessa_nome": st.column_config.SelectboxColumn("Commessa", options=list(n_to_id.keys())),
+                                       "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
+                                   },
+                                   use_container_width=True, num_rows="dynamic", hide_index=True, key="ed_tk")
+            
+            if st.button("Aggiorna Task"):
+                df_save = ed_tk.copy()
+                df_save['commessa_id'] = df_save['commessa_nome'].map(n_to_id)
+                aggiorna_database_setup("Task", df_save.drop(columns=['commessa_nome']), raw_tk)
+
+    with tabs[3]:
+        if not df_p.empty:
+            st.subheader("Analisi Tempi")
+            st.bar_chart(df_p.groupby('operatore')['Durata_ms'].sum() / 3600000)
+
+else:
+    st.warning("Nessun dato trovato nel database. Inizia creando una Commessa.")import streamlit as st
+from supabase import create_client
+import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import textwrap
+from streamlit_calendar import calendar
+
+# --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
+LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
+st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
+
+STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
+STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "Completato 🟢", "Sospeso 🟠"]
+
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
