@@ -1,5 +1,3 @@
- Gemini
-
 import streamlit as st
 from supabase import create_client
 import pandas as pd
