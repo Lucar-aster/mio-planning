@@ -405,6 +405,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     "Sospeso 🟠": "🟠",
     }
     
+    vista_compressa = st.session_state.vista_compressa
+
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
