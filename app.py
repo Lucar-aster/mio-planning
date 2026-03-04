@@ -68,27 +68,47 @@ st.markdown(f"""
     [data-testid="column"] {{
         padding: 0px 5px !important;
     }}
-    .legend-container {{
+    .legend-container {
+        display: flex; 
+        flex-direction: column; 
+        gap: 8px; 
+        padding: 10px 15px; 
+        background: #f8f9fa; 
+        border-radius: 12px; 
+        border: 1px solid #eee;
+    }
+    
+    /* Singola riga della legenda */
+    .legend-row {
         display: flex;
-        flex-direction: column;
-        gap: 5px;
-        font-size: 11px;
-        color: #444;
-        overflow-x: auto;
-        white-space: nowrap;
-        padding: 5px 0;
-    }}
-    .legend-item {{
-        display: flex;
-        flex-direction: row;
+        flex-direction: row; /* Voci in orizzontale */
         align-items: center;
-        gap: 4px;
-        flex-wrap: nowrap;
-        background: #f8f9fa;
-        padding: 2px 6px;
-        border-radius: 4px;
-    }}
-    .dot {{ height: 8px; width: 8px; border-radius: 50%; display: inline-block; }}
+        gap: 10px;
+        flex-wrap: nowrap; /* Evita che vadano a capo se c'è spazio */
+        overflow-x: auto;   /* Permette lo scroll orizzontale su schermi piccoli */
+    }
+
+    /* Titolo della riga (es: OPERATORI) */
+    .legend-label {
+        font-weight: bold;
+        color: #888;
+        min-width: 90px;
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+
+    /* Pillola singola */
+    .legend-pill {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: white;
+        padding: 2px 10px;
+        border-radius: 20px;
+        border: 1px solid #ddd;
+        font-size: 11px;
+        white-space: nowrap;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -105,19 +125,26 @@ with header_col1:
 with header_col2:
     # Generazione Legenda Operatori Dinamica
     ops = get_cached_data("Operatori")
-    op_html = "".join([f'<div class="legend-item"><span class="dot" style="background-color:{o.get("colore", "#8dbad2")}"></span>{o["nome"]}</div>' for o in ops])
+    op_html = "".join([f'<div class="legend-pill"><span class="dot" style="background-color:{o.get("colore", "#8dbad2")}"></span>{o["nome"]}</div>' for o in ops])
     
     # Legende Stati
-    cm_html = "".join([f'<div class="legend-item">{s}</div>' for s in STATI_COMMESSA])
-    tk_html = "".join([f'<div class="legend-item">{s}</div>' for s in STATI_TASK])
+    cm_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_COMMESSA])
+    tk_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_TASK])
     
     st.markdown(f"""
         <div class="legend-container">
-            <b style="font-size: 10px; color: #999;">OPERATORI:</b> {op_html}
-            <span style="border-left: 1px solid #ddd; margin: 0 5px; height: 15px;"></span>
-            <b style="font-size: 10px; color: #999;">COMMESSE:</b> {cm_html}
-            <span style="border-left: 1px solid #ddd; margin: 0 5px; height: 15px;"></span>
-            <b style="font-size: 10px; color: #999;">TASK:</b> {tk_html}
+            <div class="legend-row">
+                <span class="legend-label">👤 Operatori</span>
+                {op_html}
+            </div>
+            <div class="legend-row">
+                <span class="legend-label">🏗️ Progetti</span>
+                {cm_html}
+            </div>
+            <div class="legend-row">
+                <span class="legend-label">📋 Task</span>
+                {tk_html}
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
