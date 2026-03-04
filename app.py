@@ -13,6 +13,21 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "Completato 🟢", "Sospeso 🟠"]
 
+# --- 3. CONNESSIONE E CACHING ---
+URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
+KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
+supabase = create_client(URL, KEY)
+
+@st.cache_data(ttl=60)
+def get_cached_data(table):
+    try: return supabase.table(table).select("*").execute().data
+    except: return []
+
+if 'chart_key' not in st.session_state:
+    st.session_state.chart_key = 0
+if 'vista_compressa' not in st.session_state:
+    st.session_state.vista_compressa = False
+
 # --- 2. CSS ---
 st.markdown(f"""
     <head>
@@ -53,26 +68,58 @@ st.markdown(f"""
     [data-testid="column"] {{
         padding: 0px 5px !important;
     }}
+    .legend-container {{
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        align-items: center;
+        font-size: 11px;
+        color: #444;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 5px 0;
+    }}
+    .legend-item {{
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }}
+    .dot {{ height: 8px; width: 8px; border-radius: 50%; display: inline-block; }}
     </style>
-    <div class="compact-title">
-        <img src="{LOGO_URL}" width="35">
-        <h1>Progetti Aster</h1>
-    </div>
 """, unsafe_allow_html=True)
 
-# --- 3. CONNESSIONE E CACHING ---
-URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
-KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
-supabase = create_client(URL, KEY)
+header_col1, header_col2 = st.columns([1, 4])
 
-@st.cache_data(ttl=60)
-def get_cached_data(table):
-    try: return supabase.table(table).select("*").execute().data
-    except: return []
+with header_col1:
+    st.markdown(f"""
+        <div class="compact-title" style="margin-top: 5px;">
+            <img src="{LOGO_URL}" width="30">
+            <h1 style="font-size: 18px !important; margin-left: 5px;">Progetti Aster</h1>
+        </div>
+    """, unsafe_allow_html=True)
 
-if 'chart_key' not in st.session_state:
-    st.session_state.chart_key = 0
-
+with header_col2:
+    # Generazione Legenda Operatori Dinamica
+    ops = get_cached_data("Operatori")
+    op_html = "".join([f'<div class="legend-item"><span class="dot" style="background-color:{o.get("colore", "#8dbad2")}"></span>{o["nome"]}</div>' for o in ops])
+    
+    # Legende Stati
+    cm_html = "".join([f'<div class="legend-item">{s}</div>' for s in STATI_COMMESSA])
+    tk_html = "".join([f'<div class="legend-item">{s}</div>' for s in STATI_TASK])
+    
+    st.markdown(f"""
+        <div class="legend-container">
+            <b style="font-size: 10px; color: #999;">OPERATORI:</b> {op_html}
+            <span style="border-left: 1px solid #ddd; margin: 0 5px; height: 15px;"></span>
+            <b style="font-size: 10px; color: #999;">COMMESSE:</b> {cm_html}
+            <span style="border-left: 1px solid #ddd; margin: 0 5px; height: 15px;"></span>
+            <b style="font-size: 10px; color: #999;">TASK:</b> {tk_html}
+        </div>
+    """, unsafe_allow_html=True)
+    
 # --- 4. FUNZIONI DI AGGIORNAMENTO DB (SETUP) ---
 def aggiorna_database_setup(nome_tabella, edited_df, original_df):
     try:
