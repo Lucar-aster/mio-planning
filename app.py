@@ -72,7 +72,6 @@ st.markdown(f"""
         display: flex;
         flex-direction: column;
         gap: 5px;
-        align-items: flex-start;
         font-size: 11px;
         color: #444;
         overflow-x: auto;
