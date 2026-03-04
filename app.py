@@ -124,7 +124,7 @@ with header_col1:
 with header_col2:
     # Generazione Legenda Operatori Dinamica
     ops = get_cached_data("Operatori")
-    op_html = "".join([f'<div class="legend-pill"><span class="dot" style="background-color:{o.get("colore", "#8dbad2")}"></span>{o["nome"]}</div>' for o in ops])
+    op_html = "".join([f'<div class="legend-pill" style="background-color:{o.get("colore", "#8dbad2")}">{o["nome"]}</div>' for o in ops])
     
     # Legende Stati
     cm_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_COMMESSA])
