@@ -70,9 +70,9 @@ st.markdown(f"""
     }}
     .legend-container {{
         display: flex;
-        flex-wrap: nowrap;
-        gap: 10px;
-        align-items: center;
+        flex-direction: column;
+        gap: 5px;
+        align-items: flex-start;
         font-size: 11px;
         color: #444;
         overflow-x: auto;
