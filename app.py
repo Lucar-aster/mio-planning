@@ -71,10 +71,10 @@ st.markdown(f"""
     .legend-container {{
         display: flex; 
         flex-direction: column; 
-        gap: 8px; 
+        gap: 2px; 
         padding: 10px 15px; 
         background: #f8f9fa; 
-        border-radius: 12px; 
+        border-radius: 8px; 
         border: 1px solid #eee;
     }}
     
@@ -83,7 +83,7 @@ st.markdown(f"""
         display: flex;
         flex-direction: row; /* Voci in orizzontale */
         align-items: center;
-        gap: 10px;
+        gap: 6px;
         flex-wrap: nowrap; /* Evita che vadano a capo se c'è spazio */
         overflow-x: auto;   /* Permette lo scroll orizzontale su schermi piccoli */
     }}
@@ -101,7 +101,7 @@ st.markdown(f"""
     .legend-pill {{
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 3px;
         background: white;
         padding: 2px 10px;
         border-radius: 20px;
