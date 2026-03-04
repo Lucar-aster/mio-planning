@@ -68,7 +68,7 @@ st.markdown(f"""
     [data-testid="column"] {{
         padding: 0px 5px !important;
     }}
-    .legend-container {
+    .legend-container {{
         display: flex; 
         flex-direction: column; 
         gap: 8px; 
@@ -76,29 +76,29 @@ st.markdown(f"""
         background: #f8f9fa; 
         border-radius: 12px; 
         border: 1px solid #eee;
-    }
+    }}
     
     /* Singola riga della legenda */
-    .legend-row {
+    .legend-row {{
         display: flex;
         flex-direction: row; /* Voci in orizzontale */
         align-items: center;
         gap: 10px;
         flex-wrap: nowrap; /* Evita che vadano a capo se c'è spazio */
         overflow-x: auto;   /* Permette lo scroll orizzontale su schermi piccoli */
-    }
+    }}
 
     /* Titolo della riga (es: OPERATORI) */
-    .legend-label {
+    .legend-label {{
         font-weight: bold;
         color: #888;
         min-width: 90px;
         font-size: 10px;
         text-transform: uppercase;
-    }
+    }}
 
     /* Pillola singola */
-    .legend-pill {
+    .legend-pill {{
         display: flex;
         align-items: center;
         gap: 5px;
@@ -108,7 +108,7 @@ st.markdown(f"""
         border: 1px solid #ddd;
         font-size: 11px;
         white-space: nowrap;
-    }
+    }}
     </style>
 """, unsafe_allow_html=True)
 
