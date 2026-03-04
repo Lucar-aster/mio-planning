@@ -102,7 +102,6 @@ st.markdown(f"""
         display: flex;
         align-items: center;
         gap: 3px;
-        background: white;
         padding: 2px 10px;
         border-radius: 20px;
         border: 1px solid #ddd;
