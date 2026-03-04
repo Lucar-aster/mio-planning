@@ -53,12 +53,59 @@ st.markdown(f"""
     [data-testid="column"] {{
         padding: 0px 5px !important;
     }}
+
+    .legend-container {{
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        align-items: center;
+        font-size: 11px;
+        color: #444;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 5px 0;
+    }}
+    .legend-item {{
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }}
+    .dot {{ height: 8px; width: 8px; border-radius: 50%; display: inline-block; }}
     </style>
-    <div class="compact-title">
-        <img src="{LOGO_URL}" width="35">
-        <h1>Progetti Aster</h1>
-    </div>
 """, unsafe_allow_html=True)
+
+# Layout Titolo + Legende
+header_col1, header_col2 = st.columns([1, 4])
+
+with header_col1:
+    st.markdown(f"""
+        <div class="compact-title" style="margin-top: 5px;">
+            <img src="{LOGO_URL}" width="30">
+            <h1 style="font-size: 18px !important; margin-left: 5px;">Progetti Aster</h1>
+        </div>
+    """, unsafe_allow_html=True)
+
+with header_col2:
+    # Generazione Legenda Operatori Dinamica
+    ops = get_cached_data("Operatori")
+    op_html = "".join([f'<div class="legend-item"><span class="dot" style="background-color:{o.get("colore", "#8dbad2")}"></span>{o["nome"]}</div>' for o in ops])
+    
+    # Legende Stati
+    cm_html = "".join([f'<div class="legend-item">{s}</div>' for s in STATI_COMMESSA])
+    tk_html = "".join([f'<div class="legend-item">{s}</div>' for s in STATI_TASK])
+    
+    st.markdown(f"""
+        <div class="legend-container">
+            <b style="font-size: 10px; color: #999;">OPERATORI:</b> {op_html}
+            <span style="border-left: 1px solid #ddd; margin: 0 5px; height: 15px;"></span>
+            <b style="font-size: 10px; color: #999;">COMMESSE:</b> {cm_html}
+            <span style="border-left: 1px solid #ddd; margin: 0 5px; height: 15px;"></span>
+            <b style="font-size: 10px; color: #999;">TASK:</b> {tk_html}
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -72,6 +119,9 @@ def get_cached_data(table):
 
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
+
+if 'vista_compressa' not in st.session_state:
+    st.session_state.vista_compressa = False
 
 # --- 4. FUNZIONI DI AGGIORNAMENTO DB (SETUP) ---
 def aggiorna_database_setup(nome_tabella, edited_df, original_df):
@@ -337,26 +387,14 @@ def get_it_date_label(dt, delta):
 
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
-def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
+def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes, vista_compressa=False):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
     fig = go.Figure()
 
-    mappa_emoji = {
-    "Quotazione 🟣": "🟣",
-    "Pianificata 🔵": "🔵",
-    "In corso 🟡": "🟡",
-    "Completata 🟢": "🟢",
-    "Sospesa 🟠": "🟠",
-    "Cancellata 🔴": "🔴"
-    }
+    mappa_emoji = {"Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡", "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"}
 
-    mappa_emoji_task = {
-    "Pianificato 🔵": "🔵",
-    "In corso 🟡": "🟡",
-    "Completato 🟢": "🟢",
-    "Sospeso 🟠": "🟠",
-    }
+    mappa_emoji_task = {"Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "Completato 🟢": "🟢", "Sospeso 🟠": "🟠"}
     
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
@@ -367,13 +405,17 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             emoji_t = mappa_emoji_task.get(row.get('stato_task'), "⚫")
             base_label = f"{emoji} {row['Commessa']}"
             base_t = f"{emoji_t} {row['Task']}"
-            labels_commesse.append(base_label)
-            labels_task.append(base_t)
+            if vista_compressa:
+                labels_commesse.append(base_label)
+            else:
+                labels_commesse.append(base_label)
+                labels_task.append(base_t)
+                
         c_w = ["<br>".join(textwrap.wrap(str(label), 15)) for label in labels_commesse]
         t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in labels_task]
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w], orientation='h', name=op,
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w] if vista_compressa else [c_w, t_w], orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
@@ -406,6 +448,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
     fig.update_layout(
         height=300 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 25),
+        showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True),
@@ -454,11 +497,14 @@ if l and tk and cm:
 
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b4 = st.columns(4)
+        b1, b2, b3, b4, b5 = st.columns(5)
         if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
         if b2.button("📑 Task", use_container_width=True): modal_task()
         if b3.button("⏱️ Log", use_container_width=True): modal_log()
         if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+        label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
+        if b5.button(label_view, use_container_width=True): st.session_state.vista_compressa = not st.session_state.vista_compressa
+        st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- FILTRAGGIO DATI ---
