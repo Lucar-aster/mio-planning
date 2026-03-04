@@ -13,6 +13,22 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "Completato 🟢", "Sospeso 🟠"]
 
+# --- 3. CONNESSIONE E CACHING ---
+URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
+KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
+supabase = create_client(URL, KEY)
+
+@st.cache_data(ttl=60)
+def get_cached_data(table):
+    try: return supabase.table(table).select("*").execute().data
+    except: return []
+
+if 'chart_key' not in st.session_state:
+    st.session_state.chart_key = 0
+
+if 'vista_compressa' not in st.session_state:
+    st.session_state.vista_compressa = False
+
 # --- 2. CSS ---
 st.markdown(f"""
     <head>
@@ -106,22 +122,6 @@ with header_col2:
             <b style="font-size: 10px; color: #999;">TASK:</b> {tk_html}
         </div>
     """, unsafe_allow_html=True)
-
-# --- 3. CONNESSIONE E CACHING ---
-URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
-KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
-supabase = create_client(URL, KEY)
-
-@st.cache_data(ttl=60)
-def get_cached_data(table):
-    try: return supabase.table(table).select("*").execute().data
-    except: return []
-
-if 'chart_key' not in st.session_state:
-    st.session_state.chart_key = 0
-
-if 'vista_compressa' not in st.session_state:
-    st.session_state.vista_compressa = False
 
 # --- 4. FUNZIONI DI AGGIORNAMENTO DB (SETUP) ---
 def aggiorna_database_setup(nome_tabella, edited_df, original_df):
