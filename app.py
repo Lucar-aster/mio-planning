@@ -39,7 +39,7 @@ st.markdown(f"""
 st.markdown(f"""
     <style>
     header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-    .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; }}
+    .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; margin-top: -30px; }}
     
     /* Riduce lo spazio tra gli elementi dei filtri */
     [data-testid="stVerticalBlock"] > div {{
