@@ -81,8 +81,10 @@ st.markdown(f"""
     }}
     .legend-item {{
         display: flex;
+        flex-direction: row;
         align-items: center;
         gap: 4px;
+        flex-wrap: nowrap;
         background: #f8f9fa;
         padding: 2px 6px;
         border-radius: 4px;
