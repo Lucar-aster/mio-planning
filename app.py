@@ -407,21 +407,23 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
-        labels_commesse = []
-        labels_task = []
+        y_labels = []
         for _, row in df_op.iterrows():
-            emoji = mappa_emoji.get(row['stato_commessa'], "⚫")
-            emoji_t = mappa_emoji_task.get(row.get('stato_task'), "⚫")
-            base_label = f"{emoji} {row['Commessa']}"
-            base_t = f"{emoji_t} {row['Task']}"
-            labels_commesse.append(base_label)
-            labels_task.append(base_t)
-        c_w = ["<br>".join(textwrap.wrap(str(label), 15)) for label in labels_commesse]
-        t_w = ["<br>".join(textwrap.wrap(str(t), 20)) for t in labels_task]
+            e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+            e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+
+            c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+
+            if vista_compressa:
+                y_labels.append(c_label)
+            else:
+                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+                y_labels.append([c_label, t_label])
+
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=[c_w, t_w], orientation='h', name=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.6 if vista_compressa else 0.4,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
@@ -453,7 +455,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
     fig.update_layout(
         height=300 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 25),
-        margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
+        showlegend=False,
+        margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode='overlay' if vista_compressa else 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
@@ -501,11 +504,15 @@ if l and tk and cm:
 
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b4 = st.columns(4)
+        b1, b2, b3, b4, b5 = st.columns(5)
         if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
         if b2.button("📑 Task", use_container_width=True): modal_task()
         if b3.button("⏱️ Log", use_container_width=True): modal_log()
         if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+        label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
+        if b5.button(label_view, use_container_width=True):
+            st.session_state.vista_compressa = not st.session_state.vista_compressa
+            st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- FILTRAGGIO DATI ---
