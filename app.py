@@ -60,12 +60,12 @@ st.markdown(f"""
     }}
 
     /* Rimuove lo spazio specifico sopra le Tab */
-    [data-testid="stTabs"] {
+    [data-testid="stTabs"] {{
         margin-top: -10px !important;
-    }
+    }}
     
     /* Riduce il margine superiore dei bottoni e dei widget */
-    .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{
+    .stButton, .stMultiSelect, .stSelectbox, .stDateInput {
         margin-bottom: -10px !important;
     }}
     
