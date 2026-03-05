@@ -59,6 +59,11 @@ st.markdown(f"""
         border-bottom: 1px solid #f0f2f6;
     }}
 
+    /* Rimuove lo spazio specifico sopra le Tab */
+    [data-testid="stTabs"] {
+        margin-top: -10px !important;
+    }
+    
     /* Riduce il margine superiore dei bottoni e dei widget */
     .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{
         margin-bottom: -10px !important;
@@ -67,6 +72,7 @@ st.markdown(f"""
     /* Riduce lo spazio interno delle colonne */
     [data-testid="column"] {{
         padding: 0px 5px !important;
+        margin-bottom: -10px !important;
     }}
     .legend-container {{
         display: flex; 
