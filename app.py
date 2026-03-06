@@ -133,9 +133,7 @@ st.markdown(f"""
         footer {{
             display: none !important;
         }}
-        [data-testid="stVerticalBlock"] > div:has(button) {{
-            display: none !important;
-        }}
+
     /* Forza il contenitore a occupare tutto lo spazio */
         .block-container {{
             padding: 0 !important;
