@@ -153,7 +153,7 @@ st.markdown(f"""
         }}
     /* Compatta l'header Aster per la stampa */
         .legend-container {{
-            margin-bottom: 5px !important;
+            margin-bottom: 7px !important;
             padding: 5px !important;
         }}
 
