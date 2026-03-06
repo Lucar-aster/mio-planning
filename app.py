@@ -116,12 +116,12 @@ st.markdown(f"""
     }}
     
     /* REGOLE PER LA STAMPA */
-    @media print {
+    @media print {{
     /* Imposta la pagina A4 Orizzontale */
-        @page {
+        @page {{
             size: A4 landscape;
             margin: 0.5cm;
-        }
+        }}
         
         /* Nasconde sidebar, pulsanti, filtri e footer di Streamlit */
         [data-testid="stSidebar"], 
@@ -130,27 +130,27 @@ st.markdown(f"""
         [data-testid="stSelectbox"], 
         [data-testid="stMultiSelect"],
         [data-testid="stTabs"] [role="tablist"], /* Nasconde i titoli dei Tab */
-        footer {
+        footer {{
             display: none !important;
-        }
+        }}
 
     /* Forza il contenitore a occupare tutto lo spazio */
-        .block-container {
+        .block-container {{
             padding: 0 !important;
             margin: 0 !important;
-        }
+        }}
 
     /* Assicura che il grafico Plotly sia visibile */
-        .js-plotly-plot {
+        .js-plotly-plot {{
             width: 100% !important;
-        }
+        }}
         
     /* Evita che la legenda venga tagliata tra due pagine */
-        .legend-container {
+        .legend-container {{
             break-inside: avoid;
             border: 1px solid #ccc !important;
-        }
-    }
+        }}
+    }}
     </style>
 """, unsafe_allow_html=True)
 
