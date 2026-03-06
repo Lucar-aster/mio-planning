@@ -114,6 +114,43 @@ st.markdown(f"""
         font-size: 11px;
         white-space: nowrap;
     }}
+    
+    /* REGOLE PER LA STAMPA */
+    @media print {
+        /* Imposta la pagina A4 Orizzontale */
+        @page {
+            size: A4 landscape;
+            margin: 0.5cm;
+        }
+        
+        /* Nasconde sidebar, pulsanti, filtri e footer di Streamlit */
+        [data-testid="stSidebar"], 
+        [data-testid="stHeader"],
+        .stButton, 
+        [data-testid="stSelectbox"], 
+        [data-testid="stMultiSelect"],
+        [data-testid="stTabs"] [role="tablist"], /* Nasconde i titoli dei Tab */
+        footer {
+            display: none !important;
+        }
+
+        /* Forza il contenitore a occupare tutto lo spazio */
+        .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Assicura che il grafico Plotly sia visibile */
+        .js-plotly-plot {
+            width: 100% !important;
+        }
+        
+        /* Evita che la legenda venga tagliata tra due pagine */
+        .legend-container {
+            break-inside: avoid;
+            border: 1px solid #ccc !important;
+        }
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -544,7 +581,7 @@ if l and tk and cm:
 
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b4, b5 = st.columns(5)
+        b1, b2, b3, b4, b5, b6 = st.columns(6)
         if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
         if b2.button("📑 Task", use_container_width=True): modal_task()
         if b3.button("⏱️ Log", use_container_width=True): modal_log()
@@ -553,6 +590,7 @@ if l and tk and cm:
         if b5.button(label_view, use_container_width=True):
             st.session_state.vista_compressa = not st.session_state.vista_compressa
             st.rerun()
+        if b6.button("🖨️ Stampa PDF", use_container_width=True):st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- FILTRAGGIO DATI ---
