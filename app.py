@@ -488,8 +488,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
         curr += timedelta(days=1)
 
+    unique_rows = df_m['Commessa'].unique() if is_compressed else df_m[['Commessa', 'Task']].drop_duplicates()
+    n_r = len(unique_rows)
+
     fig.update_layout(
-        height=300 + (len(df_merged[['Commessa', 'Task']].drop_duplicates()) * 25),
+        height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
