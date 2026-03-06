@@ -129,15 +129,17 @@ st.markdown(f"""
         .stButton, 
         [data-testid="stSelectbox"], 
         [data-testid="stMultiSelect"],
+        [data-testid="stVerticalBlock"],
         [data-testid="stTabs"] [role="tablist"], /* Nasconde i titoli dei Tab */
         footer {{
             display: none !important;
         }}
-
+        
     /* Forza il contenitore a occupare tutto lo spazio */
         .block-container {{
             padding: 0 !important;
             margin: 0 !important;
+            top: 0 !important;
         }}
 
     /* Assicura che il grafico Plotly sia visibile */
@@ -149,6 +151,16 @@ st.markdown(f"""
         .legend-container {{
             break-inside: avoid;
             border: 1px solid #ccc !important;
+        }}
+    /* Compatta l'header Aster per la stampa */
+        .legend-container {{
+            margin-bottom: 5px !important;
+            padding: 5px !important;
+        }}
+
+        /* Rimuove lo spazio bianco tra header e grafico */
+        [data-testid="stVerticalBlock"] {{
+            gap: 0 !important;
         }}
     }}
     </style>
