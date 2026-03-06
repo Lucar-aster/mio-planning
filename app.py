@@ -161,6 +161,31 @@ st.markdown(f"""
         [data-testid="stVerticalBlock"] {{
             gap: 0 !important;
         }}
+        /* Rimuove la linea sotto le Tab e il bordo del contenitore delle Tab */
+        [data-testid="stTabs"] {{
+            border-bottom: none !important;
+        }}
+    
+        [data-testid="stTab"] {{
+            border-bottom: none !important;
+        }}
+
+        /* Rimuove la linea di separazione decorativa delle Tab di Streamlit */
+        div[data-baseweb="tab-list"] {{
+            border-bottom: none !important;
+        }}
+
+        /* Rimuove eventuali bordi dai blocchi verticali */
+        [data-testid="stVerticalBlock"] > div {{
+            border: none !important;
+        }}
+    
+        /* Se avevi un <hr> o un st.divider(), questo lo nasconde */
+        hr {{
+            display: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
     }}
     </style>
 """, unsafe_allow_html=True)
