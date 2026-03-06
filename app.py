@@ -129,12 +129,13 @@ st.markdown(f"""
         .stButton, 
         [data-testid="stSelectbox"], 
         [data-testid="stMultiSelect"],
-        [data-testid="stVerticalBlock"],
         [data-testid="stTabs"] [role="tablist"], /* Nasconde i titoli dei Tab */
         footer {{
             display: none !important;
         }}
-        
+        [data-testid="stVerticalBlock"] > div:has(button) {{
+            display: none !important;
+        }}
     /* Forza il contenitore a occupare tutto lo spazio */
         .block-container {{
             padding: 0 !important;
