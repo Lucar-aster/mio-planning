@@ -117,7 +117,7 @@ st.markdown(f"""
     
     /* REGOLE PER LA STAMPA */
     @media print {
-        /* Imposta la pagina A4 Orizzontale */
+    /* Imposta la pagina A4 Orizzontale */
         @page {
             size: A4 landscape;
             margin: 0.5cm;
@@ -134,18 +134,18 @@ st.markdown(f"""
             display: none !important;
         }
 
-        /* Forza il contenitore a occupare tutto lo spazio */
+    /* Forza il contenitore a occupare tutto lo spazio */
         .block-container {
             padding: 0 !important;
             margin: 0 !important;
         }
 
-        /* Assicura che il grafico Plotly sia visibile */
+    /* Assicura che il grafico Plotly sia visibile */
         .js-plotly-plot {
             width: 100% !important;
         }
         
-        /* Evita che la legenda venga tagliata tra due pagine */
+    /* Evita che la legenda venga tagliata tra due pagine */
         .legend-container {
             break-inside: avoid;
             border: 1px solid #ccc !important;
