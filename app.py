@@ -490,7 +490,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         
     vista_compressa = st.session_state.vista_compressa
     
-    unique_rows = df_m['Commessa'].unique() if vista_compressa else df_m[['Commessa', 'Task']].drop_duplicates()
+    unique_rows = df_merged['Commessa'].unique() if vista_compressa else df_merged[['Commessa', 'Task']].drop_duplicates()
     n_r = len(unique_rows)
 
     fig.update_layout(
