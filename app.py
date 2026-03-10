@@ -641,10 +641,9 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[df['inizio'].min(), df['fine'].max()],
-                format="DD/MM/YYYY",
+                value=[df['inizio'].min(), df['fine'].max()], # Range preimpostato sui dati esistenti
                 label_visibility="collapsed",
-                placeholder="Filtro date"
+                key="filter_date_range"
             )
             
         # Riga 3: Pulsanti
