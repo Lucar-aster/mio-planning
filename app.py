@@ -260,86 +260,108 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     st.markdown("""
         <style>
             div[data-testid="stDialog"] div[role="dialog"] {
-                width: 80vw !important;
-                max-width: 1200px !important;
+                width: 90vw !important;
+                max-width: 1300px !important;
             }
         </style>
     """, unsafe_allow_html=True)
     
-    st.write(f"Operatore: **{current_op}**")
+    # --- 1. RECUPERO DATI NECESSARI ---
+    # Recuperiamo le info della commessa attuale partendo dal task_id
+    current_task_data = supabase.table("Task").select("*, Commesse(id, nome)").eq("id", current_task_id).execute().data[0]
+    current_commessa_id = current_task_data['commessa_id']
     
-    # 1. Recupero log e informazioni sul Task (per lo stato)
+    # Carichiamo tutte le commesse e tutti i task per i menu a tendina
+    all_commesse = supabase.table("Commesse").select("id, nome").execute().data
+    dict_commesse = {c['nome']: c['id'] for c in all_commesse}
+    list_commesse = list(dict_commesse.keys())
+
+    # --- 2. UI SPOSTAMENTO LOG (COMMESSA E TASK) ---
+    st.subheader("Sposta Log su altro Task/Commessa")
+    col_c, col_t, col_s = st.columns(3)
+    
+    with col_c:
+        # Trova l'indice della commessa attuale
+        curr_c_name = current_task_data['Commesse']['nome']
+        idx_c = list_commesse.index(curr_c_name) if curr_c_name in list_commesse else 0
+        nuova_commessa = st.selectbox("Seleziona Commessa:", options=list_commesse, index=idx_c)
+        id_commessa_sel = dict_commesse[nuova_commessa]
+
+    with col_t:
+        # Carica i task filtrati per la commessa selezionata
+        tasks_filtrati = supabase.table("Task").select("id, nome, stato").eq("commessa_id", id_commessa_sel).execute().data
+        dict_tasks = {t['nome']: t['id'] for t in tasks_filtrati}
+        list_tasks = list(dict_tasks.keys())
+        
+        # Seleziona il task attuale (se appartiene alla commessa) o il primo della lista
+        idx_t = list_tasks.index(current_task_data['nome']) if current_task_data['nome'] in list_tasks else 0
+        nuovo_task_nome = st.selectbox("Seleziona Task:", options=list_tasks, index=idx_t)
+        id_task_target = dict_tasks[nuovo_task_nome]
+
+    with col_s:
+        # Gestione dello stato del Task target
+        task_target_info = next(item for item in tasks_filtrati if item["id"] == id_task_target)
+        current_task_stato = task_target_info['stato']
+        nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, 
+                                       index=STATI_TASK.index(current_task_stato) if current_task_stato in STATI_TASK else 0)
+
+    st.divider()
+
+    # --- 3. GESTIONE LOG TEMPI ---
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
-    task_info = supabase.table("Task").select("stato").eq("id", current_task_id).execute().data
-    current_task_stato = task_info[0]['stato'] if task_info else "Pianificato 🔵"
-    
-    # 2. Trasformazione in DataFrame e filtro temporale
     df_sub = pd.DataFrame(all_logs)
+    
     if not df_sub.empty:
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
         df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
         mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & \
                (df_sub['inizio'] <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].sort_values("inizio")
-    
+        df_sub["Elimina"] = False
+
     if df_sub.empty:
-        st.warning("Nessun dato trovato per questo intervallo.")
+        st.warning("Nessun log trovato.")
         if st.button("Chiudi"): st.rerun()
         return
 
-    # 3. UI: Gestione Stato del Task (Globale per la barra cliccata)
-    st.info(f"Stato attuale del Task: **{current_task_stato}**")
-    nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_task_stato) if current_task_stato in STATI_TASK else 0)
-
-    # Aggiungiamo colonna selezione eliminazione
-    df_sub["Elimina"] = False
-    
-    # 4. DATA EDITOR per i singoli log
-    st.write("Modifica i log o seleziona 'Elimina':")
+    st.write(f"Modifica i tempi dell'operatore **{current_op}**:")
     edited_df = st.data_editor(
         df_sub,
         column_config={
-            "id": None, 
-            "task_id": None,
+            "id": None, "task_id": None,
             "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
             "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
         disabled=["id", "task_id"],
-        use_container_width=True,
-        hide_index=True,
-        key="editor_log_multi_v7"
+        use_container_width=True, hide_index=True, key="editor_log_v8"
     )
 
-    st.divider()
-    
-    # 5. PULSANTI DI AZIONE
+    # --- 4. SALVATAGGIO ---
     c1, c2 = st.columns(2)
-    
     if c1.button("Salva Tutto", type="primary", use_container_width=True):
-        # A. Aggiorna lo stato del Task
-        supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", current_task_id).execute()
+        # A. Aggiorna lo stato del Task Target
+        supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
         
-        # B. Gestione Log (Elimina o Aggiorna)
+        # B. Aggiorna i Log
         for _, row in edited_df.iterrows():
             if row["Elimina"]:
                 supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
             else:
                 supabase.table("Log_Tempi").update({
+                    "task_id": id_task_target,  # Sposta il log sul nuovo task selezionato
                     "operatore": row["operatore"],
                     "inizio": str(row["inizio"]),
                     "fine": str(row["fine"]),
                     "note": row["note"]
                 }).eq("id", row["id"]).execute()
             
-        st.success("Dati salvati!")
+        st.success("Dati aggiornati correttamente!")
         get_cached_data.clear()
         st.session_state.chart_key += 1
-        st.rerun() # Chiude la modale e aggiorna la pagina
+        st.rerun()
 
-    # Fix per il pulsante Annulla: forziamo il rerun senza fare nulla
     if c2.button("Annulla ed Esci", use_container_width=True):
-        st.session_state.chart_key += 1
         st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
