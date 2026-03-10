@@ -668,21 +668,21 @@ if l and tk and cm:
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
     
-# Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
-   if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-       # Convertiamo i limiti del filtro in datetime
-       start_search = pd.to_datetime(f_range[0])
-       end_search = pd.to_datetime(f_range[1])
+# Filtro temporale (FIXATO)
+if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
+    # Convertiamo i limiti del filtro in datetime
+    start_search = pd.to_datetime(f_range[0])
+    end_search = pd.to_datetime(f_range[1])
     
-       # Assicuriamoci che le colonne inizio/fine siano datetime
-       df_p['inizio'] = pd.to_datetime(df_p['inizio'])
-       df_p['fine'] = pd.to_datetime(df_p['fine'])
+    # Assicuriamoci che le colonne inizio/fine siano datetime
+    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
+    df_p['fine'] = pd.to_datetime(df_p['fine'])
     
-       # Applichiamo il filtro di intersezione
-       df_p = df_p[
-           (df_p['inizio'] <= end_search) & 
-           (df_p['fine'] >= start_search)
-       ].copy()
+    # Applichiamo il filtro di intersezione
+    df_p = df_p[
+        (df_p['inizio'] <= end_search) & 
+        (df_p['fine'] >= start_search)
+    ].copy()
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
