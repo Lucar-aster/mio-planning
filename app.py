@@ -639,10 +639,10 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=(),
+                value=none,
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
-                placeholder="Filtra per periodo (Inizio - Fine)",
+                placeholder="📅 Filtra per periodo (Inizio - Fine)",
                 key="filter_date_range"
             )
             
@@ -667,25 +667,19 @@ if l and tk and cm:
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
     # Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
-    if f_range and len(f_range) == 2:
+    if f_range is not None and len(f_range) == 2:
         try:
             start_search = pd.to_datetime(f_range[0]).date()
             end_search = pd.to_datetime(f_range[1]).date()
             
-            # Convertiamo le colonne del DF in date per il confronto
-            df_p['inizio_dt'] = pd.to_datetime(df_p['inizio']).dt.date
-            df_p['fine_dt'] = pd.to_datetime(df_p['fine']).dt.date
-            
-            # Logica di intersezione: il task deve "toccare" l'intervallo
+            # Applichiamo il filtro sulle date
             df_p = df_p[
-                (df_p['inizio_dt'] <= end_search) & 
-                (df_p['fine_dt'] >= start_search)
+                (pd.to_datetime(df_p['inizio']).dt.date <= end_search) & 
+                (pd.to_datetime(df_p['fine']).dt.date >= start_search)
             ]
-            
-            # Pulizia colonne temporanee
-            df_p = df_p.drop(columns=['inizio_dt', 'fine_dt'])
-        except Exception as e:
-            # Gestione silenziosa durante la transizione di selezione
+        except Exception:
+            # Durante la selezione (quando c'è solo 1 data) o in caso di errore, 
+            # non filtriamo nulla per evitare crash
             pass
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
