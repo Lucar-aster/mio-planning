@@ -639,8 +639,10 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[df['inizio'].min(), df['fine'].max()], # Range preimpostato sui dati esistenti
+                value=[],
+                format="DD/MM/YYYY",
                 label_visibility="collapsed",
+                placeholder="Filtra per periodo (Inizio - Fine)",
                 key="filter_date_range"
             )
             
@@ -665,12 +667,12 @@ if l and tk and cm:
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
     # Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
-    if isinstance(f_range, list) and len(f_range) == 2:
+    if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
         start_search, end_search = pd.to_datetime(f_range[0]), pd.to_datetime(f_range[1])
         # Un task è visibile se: inizia prima della fine del filtro E finisce dopo l'inizio del filtro
         df_p = df_p[
-            (pd.to_datetime(df_p['inizio']) <= end_search) & 
-            (pd.to_datetime(df_p['fine']) >= start_search)
+            (pd.to_datetime(df_p['inizio']) <= end_search.date()) & 
+            (pd.to_datetime(df_p['fine']) >= start_search.date())
         ]
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
