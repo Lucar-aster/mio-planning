@@ -668,19 +668,15 @@ if l and tk and cm:
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
-    # Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
-    if f_range and len(f_range) == 2 and all(v is not None for v in f_range):
-        try:
-            start_search = pd.to_datetime(f_range[0]).date()
-            end_search = pd.to_datetime(f_range[1]).date()
-            
-            # Filtro: il task deve intersecare l'intervallo scelto
-            df_p = df_p[
-                (pd.to_datetime(df_p['inizio']).dt.date <= end_search) & 
-                (pd.to_datetime(df_p['fine']).dt.date >= start_search)
-            ]
-        except Exception:
-            pass
+    
+# Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
+    if isinstance(f_range, list) and len(f_range) == 2:
+        start_search, end_search = pd.to_datetime(f_range[0]), pd.to_datetime(f_range[1])
+        # Un task è visibile se: inizia prima della fine del filtro E finisce dopo l'inizio del filtro
+        df_p = df_p[
+            (pd.to_datetime(df_p['inizio']) <= end_search) & 
+            (pd.to_datetime(df_p['fine']) >= start_search)
+        ]
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
