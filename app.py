@@ -641,7 +641,7 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=None,
+                value=[[],[]],
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 placeholder="Filtro date"
