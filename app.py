@@ -636,10 +636,12 @@ if l and tk and cm:
 
         with s3:
             # Filtro intervallo date (Date Range)
+            min_d = pd.to_datetime(df['inizio']).min().date()
+            max_d = pd.to_datetime(df['fine']).max().date()
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[None, None],
+                value=[min_d, max_d],
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 placeholder="📅 Filtra per periodo (Inizio - Fine)",
