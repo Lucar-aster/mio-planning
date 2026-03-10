@@ -630,10 +630,20 @@ if l and tk and cm:
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)], label_visibility="collapsed") if scala == "Personalizzato" else None
         
         # Riga 2: Stati
-        s1, s2 = st.columns(2)
+        s1, s2, s3 = st.columns([3, 3, 4])
         f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=[], label_visibility="collapsed", placeholder="Stato Commesse")
         f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
 
+        with s3:
+            # Filtro intervallo date (Date Range)
+            # Default: oggi -> +30 giorni (o quello che preferisci)
+            f_range = st.date_input(
+                "Intervallo Date",
+                value=[df['inizio'].min(), df['fine'].max()], # Range preimpostato sui dati esistenti
+                label_visibility="collapsed",
+                key="filter_date_range"
+            )
+            
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b4, b5, b6 = st.columns(6)
@@ -654,7 +664,15 @@ if l and tk and cm:
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
-
+    # Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
+    if isinstance(f_range, list) and len(f_range) == 2:
+        start_search, end_search = pd.to_datetime(f_range[0]), pd.to_datetime(f_range[1])
+        # Un task è visibile se: inizia prima della fine del filtro E finisce dopo l'inizio del filtro
+        df_p = df_p[
+            (pd.to_datetime(df_p['inizio']) <= end_search) & 
+            (pd.to_datetime(df_p['fine']) >= start_search)
+        ]
+    
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: # TIMELINE
