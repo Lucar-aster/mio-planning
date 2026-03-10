@@ -641,10 +641,9 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[min_d, max_d],
+                value=[df['inizio'].min(), df['fine'].max()],
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
-                placeholder="📅 Filtra per periodo (Inizio - Fine)",
                 key="filter_date_range"
             )
             
