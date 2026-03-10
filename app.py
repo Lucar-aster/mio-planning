@@ -639,7 +639,7 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[],
+                value=(),
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 placeholder="Filtra per periodo (Inizio - Fine)",
@@ -667,13 +667,26 @@ if l and tk and cm:
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
     # Filtro temporale (mostra i task che si sovrappongono all'intervallo scelto)
-    if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-        start_search, end_search = pd.to_datetime(f_range[0]), pd.to_datetime(f_range[1])
-        # Un task è visibile se: inizia prima della fine del filtro E finisce dopo l'inizio del filtro
-        df_p = df_p[
-            (pd.to_datetime(df_p['inizio']) <= end_search.date()) & 
-            (pd.to_datetime(df_p['fine']) >= start_search.date())
-        ]
+    if f_range and len(f_range) == 2:
+        try:
+            start_search = pd.to_datetime(f_range[0]).date()
+            end_search = pd.to_datetime(f_range[1]).date()
+            
+            # Convertiamo le colonne del DF in date per il confronto
+            df_p['inizio_dt'] = pd.to_datetime(df_p['inizio']).dt.date
+            df_p['fine_dt'] = pd.to_datetime(df_p['fine']).dt.date
+            
+            # Logica di intersezione: il task deve "toccare" l'intervallo
+            df_p = df_p[
+                (df_p['inizio_dt'] <= end_search) & 
+                (df_p['fine_dt'] >= start_search)
+            ]
+            
+            # Pulizia colonne temporanee
+            df_p = df_p.drop(columns=['inizio_dt', 'fine_dt'])
+        except Exception as e:
+            # Gestione silenziosa durante la transizione di selezione
+            pass
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
