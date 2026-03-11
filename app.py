@@ -634,15 +634,14 @@ if l and tk and cm:
         f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=[], label_visibility="collapsed", placeholder="Stato Commesse")
         f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
 
-        with s3:
-            # Filtro intervallo date (Date Range)
-            min_d = pd.to_datetime(df['inizio']).min().date()
-            max_d = pd.to_datetime(df['fine']).max().date()
-            # Default: oggi -> +30 giorni (o quello che preferisci)
+                        
+        with s3:     
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[df['inizio'].min(), df['fine'].max()], # Range preimpostato sui dati esistenti
+                value=[None, None],
+                format="DD/MM/YYYY",
                 label_visibility="collapsed",
+                placeholder="📅 Filtra per date",
                 key="filter_date_range"
             )
             
@@ -667,21 +666,21 @@ if l and tk and cm:
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
     
-# Filtro temporale (FIXATO)
-if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-    # Convertiamo i limiti del filtro in datetime
-    start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1])
-    
-    # Assicuriamoci che le colonne inizio/fine siano datetime
-    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
-    df_p['fine'] = pd.to_datetime(df_p['fine'])
-    
-    # Applichiamo il filtro di intersezione
-    df_p = df_p[
-        (df_p['inizio'] <= end_search) & 
-        (df_p['fine'] >= start_search)
-    ].copy()
+    # Filtro intervallo date (Date Range)
+    if f_range and len(f_range) == 2 and all(v is not None for v in f_range):
+        start_search = pd.to_datetime(f_range[0])
+        end_search = pd.to_datetime(f_range[1])
+        df_p['inizio'] = pd.to_datetime(df_p['inizio'])
+        df_p['fine'] = pd.to_datetime(df_p['fine'])
+
+        df_p = df_p[
+            (df_p['inizio'] <= end_search) & 
+            (df_p['fine'] >= start_search)
+         ].copy()
+        else:
+            # Se il filtro è nullo o incompleto, non facciamo nulla.
+            # df_p rimane quello filtrato solo per progetto/operatore/stato.
+            pass
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
