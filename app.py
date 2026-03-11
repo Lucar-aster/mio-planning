@@ -642,6 +642,7 @@ if l and tk and cm:
             f_range = st.date_input(
                 "Intervallo Date",
                 value=[df['inizio'].min(), df['fine'].max()], # Range preimpostato sui dati esistenti
+                format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 key="filter_date_range"
             )
