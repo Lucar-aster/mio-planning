@@ -355,7 +355,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         st.session_state.chart_key += 1
         st.rerun()
 
-    if c2.button("Annulla", use_container_width=True): st.rerun()
+    if c2.button("Annulla", use_container_width=True): get_cached_data.clear(); st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
