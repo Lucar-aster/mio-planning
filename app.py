@@ -677,10 +677,10 @@ if l and tk and cm:
             (df_p['inizio'] <= end_search) & 
             (df_p['fine'] >= start_search)
          ].copy()
-        else:
-            # Se il filtro è nullo o incompleto, non facciamo nulla.
-            # df_p rimane quello filtrato solo per progetto/operatore/stato.
-            pass
+    else:
+        # Se il filtro è nullo o incompleto, non facciamo nulla.
+        # df_p rimane quello filtrato solo per progetto/operatore/stato.
+        pass
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
