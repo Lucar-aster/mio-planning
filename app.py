@@ -638,7 +638,7 @@ if l and tk and cm:
         with s3:     
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[None, None],
+                value=[],
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 placeholder="📅 Filtra per date",
