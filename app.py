@@ -579,7 +579,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     for _, r in df_full_list.iterrows():
         e_cm = next((s.split()[-1] for s in STATI_COMMESSA if s.startswith(r['stato'])), "⚫")
         e_tk = next((s.split()[-1] for s in STATI_TASK if s.startswith(r['stato'])), "⚫")
-        c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
+        c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['nome_commessa']}", 15))
         y_labels_full.append(c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))))
         custom_data_full.append(["LOG_FITTIZIO", r['id']])
         
