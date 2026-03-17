@@ -584,6 +584,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     }
     
     vista_compressa = st.session_state.vista_compressa
+    df_tasks = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
 
     for _, row_t in df_tasks.iterrows():
             e_cm, e_tk = mappa_emoji.get(row_t['stato_commessa'], "⚫"), mappa_emoji_task.get(row_t.get('stato_task'), "⚫")
