@@ -653,10 +653,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     if selected and "selection" in selected and selected["selection"]["points"]:
             punto = selected["selection"]["points"][0]
-            if "customdata" in punto and punto["customdata"][0] == "CLIC_AREA":
-                task_id_selezionato = punto["customdata"][1]
-                data_selezionata = pd.to_datetime(punto["x"]).date()
-                modal_gestione_clic(task_id=task_id_selezionato, data_clic=data_selezionata)
+            if "customdata" in punto:
+                info = punto["customdata"]
+                if info[0] == "CLIC_AREA":
+                    task_id_selezionato = info[1]
+                    data_selezionata = pd.to_datetime(punto["x"]).date()
+                    modal_gestione_clic(task_id=task_id_selezionato, data_clic=data_selezionata)
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
