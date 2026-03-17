@@ -543,8 +543,9 @@ def get_it_date_label(dt, delta):
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
-    
     commesse_visibili = df_plot['Commessa'].unique() if not df_plot.empty else []
+    fig = go.Figure()
+    
     raw_tk = get_cached_data("Task")
     raw_cm = get_cached_data("Commesse")
     df_all_tk = pd.DataFrame(raw_tk)
@@ -552,8 +553,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
     df_full_list = df_all_tk.merge(df_all_cm[['id', 'nome_commessa', 'stato']], left_on='commessa_id', right_on='id', suffixes=('', '_cm'))
     df_full_list = df_full_list[df_full_list['nome_commessa'].isin(commesse_visibili)]
-    
-    fig = go.Figure()
 
     mappa_emoji = {
     "Quotazione 🟣": "🟣",
