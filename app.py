@@ -544,7 +544,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
     
-    commesse_visibili = df_plot['Commessa'].unique()
+    commesse_visibili = df_plot['Commessa'].unique() if not df_plot.empty else []
     raw_tk = get_cached_data("Task")
     raw_cm = get_cached_data("Commesse")
     df_all_tk = pd.DataFrame(raw_tk)
