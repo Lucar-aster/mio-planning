@@ -656,11 +656,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
             if d[0] == "LOG_FITTIZIO":
-            task_id_selezionato = d[1]
-                    data_selezionata = pd.to_datetime(p[0]["x"]).date()
-                    modal_gestione_clic(task_id_selezionato, data_selezionata)
+                task_id_selezionato = d[1]
+                data_selezionata = pd.to_datetime(p[0]["x"]).date()
+                modal_gestione_clic(task_id_selezionato, data_selezionata)
             else:
-            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
