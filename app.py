@@ -131,16 +131,50 @@ def modal_edit_log(log_id, operatore, inizio, fine, task_id, nota):
         supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
         get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
-# --- 6. LOGICA DATI ---
-raw_cm, raw_tk, raw_log = get_cached_data("Commesse"), get_cached_data("Task"), get_cached_data("Log_Tempi")
-df_cm, df_tk, df_log = pd.DataFrame(raw_cm), pd.DataFrame(raw_tk), pd.DataFrame(raw_log)
+# --- 6. LOGICA DATI (CORRETTA) ---
+raw_cm = get_cached_data("Commesse")
+raw_tk = get_cached_data("Task")
+raw_log = get_cached_data("Log_Tempi")
 
-if not df_log.empty:
-    df = df_log.merge(df_tk[['id', 'nome', 'commessa_id', 'stato']], left_on='task_id', right_on='id', suffixes=('', '_tk'))
-    df = df.merge(df_cm[['id', 'nome_commessa', 'stato']], left_on='commessa_id', right_on='id', suffixes=('', '_cm'))
-    df = df.rename(columns={'nome': 'Task', 'nome_commessa': 'Commessa', 'stato_cm': 'stato_commessa', 'stato': 'stato_task'})
-    df['note_html'] = df['note'].fillna('').apply(lambda x: str(x).replace('\n', '<br>'))
+df_cm = pd.DataFrame(raw_cm)
+df_tk = pd.DataFrame(raw_tk)
+df_log = pd.DataFrame(raw_log)
+
+# Verifichiamo che i DataFrame non siano vuoti e contengano le colonne necessarie
+if not df_log.empty and not df_tk.empty and not df_cm.empty:
+    
+    # Identifichiamo dinamicamente la colonna del nome nel task
+    # (cerca 'nome', se non esiste cerca 'nome_task')
+    col_nome_task = 'nome' if 'nome' in df_tk.columns else ('nome_task' if 'nome_task' in df_tk.columns else None)
+    
+    if col_nome_task is None:
+        st.error("Errore: La tabella 'Task' non contiene una colonna 'nome' o 'nome_task'. Controlla il DB.")
+        df = pd.DataFrame()
+    else:
+        # Eseguiamo il merge usando la colonna trovata
+        df = df_log.merge(
+            df_tk[['id', col_nome_task, 'commessa_id', 'stato']], 
+            left_on='task_id', 
+            right_on='id', 
+            suffixes=('', '_tk')
+        )
+        df = df.merge(
+            df_cm[['id', 'nome_commessa', 'stato']], 
+            left_on='commessa_id', 
+            right_on='id', 
+            suffixes=('', '_cm')
+        )
+        
+        # Rinominiamo per uniformità nel resto del codice
+        df = df.rename(columns={
+            col_nome_task: 'Task', 
+            'nome_commessa': 'Commessa', 
+            'stato_cm': 'stato_commessa', 
+            'stato': 'stato_task'
+        })
+        df['note_html'] = df['note'].fillna('').apply(lambda x: str(x).replace('\n', '<br>'))
 else:
+    # DataFrame vuoto di emergenza per non rompere i filtri UI
     df = pd.DataFrame(columns=['id', 'operatore', 'inizio', 'fine', 'Task', 'Commessa', 'task_id', 'stato_commessa', 'stato_task', 'note_html'])
 
 # --- 7. CSS E HEADER ---
