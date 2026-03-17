@@ -630,7 +630,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     df_tasks = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
 
     for _, row_t in df_tasks.iterrows():
-        y_val = get_y_label(row_t, st.session_state.vista_compressa, mappa_emoji, mappa_emoji_task)))
+        y_val = get_y_label(row_t, st.session_state.vista_compressa, mappa_emoji, mappa_emoji_task)
         fig.add_trace(go.Bar(
             base=[x_range[0]], x=[(x_range[1] - x_range[0]).total_seconds() * 1000], 
             y=[y_val],
