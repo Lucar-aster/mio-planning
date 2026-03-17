@@ -481,165 +481,6 @@ def modal_clona_avanzata():
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.rerun()
 
-# --- 6. LOGICA MERGE ---
-def merge_consecutive_logs(df):
-    if df.empty: return df
-    df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
-    merged = []
-    for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
-        current_row = None
-        for _, row in group.iterrows():
-            nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
-            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m')}</i>: {nota_testo}" if nota_testo else ""
-            if current_row is None: 
-                current_row = row.to_dict()
-                current_row['note_html'] = nota_formattata
-            else:
-                if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
-                    current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
-                    current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
-                    if nota_formattata: current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
-                else:
-                    merged.append(current_row); current_row = row.to_dict(); current_row['note_html'] = nota_formattata
-        if current_row: merged.append(current_row)
-    return pd.DataFrame(merged)
-
-def get_it_date_label(dt, delta):
-    mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
-    giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-    if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
-    return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
-
-# --- 7. GANTT FRAGMENT ---
-@st.fragment(run_every=60)
-def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_merged = merge_consecutive_logs(df_plot)
-    fig = go.Figure()
-
-    mappa_emoji = {
-    "Quotazione 🟣": "🟣",
-    "Pianificata 🔵": "🔵",
-    "In corso 🟡": "🟡",
-    "Completata 🟢": "🟢",
-    "Sospesa 🟠": "🟠",
-    "Cancellata 🔴": "🔴"
-    }
-
-    mappa_emoji_task = {
-    "Pianificato 🔵": "🔵",
-    "In corso 🟡": "🟡",
-    "Completato 🟢": "🟢",
-    "Sospeso 🟠": "🟠",
-    }
-    
-    vista_compressa = st.session_state.vista_compressa
-
-    df_tasks = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-
-    for _, row_t in df_tasks.iterrows():
-        e_cm = mappa_emoji.get(row_t['stato_commessa'], "⚫")
-        e_tk = mappa_emoji_task.get(row_t.get('stato_task'), "⚫")
-        c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row_t['Commessa']}", 15))
-        
-        if st.session_state.vista_compressa:
-            y_val = c_label
-        else:
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row_t['Task']}", 20))
-            y_val = (c_label, t_label)
-
-        # Aggiungiamo una barra trasparente che va dall'inizio alla fine del range visualizzato
-        fig.add_trace(go.Bar(
-            base=[x_range[0]], 
-            x=[(x_range[1] - x_range[0]).total_seconds() * 1000], 
-            y=[y_val] if st.session_state.vista_compressa else [list(y_val)],
-            orientation='h',
-            showlegend=False,
-            marker=dict(color="rgba(0,0,0,0)"), # Invisibile
-            hoverinfo='none',
-            # Customdata speciale per identificare il Task ed escludere il Log
-            customdata=[["GHOST", row_t['task_id'], row_t['Task']]], 
-            width=0.5 # Leggermente più larga per facilitare il clic
-        ))
-        
-    for op in df_merged['operatore'].unique():
-        df_op = df_merged[df_merged['operatore'] == op]
-        y_labels = []
-        for _, row in df_op.iterrows():
-            e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-            e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
-
-            c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-
-            if vista_compressa:
-                y_labels.append(c_label)
-            else:
-                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
-                y_labels.append([c_label, t_label])
-
-        
-        fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-            customdata=list(zip("LOG", df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
-            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
-        ))
-        
-    # --- Gestione Asse X Dinamica ---
-    # Definiamo i confini dell'area "cuscinetto" per il PAN
-    start_buffer = x_range[0] - timedelta(days=180)
-    end_buffer = x_range[1] + timedelta(days=180)
-    
-    # Scegliamo la frequenza in base alla scala
-    if delta_giorni > 60:
-        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
-    elif delta_giorni >20:
-       full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-       tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
-    else:
-        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-
-     # 3. Generiamo i testi solo per i giorni filtrati
-    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
-    
-    all_shapes = []
-    curr = x_range[0] - timedelta(days=60)
-    while curr <= x_range[1] + timedelta(days=60):
-        all_shapes.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
-        if curr.weekday() >= 5:
-            all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
-        curr += timedelta(days=1)
-        
-    vista_compressa = st.session_state.vista_compressa
-    
-    unique_rows = df_merged['Commessa'].unique() if vista_compressa else df_merged[['Commessa', 'Task']].drop_duplicates()
-    n_r = len(unique_rows)
-
-    fig.update_layout(
-        height=300 + (n_r * 25),
-        showlegend=False,
-        margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
-        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
-        legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
-    )
-    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
-    
-    selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
-    
-    if selected and "selection" in selected and "points" in selected["selection"]:
-        p = selected["selection"]["points"]
-        if p and "customdata" in p[0]:
-            d = p[0]["customdata"]
-            tipo_clic = d[0]
-            
-            if tipo_clic == "LOG":
-                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
-            elif tipo_clic == "GHOST":
-                task_id = d[1]
-                data_clic = pd.to_datetime(p[0]["x"]).date()
-                modal_manage_task_and_log(task_id, data_clic)
-            
 @st.dialog("⚙️ Gestione Task e Nuovo Log")
 def modal_manage_task_and_log(task_id, data_clic):
     # --- RECUPERO DATI ---
@@ -732,6 +573,134 @@ def modal_manage_task_and_log(task_id, data_clic):
             st.session_state.chart_key += 1
             st.rerun()
 
+# --- 6. LOGICA MERGE ---
+def merge_consecutive_logs(df):
+    if df.empty: return df
+    df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
+    merged = []
+    for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
+        current_row = None
+        for _, row in group.iterrows():
+            nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
+            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m')}</i>: {nota_testo}" if nota_testo else ""
+            if current_row is None: 
+                current_row = row.to_dict()
+                current_row['note_html'] = nota_formattata
+            else:
+                if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
+                    current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
+                    current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
+                    if nota_formattata: current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
+                else:
+                    merged.append(current_row); current_row = row.to_dict(); current_row['note_html'] = nota_formattata
+        if current_row: merged.append(current_row)
+    return pd.DataFrame(merged)
+
+def get_it_date_label(dt, delta):
+    mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
+    giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
+    return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
+
+# --- 7. GANTT FRAGMENT ---
+@st.fragment(run_every=60)
+def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
+    if df_plot.empty: st.info("Nessun dato trovato."); return
+    df_merged = merge_consecutive_logs(df_plot)
+    fig = go.Figure()
+
+    mappa_emoji = {
+    "Quotazione 🟣": "🟣",
+    "Pianificata 🔵": "🔵",
+    "In corso 🟡": "🟡",
+    "Completata 🟢": "🟢",
+    "Sospesa 🟠": "🟠",
+    "Cancellata 🔴": "🔴"
+    }
+
+    mappa_emoji_task = {
+    "Pianificato 🔵": "🔵",
+    "In corso 🟡": "🟡",
+    "Completato 🟢": "🟢",
+    "Sospeso 🟠": "🟠",
+    }
+    
+    vista_compressa = st.session_state.vista_compressa
+
+    df_tasks = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
+
+    for _, row_t in df_tasks.iterrows():
+        y_val = get_y_label(row_t, st.session_state.vista_compressa, mappa_emoji, mappa_emoji_task)))
+        fig.add_trace(go.Bar(
+            base=[x_range[0]], x=[(x_range[1] - x_range[0]).total_seconds() * 1000], 
+            y=[y_val],
+            orientation='h',
+            showlegend=False,
+            marker=dict(color="rgba(0,0,0,0)"), 
+            hoverinfo='none',
+            customdata=[["GHOST", row_t['task_id'], row_t['Task']]], 
+            width=0.5
+        ))
+        
+    for op in df_merged['operatore'].unique():
+        df_op = df_merged[df_merged['operatore'] == op]
+        y_labels = [get_y_label(r, st.session_state.vista_compressa, mappa_emoji, mappa_emoji_task) for _, r in df_op.iterrows()]
+        fig.add_trace(go.Bar(
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels, orientation='h', name=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
+            customdata=list(zip("LOG", df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            customdata=[["LOG", r['id'], r['operatore'], r['Inizio'], r['Fine'], r['Commessa'], r['Task'], r['note_html'], r['task_id']] for _, r in df_op.iterrows()],
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
+        ))
+        
+    # --- Gestione Asse X Dinamica ---
+    # Definiamo i confini dell'area "cuscinetto" per il PAN
+    start_buffer = x_range[0] - timedelta(days=180)
+    end_buffer = x_range[1] + timedelta(days=180)
+    
+    # Scegliamo la frequenza in base alla scala
+    if delta_giorni > 60:
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
+    elif delta_giorni >20:
+       full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+       tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
+    else:
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+
+     # 3. Generiamo i testi solo per i giorni filtrati
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
+    
+    all_shapes = []
+    curr = x_range[0] - timedelta(days=60)
+    while curr <= x_range[1] + timedelta(days=60):
+        all_shapes.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
+        if curr.weekday() >= 5:
+            all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
+        curr += timedelta(days=1)
+        
+    vista_compressa = st.session_state.vista_compressa
+    
+    unique_rows = df_merged['Commessa'].unique() if vista_compressa else df_merged[['Commessa', 'Task']].drop_duplicates()
+    n_r = len(unique_rows)
+
+    fig.update_layout(
+        height=300 + (n_r * 25),
+        showlegend=False,
+        margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
+        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
+        legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
+    )
+    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
+    
+    selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
+    
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        d = selected["selection"]["points"][0].get("customdata")
+        if d:
+            if d[0] == "LOG": modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+            elif d[0] == "GHOST": modal_manage_task_and_log(d[1], pd.to_datetime(selected["selection"]["points"][0]["x"]).date())
+            
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
