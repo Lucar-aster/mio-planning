@@ -580,7 +580,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y=y_labels_log,
         orientation='h',
         name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0)"), # Trasparente
+        marker=dict(color="rgba(0,0,0,0.02)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
         customdata=[["LOG_FITTIZIO", r['task_id']] for _, r in df_tasks_clic.iterrows()]
@@ -656,9 +656,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
             if d[0] == "LOG_FITTIZIO":
-                task_id_selezionato = d[1]
-                data_selezionata = pd.to_datetime(p[0]["x"]).date()
-                modal_gestione_clic(task_id_selezionato, data_selezionata)
+                modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
             else:
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
