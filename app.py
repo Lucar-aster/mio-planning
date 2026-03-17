@@ -587,7 +587,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
     fig.add_trace(go.Bar(
         base=[x_range[0]] * len(df_full_list),
-        x=[(x_range[1] - x_range[0]).total_seconds() * 1000] * len(df_tasks_clic),
+        x=[(x_range[1] - x_range[0]).total_seconds() * 1000] * len(df_full_list),
         y=y_labels_full,
         orientation='h',
         width=0.9,
