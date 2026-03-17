@@ -564,26 +564,26 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     vista_compressa = st.session_state.vista_compressa
     
     # --- AGGIUNTA OPERATORE FITTIZIO "LOG" ---
-        df_tasks_clic = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-        y_labels_log = []
+    df_tasks_clic = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
+    y_labels_log = []
         
-        for _, r in df_tasks_clic.iterrows():
-            e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
-            e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
-            c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
-            y_labels_log.append(c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))))
+    for _, r in df_tasks_clic.iterrows():
+        e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
+        c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
+        y_labels_log.append(c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))))
         
-        # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
-        fig.add_trace(go.Bar(
-            base=[x_range[0]] * len(df_tasks_clic),
-            x=[(x_range[1] - x_range[0]).total_seconds() * 1000] * len(df_tasks_clic),
-            y=y_labels_log,
-            orientation='h',
-            name="LOG", # Nome dell'operatore fittizio
-            marker=dict(color="rgba(0,0,0,0)"), # Trasparente
-            showlegend=False,
-            hoverinfo='none',
-            customdata=[["CLIC_AREA", r['task_id']] for _, r in df_tasks_clic.iterrows()]
+    # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
+    fig.add_trace(go.Bar(
+        base=[x_range[0]] * len(df_tasks_clic),
+        x=[(x_range[1] - x_range[0]).total_seconds() * 1000] * len(df_tasks_clic),
+        y=y_labels_log,
+        orientation='h',
+        name="LOG", # Nome dell'operatore fittizio
+        marker=dict(color="rgba(0,0,0,0)"), # Trasparente
+        showlegend=False,
+        hoverinfo='none',
+        customdata=[["CLIC_AREA", r['task_id']] for _, r in df_tasks_clic.iterrows()]
         ))
         
     for op in df_merged['operatore'].unique():
