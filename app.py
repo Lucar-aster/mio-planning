@@ -580,7 +580,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         e_cm = next((s.split()[-1] for s in STATI_COMMESSA if s.startswith(r['stato'])), "⚫")
         e_tk = next((s.split()[-1] for s in STATI_TASK if s.startswith(r['stato'])), "⚫")
         c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['nome_commessa']}", 15))
-        y_labels_full.append(c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))))
+        y_val = c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['nome']}", 20)))
+        y_labels_full.append(y_val)
         custom_data_full.append(["LOG_FITTIZIO", r['id']])
         
     # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
