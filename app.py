@@ -634,12 +634,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             tipo_clic = d[0]
             
             if tipo_clic == "LOG":
-            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
             elif tipo_clic == "GHOST":
-            task_id = d[1]
-            task_nome = d[2]
-            data_clic = pd.to_datetime(p[0]["x"]).date()
-            modal_manage_task_and_log(task_id, data_clic)
+                task_id = d[1]
+                task_nome = d[2]
+                data_clic = pd.to_datetime(p[0]["x"]).date()
+                modal_manage_task_and_log(task_id, data_clic)
             
 @st.dialog("⚙️ Gestione Task e Nuovo Log")
 def modal_manage_task_and_log(task_id, data_clic):
