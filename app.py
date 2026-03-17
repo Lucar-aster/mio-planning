@@ -546,7 +546,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             y_val = c_label
         else:
             t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row_t['Task']}", 20))
-            y_val = [c_label, t_label]
+            y_val = (c_label, t_label)
 
         # Aggiungiamo una barra trasparente che va dall'inizio alla fine del range visualizzato
         fig.add_trace(go.Bar(
@@ -559,7 +559,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             hoverinfo='none',
             # Customdata speciale per identificare il Task ed escludere il Log
             customdata=[["GHOST", row_t['task_id'], row_t['Task']]], 
-            width=0.6 # Leggermente più larga per facilitare il clic
+            width=0.5 # Leggermente più larga per facilitare il clic
         ))
         
     for op in df_merged['operatore'].unique():
@@ -581,7 +581,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            customdata=list(zip("LOG", df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
         
@@ -637,7 +637,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
             elif tipo_clic == "GHOST":
                 task_id = d[1]
-                task_nome = d[2]
                 data_clic = pd.to_datetime(p[0]["x"]).date()
                 modal_manage_task_and_log(task_id, data_clic)
             
