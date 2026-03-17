@@ -255,8 +255,8 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
         st.error(f"Errore: {e}")
 
 # --- 5. MODALI ---
-@st.dialog("⚙️ Gestione Task / Nuovo Log")
-def modal_manage_task_and_log(task_id, data_clic):
+@st.dialog("Gestione Task & Log")
+def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
     if not task_info: return
@@ -273,38 +273,16 @@ def modal_manage_task_and_log(task_id, data_clic):
             supabase.table("Task").update({"nome": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
             if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
             get_cached_data.clear(); st.rerun()
+            
     st.divider()
     st.subheader(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}")
     ops = [o['nome'] for o in get_cached_data("Operatori")]
-    c1, c2 = st.columns(2)
-    with c1: 
-        op_sel = st.selectbox("Operatore", ops)
-        d_ini = st.date_input("Inizio Log", value=data_clic)
-    with c2: 
-        nota = st.text_input("Nota")
-        d_fin = st.date_input("Fine Log", value=data_clic)
+    op_sel = st.selectbox("Seleziona Operatore", ops)
+    nota = st.text_input("Nota log")
     if st.button("Registra Log", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").insert({"task_id": task_id, "operatore": op_sel, "inizio": str(d_ini), "fine": str(d_fin), "note": nota}).execute()
-        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-
-@st.dialog("⏱️ Modifica Log Esistente")
-def modal_edit_log(log_id, operatore, inizio, fine, nota):
-    ops_list = [o['nome'] for o in get_cached_data("Operatori")]
-    c1, c2 = st.columns(2)
-    with c1: 
-        new_op = st.selectbox("Operatore", ops_list, index=ops_list.index(operatore) if operatore in ops_list else 0)
-        new_ini = st.date_input("Inizio", value=pd.to_datetime(inizio).date())
-    with c2: 
-        new_fin = st.date_input("Fine", value=pd.to_datetime(fine).date())
-        new_nota = st.text_input("Nota", value=nota if nota else "")
-    cb1, cb2 = st.columns(2)
-    if cb1.button("Salva", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").update({"operatore": new_op, "inizio": str(new_ini), "fine": str(new_fin), "note": new_nota}).eq("id", log_id).execute()
-        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-    if cb2.button("Elimina Log", type="secondary", use_container_width=True):
-        supabase.table("Log_Tempi").delete().eq("id", log_id).execute()
-        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-
+        supabase.table("Log_Tempi").insert({"task_id": task_id, "operatore": op_sel, "inizio": str(data_clic), "fine": str(data_clic), "note": nota}).execute()
+        get_cached_data.clear(); st.rerun()
+        
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
     st.markdown("""<style>div[data-testid="stDialog"] div[role="dialog"] { width: 90vw !important; max-width: 1300px !important; }</style>""", unsafe_allow_html=True)
@@ -584,15 +562,30 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     }
     
     vista_compressa = st.session_state.vista_compressa
-    df_tasks = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-
-    for _, row_t in df_tasks.iterrows():
-            e_cm, e_tk = mappa_emoji.get(row_t['stato_commessa'], "⚫"), mappa_emoji_task.get(row_t.get('stato_task'), "⚫")
-            c_l = "<br>".join(textwrap.wrap(f"{e_cm} {row_t['Commessa']}", 15))
-            y_val = c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {row_t['Task']}", 20)))
-            # Aggiunto customdata per identificare il task al clic
-            fig.add_trace(go.Bar(base=[x_range[0]], x=[(x_range[1]-x_range[0]).total_seconds()*1000], y=[y_val], orientation='h', marker=dict(color="rgba(0,0,0,0)"), showlegend=False, hoverinfo='none', customdata=[["GHOST", row_t['task_id']]], width=0.5))
     
+    # --- AGGIUNTA OPERATORE FITTIZIO "LOG" ---
+        df_tasks_clic = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
+        y_labels_log = []
+        
+        for _, r in df_tasks_clic.iterrows():
+            e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
+            e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
+            c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
+            y_labels_log.append(c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))))
+        
+        # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
+        fig.add_trace(go.Bar(
+            base=[x_range[0]] * len(df_tasks_clic),
+            x=[(x_range[1] - x_range[0]).total_seconds() * 1000] * len(df_tasks_clic),
+            y=y_labels_log,
+            orientation='h',
+            name="LOG", # Nome dell'operatore fittizio
+            marker=dict(color="rgba(0,0,0,0)"), # Trasparente
+            showlegend=False,
+            hoverinfo='none',
+            customdata=[["CLIC_AREA", r['task_id']] for _, r in df_tasks_clic.iterrows()]
+        ))
+        
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
@@ -612,8 +605,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-            customdata=list(zip("LOG", df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
-            hovertemplate="<b>%{customdata[5]} - %{customdata[6]}</b><br>%{customdata[2]}<br>%{customdata[3]|%d/%m/%Y} - %{customdata[4]|%d/%m/%Y}<br>%{customdata[7]}<extra></extra>"
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
         
     # --- Gestione Asse X Dinamica ---
@@ -659,14 +652,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
     
     if selected and "selection" in selected and selected["selection"]["points"]:
-            pt = selected["selection"]["points"][0]
-            if "customdata" in pt:
-                d = pt["customdata"]
-                if d[0] == "LOG": 
-                    modal_edit_log(d[1], d[2], d[3], d[4], d[5])
-                elif d[0] == "GHOST": 
-                    modal_manage_task_and_log(d[1], pd.to_datetime(pt["x"]).date())
-                    
+            punto = selected["selection"]["points"][0]
+            if "customdata" in punto and punto["customdata"][0] == "CLIC_AREA":
+                task_id_selezionato = punto["customdata"][1]
+                data_selezionata = pd.to_datetime(punto["x"]).date()
+                modal_gestione_clic(task_id=task_id_selezionato, data_clic=data_selezionata)
+
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
