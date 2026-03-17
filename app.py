@@ -535,6 +535,33 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     vista_compressa = st.session_state.vista_compressa
 
+    df_tasks = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
+
+    for _, row_t in df_tasks.iterrows():
+        e_cm = mappa_emoji.get(row_t['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(row_t.get('stato_task'), "⚫")
+        c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row_t['Commessa']}", 15))
+        
+        if st.session_state.vista_compressa:
+            y_val = c_label
+        else:
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row_t['Task']}", 20))
+            y_val = [c_label, t_label]
+
+        # Aggiungiamo una barra trasparente che va dall'inizio alla fine del range visualizzato
+        fig.add_trace(go.Bar(
+            base=[x_range[0]], 
+            x=[(x_range[1] - x_range[0]).total_seconds() * 1000], 
+            y=[y_val] if st.session_state.vista_compressa else [list(y_val)],
+            orientation='h',
+            showlegend=False,
+            marker=dict(color="rgba(0,0,0,0)"), # Invisibile
+            hoverinfo='none',
+            # Customdata speciale per identificare il Task ed escludere il Log
+            customdata=[["GHOST", row_t['task_id'], row_t['Task']]], 
+            width=0.6 # Leggermente più larga per facilitare il clic
+        ))
+        
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
@@ -604,7 +631,107 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         p = selected["selection"]["points"]
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
+            tipo_clic = d[0]
+            
+            if tipo_clic == "LOG":
             modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+            elif tipo_clic == "GHOST":
+            task_id = d[1]
+            task_nome = d[2]
+            data_clic = pd.to_datetime(p[0]["x"]).date()
+            modal_manage_task_and_log(task_id, data_clic)
+            
+@st.dialog("⚙️ Gestione Task e Nuovo Log")
+def modal_manage_task_and_log(task_id, data_clic):
+    # --- RECUPERO DATI ---
+    cm_data = get_cached_data("Commesse")
+    tk_data = get_cached_data("Task")
+    
+    # Info del task specifico
+    task_info = next((t for t in tk_data if t['id'] == task_id), None)
+    if not task_info:
+        st.error("Task non trovato"); return
+
+    # Info della commessa attualmente legata al task
+    curr_cm_id = task_info['commessa_id']
+    commessa_info = next((c for c in cm_data if c['id'] == curr_cm_id), None)
+
+    # --- SEZIONE A: MODIFICA ANAGRAFICA ---
+    st.subheader("🏗️ Modifica Struttura (Task & Commessa)")
+    
+    with st.expander("Modifica Nomi e Stati", expanded=False):
+        st.markdown("### 📋 Dati Task")
+        new_tk_name = st.text_input("Nome Task", value=task_info['nome_task'])
+        new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, 
+                                    index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
+        
+        st.divider()
+        
+        st.markdown("### 🏢 Dati Commessa")
+        if commessa_info:
+            # Modifica Nome Commessa
+            new_cm_name = st.text_input("Nome Commessa (Attenzione: cambia per tutti i task)", 
+                                       value=commessa_info['nome_commessa'])
+            # Modifica Stato Commessa
+            new_cm_status = st.selectbox("Stato Commessa", options=STATI_COMMESSA,
+                                        index=STATI_COMMESSA.index(commessa_info.get('stato', STATI_COMMESSA[0])))
+            
+            # Opzione per spostare il task sotto un'altra commessa esistente
+            cms_list = {c['nome_commessa']: c['id'] for c in cm_data}
+            st.info("Se vuoi spostare il task in un altro progetto esistente, usa il selettore sotto:")
+            target_cm_nome = st.selectbox("Sposta Task in:", options=list(cms_list.keys()), 
+                                         index=list(cms_list.keys()).index(commessa_info['nome_commessa']))
+        
+        if st.button("Salva Modifiche Strutturali", use_container_width=True, type="secondary"):
+            # 1. Aggiornamento Tabella COMMESSE
+            if commessa_info:
+                supabase.table("Commesse").update({
+                    "nome_commessa": new_cm_name,
+                    "stato": new_cm_status
+                }).eq("id", curr_cm_id).execute()
+            
+            # 2. Aggiornamento Tabella TASK
+            supabase.table("Task").update({
+                "nome_task": new_tk_name,
+                "stato": new_tk_status,
+                "commessa_id": cms_list[target_cm_nome] # Può essere lo stesso o uno nuovo
+            }).eq("id", task_id).execute()
+            
+            st.success("Anagrafiche aggiornate con successo!")
+            get_cached_data.clear()
+            st.rerun()
+
+    st.divider()
+
+    # --- SEZIONE B: INSERIMENTO NUOVO LOG (Logica Clic) ---
+    st.subheader(f"⏱️ Inserimento Log Rapido")
+    st.caption(f"Data intercettata dal clic: {data_clic.strftime('%d/%m/%Y')}")
+    
+    ops = [o['nome'] for o in get_cached_data("Operatori")]
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        op_sel = st.selectbox("Operatore", ops)
+        d_ini = st.date_input("Inizio", value=data_clic)
+    with col2:
+        d_fin = st.date_input("Fine", value=data_clic)
+        nota = st.text_input("Nota log", placeholder="Cosa è stato fatto?")
+
+    if st.button("Registra Nuovo Log", type="primary", use_container_width=True):
+        if d_ini > d_fin:
+            st.error("Data fine non valida")
+        else:
+            supabase.table("Log_Tempi").insert({
+                "task_id": task_id,
+                "operatore": op_sel,
+                "inizio": str(d_ini),
+                "fine": str(d_fin),
+                "note": nota
+            }).execute()
+            st.success("Log registrato!")
+            get_cached_data.clear()
+            st.session_state.chart_key += 1
+            st.rerun()
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
