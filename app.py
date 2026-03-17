@@ -583,7 +583,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
-        customdata=[["CLIC_AREA", r['task_id']] for _, r in df_tasks_clic.iterrows()]
+        customdata=[["LOG_FITTIZIO", r['task_id']] for _, r in df_tasks_clic.iterrows()]
         ))
         
     for op in df_merged['operatore'].unique():
@@ -651,14 +651,16 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
     
-    if selected and "selection" in selected and selected["selection"]["points"]:
-            punto = selected["selection"]["points"][0]
-            if "customdata" in punto:
-                info = punto["customdata"]
-                if info[0] == "CLIC_AREA":
-                    task_id_selezionato = info[1]
-                    data_selezionata = pd.to_datetime(punto["x"]).date()
-                    modal_gestione_clic(task_id=task_id_selezionato, data_clic=data_selezionata)
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        p = selected["selection"]["points"]
+        if p and "customdata" in p[0]:
+            d = p[0]["customdata"]
+            if d[0] == "LOG_FITTIZIO":
+            task_id_selezionato = d[1]
+                    data_selezionata = pd.to_datetime(p[0]["x"]).date()
+                    modal_gestione_clic(task_id_selezionato, data_selezionata)
+            else:
+            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
