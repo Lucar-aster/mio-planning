@@ -619,7 +619,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
         date_range = pd.date_range(start="2000-01-01", end="2100-12-31", freq='D')
-        y_val=y_labels_pulsanti[i] if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti[i]))
+        y_val=y_labels_pulsanti[i] if st.session_state.vista_compressa else y_labels_pulsanti[i]
     
     fig.add_trace(go.Bar(
         base=date_range,
