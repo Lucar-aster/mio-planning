@@ -1076,16 +1076,3 @@ with tabs[4]: # STATS
                 st.plotly_chart(fig_stato, use_container_width=True)
 
         st.divider()
-
-        c3, c4 = st.columns([2, 1])
-
-        with c3:
-            st.subheader("📈 Intensità Lavorativa Mensile")
-            # Convertiamo le date dei log
- 
-
-        with c4:
-            st.subheader("📝 Top Task Attivi")
-            # Mostriamo i task che hanno ricevuto più log recentemente
-            top_tasks = df_l['task_nome'].value_counts().head(5)
-            st.table(top_tasks)
