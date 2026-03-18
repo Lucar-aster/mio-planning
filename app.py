@@ -632,7 +632,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         width=0.9,
         offset= -0.45,
         name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0)"), # Trasparente
+        marker=dict(color="rgba(0,0,0,0.2)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
         customdata=[["LOG_FITTIZIO", r['task_id'], d.strftime("%Y-%m-%d")] for d in date_range]
