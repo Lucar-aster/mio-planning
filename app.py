@@ -290,14 +290,14 @@ def modal_gestione_clic(task_id, data_clic):
     nota = st.text_input("Nota log")
     c1, c2 = st.columns(2)
     if c1.button("Registra Log", type="primary", width='stretch'):
-        if not ops_sel:
+        if not op_sel:
             st.warning("Seleziona almeno un operatore.")
         elif len(date_range) < 2:
             st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
         else:
             data_inizio, data_fine = date_range
             nuovi_log = []
-            for op in ops_sel:
+            for op in op_sel:
                 nuovi_log.append({
                     "task_id": task_id,
                     "operatore": op,
@@ -307,7 +307,7 @@ def modal_gestione_clic(task_id, data_clic):
                 })
             try:
                 supabase.table("Log_Tempi").insert(nuovi_log).execute()
-                st.success(f"Inseriti {len(ops_sel)} log con successo!")
+                st.success(f"Inseriti {len(op_sel)} log con successo!")
                 get_cached_data.clear()
                 st.session_state.chart_key += 1
                 st.rerun()
