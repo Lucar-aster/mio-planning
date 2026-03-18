@@ -690,10 +690,19 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
+        try:
+        if "x" in p:
+            data_punto = pd.to_datetime(punto["x"]).date()
+        elif "base" in punto:
+            data_punto = pd.to_datetime(punto["base"]).date()
+        else:
+            data_punto = oggi_dt
+        except Exception:
+        data_punto = oggi_dt
+        
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
             if d[0] == "LOG_FITTIZIO":
-                data_punto = pd.to_datetime(punto["x"]).date()
                 modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
             else:
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
