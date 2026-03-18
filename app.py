@@ -705,7 +705,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and selected["selection"]["points"]:
-    dati_punto = selected["selection"]["points"][0].get("customdata", [])
+        dati_punto = selected["selection"]["points"][0].get("customdata", [])
         if dati_punto and dati_punto[0] == "LOG_FITTIZIO":
             task_id = dati_punto[1]
             data_clic = dati_punto[2] # Ecco la tua data YYYY-MM-DD!
