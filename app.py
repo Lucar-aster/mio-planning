@@ -718,11 +718,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             if d[0] == "LOG_FITTIZIO":
                 if "box" in sel and sel["box"]:
                 # Il box di un singolo clic ha x[0] e x[1] quasi identici
-                x_ms = sel["box"][0]["x"][0]
-                data_clic = pd.to_datetime(x_ms, unit='ms').date()
+                    x_ms = sel["box"][0]["x"][0]
+                    data_clic = pd.to_datetime(x_ms, unit='ms').date()
                 else:
-                # Fallback se il box non è disponibile
-                data_clic = oggi_dt
+                    # Fallback se il box non è disponibile
+                    data_clic = oggi_dt
                 
                 modal_gestione_clic(task_id=d[1], data_clic)
             else:
