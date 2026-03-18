@@ -621,7 +621,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     y_val=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti))
     
     fig.add_trace(go.Scatter(
-        x=[x_range[0], x_range[1]],
+        x=[oggi_dt],
         y=[y_val, y_val],
         mode='markers',
         marker=dict(opacity=0, size=20),
