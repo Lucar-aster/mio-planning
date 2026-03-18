@@ -619,18 +619,21 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
     y_val=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti))
+    date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
     
-    fig.add_trace(go.Scatter(
-        x=[x_range[0], x_range[1]], 
-        y=[y_val, y_val],
-        mode='lines',
-        line=dict(width=40, color='rgba(0,0,0,0)'), # Spessa e invisibile
-        hoverinfo='none',
+    fig.add_trace(go.Bar(
+        base=date_range,
+        x=[pd.Timedelta(days=1)] * len(date_range),
+        y=[y_val] * len(date_range),
+        orientation='h',
+        width=0.9,
+        offset= -0.45,
+        name="LOG", # Nome dell'operatore fittizio
+        marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
-        # Passiamo il Task ID. Fondamentale: deve essere una lista lunga quanto i punti (2)
-        customdata=[["LOG_FITTIZIO", r['task_id']], ["LOG_FITTIZIO", r['task_id']]],
-        name="AreaClic"
-    ))
+        hoverinfo='none',
+        customdata=[["LOG_FITTIZIO", r['task_id'], d.date()] for d in date_range]
+        ))
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
@@ -698,26 +701,24 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
-    if selected and "selection" in selected and selected["selection"]["points"]:
-        punto = selected["selection"]["points"][0]
-        dati = punto.get("customdata", [])
-    
-        if dati and dati[0] == "LOG_FITTIZIO":
-            # 1. Recupero ID Task
-            task_id = dati[1]
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        p = selected["selection"]["points"]
+        try:
+            if "x" in p:
+                data_punto = pd.to_datetime(punto["x"]).date()
+            elif "base" in punto:
+                data_punto = pd.to_datetime(punto["base"]).date()
+            else:
+                data_punto = oggi_dt
+        except Exception:
+            data_punto = oggi_dt
         
-            # 2. Recupero Data (Dallo Scatter 'x' è sempre la posizione temporale)
-            try:
-                # Plotly negli scatter restituisce x come stringa ISO o timestamp ms
-                data_raw = punto["x"]
-                data_clic = pd.to_datetime(data_raw).date()
-            except:
-                data_clic = oggi_dt
-            
-            # 3. Chiamata Modale
-            modal_gestione_clic(task_id, data_clic)
-        else:
-            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+        if p and "customdata" in p[0]:
+            d = p[0]["customdata"]
+            if d[0] == "LOG_FITTIZIO":
+                modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
+            else:
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
