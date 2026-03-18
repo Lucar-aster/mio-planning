@@ -635,6 +635,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         marker=dict(color="rgba(0,0,0,0.5)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
+        alignmentgroup="group1",
+        offsetgroup="group1",
         customdata=[["LOG_FITTIZIO", r['task_id'], d.strftime("%Y-%m-%d")] for d in date_range]
         ))
             
