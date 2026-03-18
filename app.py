@@ -606,6 +606,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     y_labels_pulsanti = []
     custom_data_full = []
+    date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
     for i, (_, r) in enumerate(df_tasks_univoci.iterrows()):
         e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
@@ -621,9 +622,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             y_labels_pulsanti.append(y_val)
             
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
-        date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-       
-    
+
     fig.add_trace(go.Bar(
         base=date_range,
         x=[pd.Timedelta(days=1)] * len(date_range),
