@@ -621,8 +621,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             y_labels_pulsanti.append(y_val)
             
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
-        date_range = pd.date_range(start="2000-01-01", end="2100-12-31", freq='D')
-        y_val=y_labels_pulsanti[]
+        date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
+       
     
     fig.add_trace(go.Bar(
         base=date_range,
