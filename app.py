@@ -606,17 +606,20 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     y_labels_pulsanti = []
     custom_data_full = []
-    for _, r in df_tasks_univoci.iterrows():
+    for i, (_, r) in enumerate(df_tasks_univoci.iterrows()):
         e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
 
         c_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
 
         if vista_compressa:
-            y_labels_pulsanti.append(c_label_pulsanti)
+            y_val = c_label_pulsanti
+            y_labels_pulsanti.append(y_val)
         else:
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
-            y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
+            y_val = (c_label_pulsanti, t_label_pulsanti)
+            y_labels_pulsanti.append(y_val)
+            
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
         date_range = pd.date_range(start="2000-01-01", end="2100-12-31", freq='D')
         y_val=y_labels_pulsanti[]
