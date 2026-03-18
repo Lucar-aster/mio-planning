@@ -579,7 +579,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             t_label_full = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
             y_labels_full.append([c_label_full, t_label_full])
             
-        custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
+        custom_data_full.append(["LOG_FITTIZIO", row['task_id']])
         
     # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
     fig.add_trace(go.Bar(
