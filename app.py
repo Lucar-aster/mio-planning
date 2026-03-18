@@ -691,12 +691,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
         try:
-        if "x" in p:
-            data_punto = pd.to_datetime(punto["x"]).date()
-        elif "base" in punto:
-            data_punto = pd.to_datetime(punto["base"]).date()
-        else:
-            data_punto = oggi_dt
+            if "x" in p:
+                data_punto = pd.to_datetime(punto["x"]).date()
+            elif "base" in punto:
+                data_punto = pd.to_datetime(punto["base"]).date()
+            else:
+                data_punto = oggi_dt
         except Exception:
         data_punto = oggi_dt
         
