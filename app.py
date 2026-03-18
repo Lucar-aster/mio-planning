@@ -620,19 +620,19 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
     y_val=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti))
     
-    fig.add_trace(go.Scatter(
-        x=[x_range[0], x_range[1]],
-        y=[y_val, y_val],
-        mode='lines',
-        marker=dict(width=30, color='rgba(0,0,0,0)'),
+    fig.add_trace(go.Bar(
+        base=["2000-01-01"] * len(df_tasks_univoci),
+        x=[36500 * 24 * 3600 * 1000] * len(df_tasks_univoci),
+        y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
+        orientation='h',
+        width=0.9,
+        offset= -0.45,
         name="LOG", # Nome dell'operatore fittizio
+        marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
-        customdata=[
-            ["LOG_FITTIZIO", r['task_id']], 
-            ["LOG_FITTIZIO", r['task_id']]
-        ]
-    ))
+        customdata=custom_data_full
+        ))
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
@@ -701,6 +701,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
+        sel = selected["selection"]
         p = selected["selection"]["points"]
         try:
             if "x" in p:
@@ -715,7 +716,15 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
             if d[0] == "LOG_FITTIZIO":
-                modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
+                if "box" in sel and sel["box"]:
+                # Il box di un singolo clic ha x[0] e x[1] quasi identici
+                x_ms = sel["box"][0]["x"][0]
+                data_clic = pd.to_datetime(x_ms, unit='ms').date()
+                else:
+                # Fallback se il box non è disponibile
+                data_clic = oggi_dt
+                
+                modal_gestione_clic(task_id=d[1], data_clic)
             else:
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
