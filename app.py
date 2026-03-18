@@ -256,7 +256,7 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 
 # --- 5. MODALI ---
 @st.dialog("Gestione Task & Log")
-def modal_gestione_clic(task_id_trovato, data_cliccata):
+def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
     if not task_info: return
@@ -585,6 +585,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
         orientation='h',
         width=0.9,
+        offset= -0.45,
         name="LOG", # Nome dell'operatore fittizio
         marker=dict(color="rgba(0,0,0,0.2)"), # Trasparente
         showlegend=False,
