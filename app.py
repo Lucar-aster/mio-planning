@@ -566,15 +566,15 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
     y_labels_pulsanti = []
     for _, r in df_tasks_univoci.iterrows():
-        e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-        e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+        e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
 
-        c_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+        c_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
 
         if vista_compressa:
             y_labels_pulsanti.append(c_label)
         else:
-            t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+            t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
 
     fig.add_trace(go.Scatter(
