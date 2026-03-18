@@ -716,7 +716,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
             # 3. Chiamata Modale
             modal_gestione_clic(task_id, data_clic)
-         else:
+        else:
             modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
