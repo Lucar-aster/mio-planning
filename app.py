@@ -257,6 +257,11 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 # --- 5. MODALI ---
 @st.dialog("Gestione Task & Log")
 def modal_gestione_clic(task_id, data_clic):
+    if st.session_state.get('chiudi_modale', False):
+        st.session_state.chiudi_modale = False # Resetta per la prossima volta
+        st.rerun()
+        return
+        
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
     if not task_info: 
@@ -311,11 +316,15 @@ def modal_gestione_clic(task_id, data_clic):
             except Exception as e:
                 st.error(f"Errore durante l'inserimento: {e}")
         
-        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+        get_cached_data.clear()
+        st.session_state.chart_key += 1
+        st.session_state.chiudi_modale = True
+        st.rerun()
         
     if c2.button("Annulla", use_container_width=True): 
         get_cached_data.clear()
         st.session_state.chart_key += 1
+        st.session_state.chiudi_modale = True
         st.rerun()    
         
 @st.dialog("📝 Gestione Dettaglio Log")
