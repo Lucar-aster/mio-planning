@@ -274,7 +274,9 @@ def modal_gestione_clic(task_id, data_clic):
         if st.button("Salva Modifiche", width='stretch'):
             supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
             if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
-            get_cached_data.clear(); st.rerun()
+            get_cached_data.clear()
+            st.session_state.chart_key += 1
+            st.rerun()
             
     st.divider()
     st.subheader(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}")
@@ -307,6 +309,7 @@ def modal_gestione_clic(task_id, data_clic):
                 supabase.table("Log_Tempi").insert(nuovi_log).execute()
                 st.success(f"Inseriti {len(ops_selezionati)} log con successo!")
                 get_cached_data.clear()
+                st.session_state.chart_key += 1
                 st.rerun()
             except Exception as e:
                 st.error(f"Errore durante l'inserimento: {e}")
