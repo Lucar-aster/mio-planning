@@ -256,7 +256,7 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 
 # --- 5. MODALI ---
 @st.dialog("Gestione Task & Log")
-def modal_gestione_clic(task_id, data_clic):
+def modal_gestione_clic(task_id_trovato, data_cliccata):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
     if not task_info: return
@@ -543,8 +543,6 @@ def get_it_date_label(dt, delta):
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
-    df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-    
     fig = go.Figure()
 
     mappa_emoji = {
@@ -565,36 +563,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     vista_compressa = st.session_state.vista_compressa
 
-    # --- AGGIUNTA OPERATORE FITTIZIO "LOG" ---
-    for _, row in df_tasks_univoci.iterrows():
-        y_labels_full = []
-        custom_data_full = []
-        e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-        e_tk = mappa_emoji_task.get(row['stato_task'], "⚫")
-        
-        c_label_full = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-        if vista_compressa:
-            y_labels_full.append(c_label)
-        else:
-            t_label_full = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
-            y_labels_full.append([c_label_full, t_label_full])
-            
-        custom_data_full.append(["LOG_FITTIZIO", row['task_id']])
-        
-    # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
-    fig.add_trace(go.Bar(
-        base=["2000-01-01"] * len(df_tasks_univoci),
-        x=[36500 * 24 * 3600 * 1000] * len(df_tasks_univoci),
-        y=y_labels_full if vista_compressa else list(zip(*y_labels_full)),
-        orientation='h',
-        width=0.9,
-        name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0.02)"), # Trasparente
-        showlegend=False,
-        hoverinfo='none',
-        customdata=custom_data_full
-        ))
-        
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
@@ -662,12 +630,45 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
+        if p:
+            punto = p[0]
+            data_cliccata = pd.to_datetime(punto["x"]).date()
+            
+            # 1. CASO: CLIC SU UN LOG ESISTENTE (Barra colorata)
+            # Se nel tuo ciclo operatori hai messo customdata, lo usiamo
+            if "customdata" in punto and isinstance(punto["customdata"], list):
+                d = punto["customdata"]
+                # Assumiamo che d[0] sia l'ID del LOG per la modifica
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+                
+            # 2. CASO: CLIC SULLA RIGA (Anche nel vuoto)
+            else:
+                # Plotly ci dice su che riga Y siamo
+                y_label = punto["y"] 
+                    
+                # Troviamo il task_id corrispondente a questa riga
+                # Cerchiamo nel df_merged usato per il grafico
+                task_id_trovato = None
+                    
+                # Pulizia della label se è una lista/tupla (vista non compressa)
+                target_task_name = y_label[1] if isinstance(y_label, (list, tuple)) else y_label
+                    
+                # Cerchiamo nel DataFrame il task_id che corrisponde al nome nella label
+                for _, r in df_merged.iterrows():
+                    # Verifichiamo se il nome del task è contenuto nella label cliccata
+                    if r['Task'] in str(target_task_name):
+                        task_id_trovato = r['task_id']
+                        break
+                    
+                if task_id_trovato:
+                    modal_gestione_clic(task_id_trovato, data_cliccata)
+
+
+
+        
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
-            if d[0] == "LOG_FITTIZIO":
-                modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
-            else:
-                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
