@@ -543,16 +543,9 @@ def get_it_date_label(dt, delta):
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
-    commesse_visibili = df_plot['Commessa'].unique() if not df_plot.empty else []
-    fig = go.Figure()
+    df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     
-    raw_tk = get_cached_data("Task")
-    raw_cm = get_cached_data("Commesse")
-    df_all_tk = pd.DataFrame(raw_tk)
-    df_all_cm = pd.DataFrame(raw_cm)
-
-    df_full_list = df_all_tk.merge(df_all_cm[['id', 'nome_commessa', 'stato']], left_on='commessa_id', right_on='id', suffixes=('', '_cm'))
-    df_full_list = df_full_list[df_full_list['nome_commessa'].isin(commesse_visibili)]
+    fig = go.Figure()
 
     mappa_emoji = {
     "Quotazione 🟣": "🟣",
@@ -573,21 +566,25 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     vista_compressa = st.session_state.vista_compressa
 
     # --- AGGIUNTA OPERATORE FITTIZIO "LOG" ---
-    y_labels_full = []
-    custom_data_full = []
-    for _, r in df_full_list.iterrows():
-        e_cm = next((s.split()[-1] for s in STATI_COMMESSA if s.startswith(r['stato'])), "⚫")
-        e_tk = next((s.split()[-1] for s in STATI_TASK if s.startswith(r['stato'])), "⚫")
-        c_l = "<br>".join(textwrap.wrap(f"{e_cm} {r['nome_commessa']}", 15))
-        y_val = c_l if st.session_state.vista_compressa else (c_l, "<br>".join(textwrap.wrap(f"{e_tk} {r['nome_task']}", 20)))
-        y_labels_full.append(y_val)
+        for _, row in df_tasks_univoci.iterrows():
+        y_labels_full = []
+        custom_data_full = []
+        e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(row['stato_task'], "⚫")
+        
+        c_l = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+         if vista_compressa:
+                y_labels_full.append(c_label)
+            else:
+                t_label_full = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+                y_labels_full.append([c_label, t_label])
         custom_data_full.append(["LOG_FITTIZIO", r['id']])
         
     # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
     fig.add_trace(go.Bar(
-        base=[x_range[0]] * len(df_full_list),
-        x=[(x_range[1] - x_range[0]).total_seconds() * 1000] * len(df_full_list),
-        y=y_labels_full,
+        base=["2000-01-01"] * len(df_tasks_univoci),
+        x=[36500 * 24 * 3600 * 1000] * len(df_tasks_univoci),
+        y=y_labels_full if vista_compressa else list(zip(*y_labels_full)),
         orientation='h',
         width=0.9,
         name="LOG", # Nome dell'operatore fittizio
