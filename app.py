@@ -565,6 +565,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     vista_compressa = st.session_state.vista_compressa
 
     y_labels_pulsanti = []
+    custom_data_full = []
     for _, r in df_tasks_univoci.iterrows():
         e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
