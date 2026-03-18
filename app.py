@@ -629,8 +629,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
     
-    if selected and "selection" in selected and "points" in selected["selection"]:
-        p = selected["selection"]["points"]
+    if selected and "selection" in selected:
+        p = selected["selection"]
         if p:
             punto = p[0]
             data_cliccata = pd.to_datetime(punto["x"]).date()
@@ -663,13 +663,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
                     
                 if task_id_trovato:
                     modal_gestione_clic(task_id_trovato, data_cliccata)
-
-
-
-        
-        if p and "customdata" in p[0]:
-            d = p[0]["customdata"]
-            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
