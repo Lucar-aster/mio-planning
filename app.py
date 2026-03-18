@@ -314,12 +314,14 @@ def modal_gestione_clic(task_id, data_clic):
         get_cached_data.clear()
         st.empty()
         st.session_state.chart_key += 1
+        st.switch_page("app.py")
         st.rerun()
         
     if c2.button("Annulla", use_container_width=True): 
         get_cached_data.clear()
         st.empty()
         st.session_state.chart_key += 1
+        st.switch_page("app.py")
         st.rerun()    
         
 @st.dialog("📝 Gestione Dettaglio Log")
