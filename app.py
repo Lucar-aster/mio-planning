@@ -259,28 +259,57 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
-    if not task_info: return
+    if not task_info: 
+        st.error("Task non trovato.")
+        return
     commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
     
     st.subheader("🏗️ Modifica Anagrafica")
     with st.expander("Nomi e Stati", expanded=False):
-        new_tk_name = st.text_input("Nome Task", value=task_info.get('nome', ''))
+        new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
         new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
         if commessa_info:
             new_cm_name = st.text_input("Nome Commessa", value=commessa_info.get('nome_commessa', ''))
             new_cm_status = st.selectbox("Stato Commessa", options=STATI_COMMESSA, index=STATI_COMMESSA.index(commessa_info.get('stato', STATI_COMMESSA[0])))
         if st.button("Salva Modifiche", use_container_width=True):
-            supabase.table("Task").update({"nome": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
+            supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
             if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
             get_cached_data.clear(); st.rerun()
             
     st.divider()
     st.subheader(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}")
+    date_range = st.date_input(
+        "Periodo Log", 
+        value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
+        format="DD/MM/YYYY"
+    )
     ops = [o['nome'] for o in get_cached_data("Operatori")]
-    op_sel = st.selectbox("Seleziona Operatore", ops)
+    op_sel = st.multiselect("Seleziona Operatore", ops)
     nota = st.text_input("Nota log")
     if st.button("Registra Log", type="primary", use_container_width=True):
-        supabase.table("Log_Tempi").insert({"task_id": task_id, "operatore": op_sel, "inizio": str(data_clic), "fine": str(data_clic), "note": nota}).execute()
+        if not ops_selezionati:
+            st.warning("Seleziona almeno un operatore.")
+        elif len(date_range) < 2:
+            st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
+        else:
+            data_inizio, data_fine = date_range
+            nuovi_log = []
+            for op in ops_selezionati:
+                nuovi_log.append({
+                    "task_id": task_id,
+                    "operatore": op,
+                    "inizio": str(data_inizio),
+                    "fine": str(data_fine),
+                    "note": nota
+                })
+            try:
+                supabase.table("Log_Tempi").insert(nuovi_log).execute()
+                st.success(f"Inseriti {len(ops_selezionati)} log con successo!")
+                get_cached_data.clear()
+                st.rerun()
+            except Exception as e:
+                st.error(f"Errore durante l'inserimento: {e}")
+        
         get_cached_data.clear(); st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log")
@@ -664,6 +693,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
             if d[0] == "LOG_FITTIZIO":
+                data_punto = pd.to_datetime(punto["x"]).date()
                 modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
             else:
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
