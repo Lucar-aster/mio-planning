@@ -628,41 +628,44 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
-    
+
     if selected and "selection" in selected:
-        p = selected["selection"]
-        if p:
-            punto = p[0]
-            data_cliccata = pd.to_datetime(punto["x"]).date()
+        sel = selected["selection"]
             
-            # 1. CASO: CLIC SU UN LOG ESISTENTE (Barra colorata)
-            # Se nel tuo ciclo operatori hai messo customdata, lo usiamo
-            if "customdata" in punto and isinstance(punto["customdata"], list):
+        # CASO 1: L'utente ha cliccato su una BARRA (Log esistente)
+        if sel.get("points"):
+            punto = sel["points"][0]
+            if "customdata" in punto:
                 d = punto["customdata"]
-                # Assumiamo che d[0] sia l'ID del LOG per la modifica
-                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+                # Se il customdata ha la struttura del tuo log reale (es. 7-8 elementi)
+                if len(d) > 2: 
+                    modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+                    st.stop() # Fermiamo l'esecuzione per evitare doppi trigger
+
+        # CASO 2: L'utente ha cliccato sul VUOTO (ma sulla riga di un Task)
+        # In molti browser/versioni, Plotly restituisce comunque l'asse Y del punto cliccato
+        if "box" in sel or sel.get("points"):
+            # Proviamo a recuperare le coordinate anche se non c'è una barra
+            # Se 'points' esiste ma non ha customdata, è un clic "di prossimità"
+            p = sel["points"][0] if sel.get("points") else None
                 
-            # 2. CASO: CLIC SULLA RIGA (Anche nel vuoto)
-            else:
-                # Plotly ci dice su che riga Y siamo
-                y_label = punto["y"] 
+            if p and "y" in p:
+                y_label = p["y"] # Es: ('Clienti', 'Task Verniciatura')
+                data_clic = pd.to_datetime(p["x"]).date()
                     
-                # Troviamo il task_id corrispondente a questa riga
-                # Cerchiamo nel df_merged usato per il grafico
-                task_id_trovato = None
-                    
-                # Pulizia della label se è una lista/tupla (vista non compressa)
+                # Estraiamo il nome del Task dalla label (che può essere tupla o stringa)
                 target_task_name = y_label[1] if isinstance(y_label, (list, tuple)) else y_label
                     
-                # Cerchiamo nel DataFrame il task_id che corrisponde al nome nella label
+                # Cerchiamo l'ID nel tuo DataFrame originale
+                # Puliamo il nome dalle emoji per il confronto
+                task_id_trovato = None
                 for _, r in df_merged.iterrows():
-                    # Verifichiamo se il nome del task è contenuto nella label cliccata
                     if r['Task'] in str(target_task_name):
                         task_id_trovato = r['task_id']
                         break
                     
                 if task_id_trovato:
-                    modal_gestione_clic(task_id_trovato, data_cliccata)
+                    modal_gestione_clic(task_id_trovato, data_clic)
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
