@@ -573,11 +573,12 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         e_tk = mappa_emoji_task.get(row['stato_task'], "⚫")
         
         c_l = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-         if vista_compressa:
-                y_labels_full.append(c_label)
-            else:
-                t_label_full = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
-                y_labels_full.append([c_label, t_label])
+        if vista_compressa:
+            y_labels_full.append(c_label)
+        else:
+            t_label_full = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+            y_labels_full.append([c_label, t_label])
+            
         custom_data_full.append(["LOG_FITTIZIO", r['id']])
         
     # Creiamo la barra trasparente dell'operatore "LOG" che copre tutto il tempo
