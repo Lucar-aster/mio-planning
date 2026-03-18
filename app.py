@@ -624,7 +624,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         x=[x_range[0], x_range[1]],
         y=[y_val, y_val],
         mode='markers',
-        marker=dict(opacity=0, size=20)
+        marker=dict(opacity=0, size=20),
         name="LOG", # Nome dell'operatore fittizio
         showlegend=False,
         hoverinfo='none',
