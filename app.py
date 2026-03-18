@@ -566,7 +566,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     vista_compressa = st.session_state.vista_compressa
 
     # --- AGGIUNTA OPERATORE FITTIZIO "LOG" ---
-        for _, row in df_tasks_univoci.iterrows():
+    for _, row in df_tasks_univoci.iterrows():
         y_labels_full = []
         custom_data_full = []
         e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
