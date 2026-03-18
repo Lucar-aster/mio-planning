@@ -906,6 +906,7 @@ with tabs[1]: # CALENDARIO
                 eid = int(state["eventClick"]["event"]["id"])
                 sel = df[df['id'] == eid].iloc[0]
                 modal_edit_log(sel['id'], sel['operatore'], sel['Inizio'], sel['Fine'], sel['task_id'], sel['note'])
+                pass
              if state.get("dateClick"):
                 click_info = state["dateClick"]
                 data_selezionata = pd.to_datetime(click_info["date"]).date() 
