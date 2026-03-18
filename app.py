@@ -702,21 +702,13 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         sel = selected["selection"]
-        p = selected["selection"]["points"]
-        try:
-            if "x" in p:
-                data_punto = pd.to_datetime(punto["x"]).date()
-            elif "base" in punto:
-                data_punto = pd.to_datetime(punto["base"]).date()
-            else:
-                data_punto = oggi_dt
-        except Exception:
-            data_punto = oggi_dt
         
-        if p and "customdata" in p[0]:
-            d = p[0]["customdata"]
-            if d[0] == "LOG_FITTIZIO":
-                if "box" in sel and sel["box"]:
+        if sel["points"]:
+        punto = sel["points"][0]
+        dati = punto.get("customdata", [])
+        
+        if dati and dati[0] == "LOG_FITTIZIO":
+            if "box" in sel and sel["box"]:
                 # Il box di un singolo clic ha x[0] e x[1] quasi identici
                     x_ms = sel["box"][0]["x"][0]
                     dt_clic = pd.to_datetime(x_ms, unit='ms')
