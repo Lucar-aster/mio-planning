@@ -1082,20 +1082,7 @@ with tabs[4]: # STATS
         with c3:
             st.subheader("📈 Intensità Lavorativa Mensile")
             # Convertiamo le date dei log
-            df_l['data_log'] = pd.to_datetime(df_l['data_log'])
-            df_l['mese_anno'] = df_l['data_log'].dt.to_period('M').astype(str)
-            
-            timeline = df_l.groupby('mese_anno').size().reset_index(name='Conteggio')
-            
-            fig_line = go.Figure(go.Scatter(
-                x=timeline['mese_anno'],
-                y=timeline['Conteggio'],
-                mode='lines+markers',
-                line=dict(color='#9b59b6', width=3),
-                fill='tozeroy'
-            ))
-            fig_line.update_layout(height=300, margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig_line, use_container_width=True)
+ 
 
         with c4:
             st.subheader("📝 Top Task Attivi")
