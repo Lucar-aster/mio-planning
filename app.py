@@ -286,7 +286,8 @@ def modal_gestione_clic(task_id, data_clic):
     ops = [o['nome'] for o in get_cached_data("Operatori")]
     op_sel = st.multiselect("Seleziona Operatore", ops)
     nota = st.text_input("Nota log")
-    if st.button("Registra Log", type="primary", use_container_width=True):
+    c1, c2 = st.columns(2)
+    if c1.button("Registra Log", type="primary", use_container_width=True):
         if not ops_selezionati:
             st.warning("Seleziona almeno un operatore.")
         elif len(date_range) < 2:
@@ -310,7 +311,12 @@ def modal_gestione_clic(task_id, data_clic):
             except Exception as e:
                 st.error(f"Errore durante l'inserimento: {e}")
         
-        get_cached_data.clear(); st.rerun()
+        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+        
+    if c2.button("Annulla", use_container_width=True): 
+        get_cached_data.clear()
+        st.session_state.chart_key += 1
+        st.rerun()    
         
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
