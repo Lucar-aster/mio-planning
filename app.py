@@ -607,7 +607,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     y_labels_pulsanti = []
     custom_data_full = []
     date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    for i, (_, r) in enumerate(df_tasks_univoci.iterrows()):
+    
+    for i, (idx, r) in enumerate(df_tasks_univoci.iterrows()):
         e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
 
@@ -615,13 +616,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
         if vista_compressa:
             y_val = c_label_pulsanti
-            y_labels_pulsanti.append(y_val)
+        
         else:
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_val = (c_label_pulsanti, t_label_pulsanti)
-            y_labels_pulsanti.append(y_val)
             
-        custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
+        y_labels_pulsanti.append(y_val)
+            
+        cu
 
     fig.add_trace(go.Bar(
         base=date_range,
@@ -631,7 +633,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         width=0.9,
         offset= -0.45,
         name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0.2)"), # Trasparente
+        marker=dict(color="rgba(0,0,0,0.5)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
         customdata=[["LOG_FITTIZIO", r['task_id'], d.strftime("%Y-%m-%d")] for d in date_range]
