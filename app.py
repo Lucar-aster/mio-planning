@@ -623,7 +623,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
         y_labels_pulsanti.append(y_val)
             
-        cu
 
     fig.add_trace(go.Bar(
         base=date_range,
