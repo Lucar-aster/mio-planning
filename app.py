@@ -602,7 +602,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         c_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
 
         if vista_compressa:
-            y_labels_pulsanti.append(c_label)
+            y_labels_pulsanti.append(c_label_pulsanti)
         else:
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
