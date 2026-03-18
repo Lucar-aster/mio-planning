@@ -603,42 +603,44 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     }
     
     vista_compressa = st.session_state.vista_compressa
-    
+
     y_labels_pulsanti = []
     custom_data_full = []
-    date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
+# --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
+    # Creiamo segmenti solo per i giorni visibili (x_range) per non appesantire il browser
+    click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
+    ms_per_day = 24 * 3600 * 1000
     
-    for i, (idx, r) in enumerate(df_tasks_univoci.iterrows()):
-        e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
-        e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
+    all_bases = []
+    all_xs = []
+    all_ys = []
+    all_customdata = []
 
-        c_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
-
-        if vista_compressa:
-            y_val = c_label_pulsanti
+    for i, (_, r) in enumerate(df_tasks_univoci.iterrows()):
+        # Recuperiamo l'etichetta Y corrispondente a questa riga
+        y_val = y_labels_pulsanti[i]
         
-        else:
-            t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
-            y_val = (c_label_pulsanti, t_label_pulsanti)
-            
-        y_labels_pulsanti.append(y_val)
-            
+        for d in click_dates:
+            all_bases.append(d)
+            all_xs.append(ms_per_day)
+            all_ys.append(y_val)
+            # Salviamo la DATA ESATTA di questo specifico segmento nel customdata
+            all_customdata.append(["LOG_FITTIZIO", r['task_id'], d.date()])
 
+    # Aggiungiamo un'unica traccia che contiene tutti i segmenti cliccabili
     fig.add_trace(go.Bar(
-        base=date_range,
-        x=[pd.Timedelta(days=1)] * len(date_range),
-        y=y_val,
+        base=all_bases,
+        x=all_xs,
+        y=all_ys if vista_compressa else list(zip(*all_ys)),
         orientation='h',
         width=0.9,
-        offset= -0.45,
-        name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0.5)"), # Trasparente
+        offset=-0.45,
+        name="CLICK_GRID",
+        marker=dict(color="rgba(0,0,0,0)"), # Completamente trasparente
         showlegend=False,
         hoverinfo='none',
-        alignmentgroup="group1",
-        offsetgroup="group1",
-        customdata=[["LOG_FITTIZIO", r['task_id'], d.strftime("%Y-%m-%d")] for d in date_range]
-        ))
+        customdata=all_customdata
+    ))
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
@@ -706,14 +708,21 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
-    if selected and "selection" in selected and selected["selection"]["points"]:
-        dati_punto = selected["selection"]["points"][0].get("customdata", [])
-        if dati_punto and dati_punto[0] == "LOG_FITTIZIO":
-            task_id = dati_punto[1]
-            data_clic = dati_punto[2] # Ecco la tua data YYYY-MM-DD!
-            modal_gestione_clic(task_id, data_clic)
-        else:
-            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        p = selected["selection"]["points"]
+        
+        if p and "customdata" in p[0]:
+            d = p[0]["customdata"]
+            
+            # Se abbiamo cliccato sull'area vuota (LOG_FITTIZIO)
+            if d[0] == "LOG_FITTIZIO":
+                task_id_cliccato = d[1]
+                data_esatta_clic = d[2] # Recuperata dal terzo elemento del customdata
+                modal_gestione_clic(task_id=task_id_cliccato, data_clic=data_esatta_clic)
+            
+            # Se abbiamo cliccato su un log esistente
+            else:
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
