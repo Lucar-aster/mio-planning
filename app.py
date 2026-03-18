@@ -271,7 +271,7 @@ def modal_gestione_clic(task_id, data_clic):
         if commessa_info:
             new_cm_name = st.text_input("Nome Commessa", value=commessa_info.get('nome_commessa', ''))
             new_cm_status = st.selectbox("Stato Commessa", options=STATI_COMMESSA, index=STATI_COMMESSA.index(commessa_info.get('stato', STATI_COMMESSA[0])))
-        if st.button("Salva Modifiche", use_container_width=True):
+        if st.button("Salva Modifiche", width='stretch'):
             supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
             if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
             get_cached_data.clear(); st.rerun()
@@ -287,7 +287,7 @@ def modal_gestione_clic(task_id, data_clic):
     op_sel = st.multiselect("Seleziona Operatore", ops)
     nota = st.text_input("Nota log")
     c1, c2 = st.columns(2)
-    if c1.button("Registra Log", type="primary", use_container_width=True):
+    if c1.button("Registra Log", type="primary", width='stretch'):
         if not ops_selezionati:
             st.warning("Seleziona almeno un operatore.")
         elif len(date_range) < 2:
@@ -316,7 +316,7 @@ def modal_gestione_clic(task_id, data_clic):
         st.session_state.chart_key += 1
         st.switch_page("app.py")
         
-    if c2.button("Annulla", use_container_width=True): 
+    if c2.button("Annulla", width='stretch'): 
         get_cached_data.clear()
         st.empty()
         st.session_state.chart_key += 1
@@ -395,12 +395,12 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
         disabled=["id", "task_id"],
-        use_container_width=True, hide_index=True, key="editor_v10"
+        width='stretch', hide_index=True, key="editor_v10"
     )
 
     # --- 4. SALVATAGGIO ---
     c1, c2 = st.columns(2)
-    if c1.button("Salva Tutto", type="primary", use_container_width=True):
+    if c1.button("Salva Tutto", type="primary", width='stretch'):
         # A. Stato Task
         supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
         
@@ -422,7 +422,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         st.session_state.chart_key += 1
         st.rerun()
 
-    if c2.button("Annulla", use_container_width=True): 
+    if c2.button("Annulla", width='stretch'): 
         get_cached_data.clear()
         st.session_state.chart_key += 1
         st.rerun()
@@ -431,7 +431,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
 def modal_commessa():
     n = st.text_input("Nome Commessa")
     s = st.selectbox("Stato", options=STATI_COMMESSA, index=1)
-    if st.button("Salva", use_container_width=True):
+    if st.button("Salva", width='stretch'):
         supabase.table("Commesse").insert({"nome_commessa": n, "stato": s}).execute()
         get_cached_data.clear(); st.rerun()
 
@@ -441,7 +441,7 @@ def modal_task():
     n = st.text_input("Nome Task")
     c = st.selectbox("Commessa", options=list(cms.keys()))
     s = st.selectbox("Stato", options=STATI_TASK, index=1)
-    if st.button("Crea", use_container_width=True):
+    if st.button("Crea", width='stretch'):
         supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c], "stato": s}).execute()
         get_cached_data.clear(); st.rerun()
 
@@ -482,7 +482,7 @@ def modal_log():
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
     nota = st.text_area("Note")
     
-    if st.button("Registra Log", use_container_width=True, type="primary"):
+    if st.button("Registra Log", width='stretch', type="primary"):
         if not op_ms: st.error("⚠️ Seleziona operatore!"); return
         
         target_id = None
@@ -534,7 +534,7 @@ def modal_clona_avanzata():
             nuova_data_inizio = st.date_input("Nuova data di inizio", value=datetime.now().date())
             offset = (nuova_data_inizio - data_min_originale).days
     
-    if st.button("🚀 Avvia Clonazione", type="primary", use_container_width=True):
+    if st.button("🚀 Avvia Clonazione", type="primary", width='stretch'):
         old_cm_id = cms_dict[sel_cm_nome]
         res_cm = supabase.table("Commesse").insert({"nome_commessa": nuovo_nome, "stato": "Pianificata"}).execute()
         if res_cm.data:
@@ -696,7 +696,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
-    selected = st.plotly_chart(fig, use_container_width=True, key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
+    selected = st.plotly_chart(fig, width=None, key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
@@ -764,15 +764,15 @@ if l and tk and cm:
         # Riga 3: Pulsanti
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b4, b5, b6 = st.columns(6)
-        if b1.button("➕ Commessa", use_container_width=True): modal_commessa()
-        if b2.button("📑 Task", use_container_width=True): modal_task()
-        if b3.button("⏱️ Log", use_container_width=True): modal_log()
-        if b4.button("📍 Oggi", use_container_width=True): st.session_state.chart_key += 1; st.rerun()
+        if b1.button("➕ Commessa", width='stretch'): modal_commessa()
+        if b2.button("📑 Task", width='stretch'): modal_task()
+        if b3.button("⏱️ Log", width='stretch'): modal_log()
+        if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
         label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
-        if b5.button(label_view, use_container_width=True):
+        if b5.button(label_view, width='stretch'):
             st.session_state.vista_compressa = not st.session_state.vista_compressa
             st.rerun()
-        if b6.button("🖨️ Stampa PDF", use_container_width=True):st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
+        if b6.button("🖨️ Stampa PDF", width='stretch'):st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- FILTRAGGIO DATI ---
@@ -903,7 +903,7 @@ with tabs[2]: # DATI
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
-        edited_log = st.data_editor(df_edit, column_config={"id": None}, use_container_width=True, hide_index=True)
+        edited_log = st.data_editor(df_edit, column_config={"id": None}, width='stretch', hide_index=True)
         if st.button("Salva Modifiche Tabella"):
             for _, r in edited_log.iterrows():
                 supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "note": r['note']}).eq("id", r['id']).execute()
@@ -925,7 +925,7 @@ with tabs[3]: # SETUP
                     "id": None, 
                     "stato": st.column_config.SelectboxColumn("Stato", options=STATI_COMMESSA)
                 }, 
-                use_container_width=True, 
+                width='stretch', 
                 num_rows="dynamic",
                 key="setup_cm_editor_v4"
             )
@@ -950,7 +950,7 @@ with tabs[3]: # SETUP
             ed_op = st.data_editor(
                 df_op_setup,
                 column_config=config_colonne,
-                use_container_width=True,
+                width='stretch',
                 num_rows="dynamic",
                 hide_index=True,
                 key="setup_operatori_vfinal"
@@ -995,7 +995,7 @@ with s3:
                     ),
                     "stato": st.column_config.SelectboxColumn("Stato", options=STATI_TASK)
                 },
-                use_container_width=True,
+                width='stretch',
                 num_rows="dynamic",
                 hide_index=True,
                 key="editor_tk_string_v6"
