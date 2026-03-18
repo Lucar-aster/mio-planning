@@ -587,25 +587,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         width=0.9,
         offset= -0.45,
         name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0.2)"), # Trasparente
+        marker=dict(color="rgba(0,0,0,0.01)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
         customdata=custom_data_full
         ))
-        
-    fig.add_trace(go.Scatter(
-        x=[x_range[0]] * len(df_tasks_univoci), # Posizionato esattamente sul bordo sinistro
-        y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
-        mode='markers+text',
-        marker=dict(symbol='square', size=20, color='rgba(0,0,0,0.1)'), # Un quadratino grigio discreto
-        text="➕",
-        textposition="middle center",
-        name="Gestione",
-        hovertext="Clicca per Gestire Task / Nuovo Log",
-        hoverinfo="text",
-        showlegend=False,
-        customdata=[["BTN_GESTIONE", r['task_id']] for _, r in df_tasks_univoci.iterrows()]
-    ))
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
