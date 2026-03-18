@@ -314,6 +314,7 @@ def modal_gestione_clic(task_id, data_clic):
             except Exception as e:
                 st.error(f"Errore durante l'inserimento: {e}")
         
+        st.success("Dati aggiornati!")
         get_cached_data.clear()
         st.session_state.chart_key += 1
         st.rerun()
