@@ -312,15 +312,13 @@ def modal_gestione_clic(task_id, data_clic):
                 st.error(f"Errore durante l'inserimento: {e}")
         
         get_cached_data.clear()
-        st.empty()
         st.session_state.chart_key += 1
-        st.switch_page("app.py")
+        st.rerun()
         
     if c2.button("Annulla", width='stretch'): 
         get_cached_data.clear()
-        st.empty()
         st.session_state.chart_key += 1
-        st.switch_page("app.py") 
+        st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
@@ -696,7 +694,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
-    selected = st.plotly_chart(fig, width='stretch', key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
+    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
