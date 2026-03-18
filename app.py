@@ -696,7 +696,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
-    selected = st.plotly_chart(fig, width=None, key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
+    selected = st.plotly_chart(fig, width='stretch', key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         p = selected["selection"]["points"]
