@@ -632,7 +632,9 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
-        customdata=[["LOG_FITTIZIO", r['task_id'], d.date()] for d in date_range]
+        customdata=[["LOG_FITTIZIO", r['task_id'], d.date()] for d in date_range],
+        alignmentgroup="bg",
+        offsetgroup="bg"
         ))
             
     for op in df_merged['operatore'].unique():
