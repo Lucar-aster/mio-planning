@@ -698,7 +698,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             else:
                 data_punto = oggi_dt
         except Exception:
-        data_punto = oggi_dt
+            data_punto = oggi_dt
         
         if p and "customdata" in p[0]:
             d = p[0]["customdata"]
