@@ -719,7 +719,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
                 if "box" in sel and sel["box"]:
                 # Il box di un singolo clic ha x[0] e x[1] quasi identici
                     x_ms = sel["box"][0]["x"][0]
-                    data_clic = pd.to_datetime(x_ms, unit='ms').date()
+                    dt_clic = pd.to_datetime(x_ms, unit='ms')
+                    data_clic = dt_clic - pd.Timedelta(hours=2)).date()
                 else:
                     # Fallback se il box non è disponibile
                     data_clic = oggi_dt
