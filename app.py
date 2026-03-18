@@ -723,7 +723,10 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
             if d and d[0] == "LOG_FITTIZIO":
                 # d[1] è il task_id, d[2] è la DATA ESATTA del quadratino cliccato
-                modal_gestione_clic(task_id=d[1], data_clic=d[2])
+                data_str = d[2]
+                # 2. Convertiamola in oggetto DATE di Python
+                data_oggetto = pd.to_datetime(data_str).date()
+                modal_gestione_clic(task_id=d[1], data_clic=data_oggetto)
             
             elif d:
                 # Gestione log esistente (come nel tuo codice originale)
