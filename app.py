@@ -699,25 +699,25 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and selected["selection"]["points"]:
-    punto = selected["selection"]["points"][0]
-    dati = punto.get("customdata", [])
+        punto = selected["selection"]["points"][0]
+        dati = punto.get("customdata", [])
     
-    if dati and dati[0] == "LOG_FITTIZIO":
-        # 1. Recupero ID Task
-        task_id = dati[1]
+        if dati and dati[0] == "LOG_FITTIZIO":
+            # 1. Recupero ID Task
+            task_id = dati[1]
         
-        # 2. Recupero Data (Dallo Scatter 'x' è sempre la posizione temporale)
-        try:
-            # Plotly negli scatter restituisce x come stringa ISO o timestamp ms
-            data_raw = punto["x"]
-            data_clic = pd.to_datetime(data_raw).date()
-        except:
-            data_clic = oggi_dt
+            # 2. Recupero Data (Dallo Scatter 'x' è sempre la posizione temporale)
+            try:
+                # Plotly negli scatter restituisce x come stringa ISO o timestamp ms
+                data_raw = punto["x"]
+                data_clic = pd.to_datetime(data_raw).date()
+            except:
+                data_clic = oggi_dt
             
-        # 3. Chiamata Modale
-        modal_gestione_clic(task_id, data_clic)
-     else:
-        modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+            # 3. Chiamata Modale
+            modal_gestione_clic(task_id, data_clic)
+         else:
+            modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
