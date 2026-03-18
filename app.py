@@ -898,7 +898,7 @@ with tabs[1]: # CALENDARIO
             state = calendar(
                 events=cal_events,
                 options=cal_options,
-                key=f"gantt_chart_{st.session_state.chart_key}"
+                key=f"calendar_{st.session_state.chart_key}"
             )
             
             # Gestione click (stessa logica della tua modale)
