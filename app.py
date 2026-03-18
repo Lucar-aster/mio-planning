@@ -617,6 +617,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     n_r = len(unique_rows)
 
     fig.update_layout(
+        clickmode='event+select',
         height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
