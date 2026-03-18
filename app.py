@@ -576,7 +576,20 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         else:
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
-
+    
+    fig.add_trace(go.Bar(
+        base=["2000-01-01"] * len(df_tasks_univoci),
+        x=[36500 * 24 * 3600 * 1000] * len(df_tasks_univoci),
+        y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
+        orientation='h',
+        width=0.9,
+        name="LOG", # Nome dell'operatore fittizio
+        marker=dict(color="rgba(0,0,0,0.2)"), # Trasparente
+        showlegend=False,
+        hoverinfo='none',
+        customdata=custom_data_full
+        ))
+        
     fig.add_trace(go.Scatter(
         x=[x_range[0]] * len(df_tasks_univoci), # Posizionato esattamente sul bordo sinistro
         y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
@@ -657,45 +670,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, use_container_width=True, key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
 
-    st.write("Dati inviati dal clic:", selected["selection"])
-    
-    if selected and "selection" in selected:
-        sel = selected["selection"]
-            
-        # CASO 1: L'utente ha cliccato su una BARRA (Log esistente)
-        if sel.get("points"):
-            punto = sel["points"][0]
-            if "customdata" in punto:
-                d = punto["customdata"]
-                # Se il customdata ha la struttura del tuo log reale (es. 7-8 elementi)
-                if len(d) > 2: 
-                    modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
-                    st.stop() # Fermiamo l'esecuzione per evitare doppi trigger
-
-        # CASO 2: L'utente ha cliccato sul VUOTO (ma sulla riga di un Task)
-        # In molti browser/versioni, Plotly restituisce comunque l'asse Y del punto cliccato
-        if "box" in sel or sel.get("points"):
-            # Proviamo a recuperare le coordinate anche se non c'è una barra
-            # Se 'points' esiste ma non ha customdata, è un clic "di prossimità"
-            p = sel["points"][0] if sel.get("points") else None
-                
-            if p and "y" in p:
-                y_label = p["y"] # Es: ('Clienti', 'Task Verniciatura')
-                data_clic = pd.to_datetime(p["x"]).date()
-                    
-                # Estraiamo il nome del Task dalla label (che può essere tupla o stringa)
-                target_task_name = y_label[1] if isinstance(y_label, (list, tuple)) else y_label
-                    
-                # Cerchiamo l'ID nel tuo DataFrame originale
-                # Puliamo il nome dalle emoji per il confronto
-                task_id_trovato = None
-                for _, r in df_merged.iterrows():
-                    if r['Task'] in str(target_task_name):
-                        task_id_trovato = r['task_id']
-                        break
-                    
-                if task_id_trovato:
-                    modal_gestione_clic(task_id_trovato, data_clic)
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        p = selected["selection"]["points"]
+        if p and "customdata" in p[0]:
+            d = p[0]["customdata"]
+            if d[0] == "LOG_FITTIZIO":
+                modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(p[0]["x"]).date())
+            else:
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
