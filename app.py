@@ -1030,6 +1030,8 @@ with s3:
 with tabs[4]: # STATS
     logs = get_cached_data("Log_Tempi")
     df_l = pd.DataFrame(logs)
+    comm = get_cached_data("Commesse")
+    df_c = pd.DataFrame(comm)
     
     if df_l.empty:
         st.warning("Non ci sono abbastanza dati nei Log per generare statistiche.")
