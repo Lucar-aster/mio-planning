@@ -1028,8 +1028,72 @@ with s3:
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
 with tabs[4]: # STATS
-    if not df_p.empty:
+logs = get_cached_data("Log")
+    df_l = pd.DataFrame(logs)
+    
+    if df_l.empty:
+        st.warning("Non ci sono abbastanza dati nei Log per generare statistiche.")
+    else:
+        # Pre-processing: uniamo i log con i nomi degli operatori se necessario
+        # (Assumendo che in df_l ci sia 'operatore' o 'operatore_id')
+        
         c1, c2 = st.columns(2)
-        c1.bar_chart(df_p.groupby('Commessa').size())
-        c2.bar_chart(df_p.groupby('operatore').size())
-        st.metric("Totale Log", len(df_p))
+
+        with c1:
+            st.subheader("👥 Carico Lavoro per Operatore")
+            # Conteggio log per operatore
+            workload = df_l['operatore'].value_counts().reset_index()
+            workload.columns = ['Operatore', 'Numero Attività']
+            
+            fig_workload = go.Figure(go.Bar(
+                x=workload['Numero Attività'],
+                y=workload['Operatore'],
+                orientation='h',
+                marker_color='#3498db'
+            ))
+            fig_workload.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
+            st.plotly_chart(fig_workload, use_container_width=True)
+
+        with c2:
+            st.subheader("🏗️ Stato delle Commesse")
+            # Distribuzione degli stati nel DataFrame delle commesse (df_c)
+            if not df_c.empty:
+                stato_comm = df_c['stato'].value_counts().reset_index()
+                stato_comm.columns = ['Stato', 'Conteggio']
+                
+                fig_stato = go.Figure(go.Pie(
+                    labels=stato_comm['Stato'],
+                    values=stato_comm['Conteggio'],
+                    hole=.4,
+                    marker_colors=['#2ecc71', '#f1c40f', '#e67e22', '#3498db', '#e74c3c']
+                ))
+                fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
+                st.plotly_chart(fig_stato, use_container_width=True)
+
+        st.divider()
+
+        c3, c4 = st.columns([2, 1])
+
+        with c3:
+            st.subheader("📈 Intensità Lavorativa Mensile")
+            # Convertiamo le date dei log
+            df_l['data_log'] = pd.to_datetime(df_l['data_log'])
+            df_l['mese_anno'] = df_l['data_log'].dt.to_period('M').astype(str)
+            
+            timeline = df_l.groupby('mese_anno').size().reset_index(name='Conteggio')
+            
+            fig_line = go.Figure(go.Scatter(
+                x=timeline['mese_anno'],
+                y=timeline['Conteggio'],
+                mode='lines+markers',
+                line=dict(color='#9b59b6', width=3),
+                fill='tozeroy'
+            ))
+            fig_line.update_layout(height=300, margin=dict(l=0, r=0, t=30, b=0))
+            st.plotly_chart(fig_line, use_container_width=True)
+
+        with c4:
+            st.subheader("📝 Top Task Attivi")
+            # Mostriamo i task che hanno ricevuto più log recentemente
+            top_tasks = df_l['task_nome'].value_counts().head(5)
+            st.table(top_tasks)
