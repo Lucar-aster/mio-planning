@@ -1028,7 +1028,7 @@ with s3:
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
 with tabs[4]: # STATS
-logs = get_cached_data("Log")
+    logs = get_cached_data("Log")
     df_l = pd.DataFrame(logs)
     
     if df_l.empty:
