@@ -1038,6 +1038,9 @@ with tabs[4]: # STATS
     else:
         # Pre-processing: uniamo i log con i nomi degli operatori se necessario
         # (Assumendo che in df_l ci sia 'operatore' o 'operatore_id')
+        df_l['inizio'] = pd.to_datetime(df_l['inizio'])
+        df_l['fine'] = pd.to_datetime(df_l['fine'])
+        df_l['durata'] = (df_l['fine'] - df_l['inizio'])
         
         c1, c2 = st.columns(2)
 
