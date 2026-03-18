@@ -543,6 +543,7 @@ def get_it_date_label(dt, delta):
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
+    df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
 
     mappa_emoji = {
@@ -563,6 +564,33 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     vista_compressa = st.session_state.vista_compressa
 
+    y_labels_pulsanti = []
+    for _, r in df_tasks_univoci.iterrows():
+        e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+
+        c_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+
+        if vista_compressa:
+            y_labels_pulsanti.append(c_label)
+        else:
+            t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+            y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
+
+    fig.add_trace(go.Scatter(
+        x=[x_range[0]] * len(df_tasks_univoci), # Posizionato esattamente sul bordo sinistro
+        y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
+        mode='markers+text',
+        marker=dict(symbol='square', size=20, color='rgba(0,0,0,0.1)'), # Un quadratino grigio discreto
+        text="➕",
+        textposition="middle center",
+        name="Gestione",
+        hovertext="Clicca per Gestire Task / Nuovo Log",
+        hoverinfo="text",
+        showlegend=False,
+        customdata=[["BTN_GESTIONE", r['task_id']] for _, r in df_tasks_univoci.iterrows()]
+    ))
+            
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
@@ -627,7 +655,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
-    selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
+    selected = st.plotly_chart(fig, use_container_width=True, key="gantt_interattivo", on_select="rerun", config={'displayModeBar': False})
 
     st.write("Dati inviati dal clic:", selected["selection"])
     
