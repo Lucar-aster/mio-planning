@@ -708,9 +708,9 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         data_clic = None
         
         if box and len(box) > 0:
-        # Il box ha x[0] (inizio) e x[1] (fine). Prendiamo l'inizio del clic.
-        x_val = box[0]["x"][0]
-        data_clic = pd.to_datetime(x_val).date()
+            # Il box ha x[0] (inizio) e x[1] (fine). Prendiamo l'inizio del clic.
+            x_val = box[0]["x"][0]
+            data_clic = pd.to_datetime(x_val).date()
 
         # 2. TENTATIVO: Coordinata X del Punto (Se hai usato lo Scatter invisibile)
         elif points:
