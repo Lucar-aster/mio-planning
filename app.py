@@ -627,7 +627,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     fig.add_trace(go.Bar(
         base=date_range,
         x=[pd.Timedelta(days=1)] * len(date_range),
-        y=[y_val] * len(date_range),
+        y=[y_val],
         orientation='h',
         width=0.9,
         offset= -0.45,
