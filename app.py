@@ -618,16 +618,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
+    y_val=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti))
     
     fig.add_trace(go.Scatter(
-        base=["2000-01-01"] * len(df_tasks_univoci),
-        x=[36500 * 24 * 3600 * 1000] * len(df_tasks_univoci),
-        y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
-        orientation='h',
-        width=0.9,
-        offset= -0.45,
+        x=[x_range[0], x_range[1]],
+        y=[y_val, y_val],
+        mode='markers',
+        marker=dict(opacity=0, size=20)
         name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0)", size=20), # Trasparente
         showlegend=False,
         hoverinfo='none',
         customdata=custom_data_full
