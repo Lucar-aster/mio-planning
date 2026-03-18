@@ -618,23 +618,19 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
         custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
-    y_val=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti))
-    date_range = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
     
     fig.add_trace(go.Bar(
-        base=date_range,
-        x=[pd.Timedelta(days=1)] * len(date_range),
-        y=[y_val] * len(date_range),
+        base=["2000-01-01"] * len(df_tasks_univoci),
+        x=[36500 * 24 * 3600 * 1000] * len(df_tasks_univoci),
+        y=y_labels_pulsanti if st.session_state.vista_compressa else list(zip(*y_labels_pulsanti)),
         orientation='h',
         width=0.9,
         offset= -0.45,
         name="LOG", # Nome dell'operatore fittizio
-        marker=dict(color="rgba(0,0,0,0)"), # Trasparente
+        marker=dict(color="rgba(0,0,0,0.01)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
-        customdata=[["LOG_FITTIZIO", r['task_id'], d.date()] for d in date_range],
-        alignmentgroup="bg",
-        offsetgroup="bg"
+        customdata=custom_data_full
         ))
             
     for op in df_merged['operatore'].unique():
