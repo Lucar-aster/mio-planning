@@ -577,7 +577,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         else:
             t_label_pulsanti = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
             y_labels_pulsanti.append([c_label_pulsanti, t_label_pulsanti])
-        custom_data_full.append(["LOG_FITTIZIO", r['id']])
+        custom_data_full.append(["LOG_FITTIZIO", r['task_id']])
     
     fig.add_trace(go.Bar(
         base=["2000-01-01"] * len(df_tasks_univoci),
