@@ -629,6 +629,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, use_container_width=True, key=f"gantt_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
+    st.write(selected["selection"])
+    
     if selected and "selection" in selected:
         sel = selected["selection"]
             
