@@ -700,24 +700,37 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
-    if selected and "selection" in selected and "points" in selected["selection"]:
+    if selected and "selection" in selected:
         sel = selected["selection"]
+        points = sel.get("points", [])
+        box = sel.get("box", [])
+
+        data_clic = None
         
-        if sel["points"]:
-            punto = sel["points"][0]
-            dati = punto.get("customdata", [])
-        
-            if dati and dati[0] == "LOG_FITTIZIO":
-                if "box" in sel and sel["box"]:
-                    # Il box di un singolo clic ha x[0] e x[1] quasi identici
-                    x_ms = sel["box"][0]["x"][0]
-                    dt_clic = pd.to_datetime(x_ms, unit='ms')
-                    data_clic = (dt_clic - pd.Timedelta(hours=2)).date()
-                else:
-                    # Fallback se il box non è disponibile
-                    data_clic = oggi_dt
-                
-                modal_gestione_clic(dati[1], data_clic)
+        if box and len(box) > 0:
+        # Il box ha x[0] (inizio) e x[1] (fine). Prendiamo l'inizio del clic.
+        x_val = box[0]["x"][0]
+        data_clic = pd.to_datetime(x_val).date()
+
+        # 2. TENTATIVO: Coordinata X del Punto (Se hai usato lo Scatter invisibile)
+        elif points:
+            p = points[0]
+            if "x" in p:
+                data_clic = pd.to_datetime(p["x"]).date()
+            elif "base" in p:
+                # Se clicchi su una Barra, 'base' è la data di inizio
+                data_clic = pd.to_datetime(p["base"]).date()
+
+        # 3. TENTATIVO: Fallback finale se i precedenti falliscono
+        if data_clic is None:
+            data_clic = oggi_dt
+
+        # --- CHIAMATA ALLA MODALE ---
+        if points:
+            d = points[0].get("customdata", [])
+            if d and d[0] == "LOG_FITTIZIO":
+                # Ora passiamo data_clic che abbiamo estratto sopra
+                modal_gestione_clic(d[1], data_clic)
             else:
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
