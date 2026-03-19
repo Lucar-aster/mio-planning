@@ -341,7 +341,7 @@ def modal_gestione_clic(task_id, data_clic):
                 except Exception as e:
                     st.error(f"Errore durante l'inserimento: {e}")
         
-        if c2.button("Annulla", width='stretch'): 
+        if c2.button("Annulla", width='stretch', key="annulla_t"): 
             get_cached_data.clear()
             st.session_state.chart_key += 1
             st.rerun()
@@ -350,13 +350,14 @@ def modal_gestione_clic(task_id, data_clic):
         date_range_l = st.date_input(
             "Periodo Log", 
             value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
-            format="DD/MM/YYYY"
+            format="DD/MM/YYYY",
+            key="date_range_l"
         )
         ops = [o['nome'] for o in get_cached_data("Operatori")]
-        op_sel_l = st.multiselect("Seleziona Operatore", ops)
-        nota_l = st.text_input("Nota log")
+        op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
+        nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
-        if c1.button("Registra Log", type="primary", width='stretch'):
+        if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
             if not op_sel_l:
                 st.warning("Seleziona almeno un operatore.")
             elif len(date_range_l) < 2:
@@ -381,7 +382,7 @@ def modal_gestione_clic(task_id, data_clic):
                 except Exception as e:
                     st.error(f"Errore durante l'inserimento: {e}")
         
-        if c2.button("Annulla", width='stretch'): 
+        if c2.button("Annulla", width='stretch', key="annulla_l"): 
             get_cached_data.clear()
             st.session_state.chart_key += 1
             st.rerun()
