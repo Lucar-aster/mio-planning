@@ -316,12 +316,12 @@ def modal_gestione_clic(task_id, data_clic):
                     res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
                     curr_cm_id = res_cm.data[0]['id']
                 if not nome_nuovo_tk: st.error("Inserisci nome task"); return
-                    res_tk = supabase.table("Task").insert({
-                        "nome_task": nome_nuovo_tk, 
-                        "commessa_id": curr_cm_id, 
-                        "stato": STATI_TASK[1]
-                    }).execute()
-                    final_task_id = res_tk.data[0]['id']
+                res_tk = supabase.table("Task").insert({
+                    "nome_task": nome_nuovo_tk, 
+                    "commessa_id": curr_cm_id, 
+                    "stato": STATI_TASK[1]
+                }).execute()
+                final_task_id = res_tk.data[0]['id']
 
                 nuovi_log = []
                 for op in op_sel:
