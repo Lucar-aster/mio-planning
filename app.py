@@ -276,7 +276,76 @@ def modal_gestione_clic(task_id, data_clic):
             get_cached_data.clear()
             st.session_state.chart_key += 1
             st.rerun()
-            
+
+    with st.expander("📑 Nuovo Task con Log", expanded=False):
+        cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+        lista_nomi_cm = list(cms_dict.keys())
+        
+        # Pre-selezioniamo la commessa cliccata se esiste
+        idx_default = lista_nomi_cm.index(commessa_info['nome_commessa']) if commessa_info and commessa_info['nome_commessa'] in lista_nomi_cm else 0
+        
+        lista_scelte_cm = lista_nomi_cm + ["➕ Nuova Commessa..."]
+        sel_cm = st.selectbox("Commessa di destinazione", options=lista_scelte_cm, index=idx_default)
+        
+        nome_nuova_cm = ""
+        if sel_cm == "➕ Nuova Commessa...":
+            nome_nuova_cm = st.text_input("Nome della Nuova Commessa")
+        
+        nome_nuovo_tk = st.text_input("Nome del Nuovo Task")
+        target_task_id = "NEW"
+        ops = [o['nome'] for o in get_cached_data("Operatori")]
+        op_sel = st.multiselect("Seleziona Operatore", ops)
+        date_range = st.date_input(
+            "Periodo Log", 
+            value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
+            format="DD/MM/YYYY"
+        )
+        nota = st.text_input("Nota log")  
+        c1, c2 = st.columns(2)
+        if c1.button("Registra Task", type="primary", width='stretch'):
+            if not op_sel:
+                st.warning("Seleziona almeno un operatore.")
+            elif len(date_range) < 2:
+                st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
+            else:
+                data_inizio, data_fine = date_range
+                final_task_id = task_id
+                curr_cm_id = cms_dict.get(sel_cm)
+                if sel_cm == "➕ Nuova Commessa...":
+                    if not nome_nuova_cm: st.error("Inserisci nome commessa"); return
+                    res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
+                    curr_cm_id = res_cm.data[0]['id']
+                if not nome_nuovo_tk: st.error("Inserisci nome task"); return
+                    res_tk = supabase.table("Task").insert({
+                        "nome_task": nome_nuovo_tk, 
+                        "commessa_id": curr_cm_id, 
+                        "stato": STATI_TASK[1]
+                    }).execute()
+                    final_task_id = res_tk.data[0]['id']
+
+                nuovi_log = []
+                for op in op_sel:
+                    nuovi_log.append({
+                        "task_id": final_task_id,
+                        "operatore": op,
+                        "inizio": str(data_inizio),
+                        "fine": str(data_fine),
+                        "note": nota
+                    })
+                try:
+                    supabase.table("Log_Tempi").insert(nuovi_log).execute()
+                    st.success(f"Inserito Task e {len(op_sel)} log con successo!")
+                    get_cached_data.clear()
+                    st.session_state.chart_key += 1
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Errore durante l'inserimento: {e}")
+        
+        if c2.button("Annulla", width='stretch'): 
+            get_cached_data.clear()
+            st.session_state.chart_key += 1
+            st.rerun()
+        
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
         date_range = st.date_input(
             "Periodo Log", 
@@ -312,15 +381,10 @@ def modal_gestione_clic(task_id, data_clic):
                 except Exception as e:
                     st.error(f"Errore durante l'inserimento: {e}")
         
-            st.success("Dati aggiornati!")
+        if c2.button("Annulla", width='stretch'): 
             get_cached_data.clear()
             st.session_state.chart_key += 1
             st.rerun()
-        
-    if c2.button("Annulla", width='stretch'): 
-        get_cached_data.clear()
-        st.session_state.chart_key += 1
-        st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
