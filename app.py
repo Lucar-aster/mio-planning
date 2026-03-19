@@ -11,7 +11,7 @@ LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/ic
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
-STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "Completato 🟢", "Sospeso 🟠"]
+STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
 
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -662,6 +662,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     mappa_emoji_task = {
     "Pianificato 🔵": "🔵",
     "In corso 🟡": "🟡",
+    "In attesa ⚪": "⚪", 
     "Completato 🟢": "🟢",
     "Sospeso 🟠": "🟠",
     }
