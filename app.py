@@ -264,8 +264,8 @@ def modal_gestione_clic(task_id, data_clic):
         return
     commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
     
-    st.subheader("🏗️ Modifica Anagrafica")
-    with st.expander("Nomi e Stati", expanded=False):
+    st.subheader()
+    with st.expander(""🏗️ Modifica Anagrafica"", expanded=False):
         new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
         new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
         if commessa_info:
