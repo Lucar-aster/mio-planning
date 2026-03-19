@@ -323,7 +323,7 @@ def modal_gestione_clic(task_id, data_clic):
                 }).execute()
                 final_task_id = res_tk.data[0]['id']
 
-                nuovi_log = []
+                nuovi_log_t = []
                 for op in op_sel_t:
                     nuovi_log.append({
                         "task_id": final_task_id,
@@ -333,8 +333,8 @@ def modal_gestione_clic(task_id, data_clic):
                         "note": nota_t
                     })
                 try:
-                    supabase.table("Log_Tempi").insert(nuovi_log).execute()
-                    st.success(f"Inserito Task e {len(op_sel)} log con successo!")
+                    supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
+                    st.success(f"Inserito Task e {len(op_sel_t)} log con successo!")
                     get_cached_data.clear()
                     st.session_state.chart_key += 1
                     st.rerun()
@@ -347,34 +347,34 @@ def modal_gestione_clic(task_id, data_clic):
             st.rerun()
         
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
-        date_range = st.date_input(
+        date_range_l = st.date_input(
             "Periodo Log", 
             value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
             format="DD/MM/YYYY"
         )
         ops = [o['nome'] for o in get_cached_data("Operatori")]
-        op_sel = st.multiselect("Seleziona Operatore", ops)
-        nota = st.text_input("Nota log")
+        op_sel_l = st.multiselect("Seleziona Operatore", ops)
+        nota_l = st.text_input("Nota log")
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch'):
-            if not op_sel:
+            if not op_sel_l:
                 st.warning("Seleziona almeno un operatore.")
-            elif len(date_range) < 2:
+            elif len(date_range_l) < 2:
                 st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
-                data_inizio, data_fine = date_range
-                nuovi_log = []
-                for op in op_sel:
+                data_inizio_l, data_fine_l = date_range_l
+                nuovi_log_l = []
+                for op in op_sel_l:
                     nuovi_log.append({
                         "task_id": task_id,
                         "operatore": op,
-                        "inizio": str(data_inizio),
-                        "fine": str(data_fine),
-                        "note": nota
+                        "inizio": str(data_inizio_l),
+                        "fine": str(data_fine_l),
+                        "note": nota_l
                     })
                 try:
-                    supabase.table("Log_Tempi").insert(nuovi_log).execute()
-                    st.success(f"Inseriti {len(op_sel)} log con successo!")
+                    supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
+                    st.success(f"Inseriti {len(op_sel_l)} log con successo!")
                     get_cached_data.clear()
                     st.session_state.chart_key += 1
                     st.rerun()
