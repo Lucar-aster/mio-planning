@@ -264,18 +264,18 @@ def modal_gestione_clic(task_id, data_clic):
         return
     commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
     
-    st.expander("🏗️ Modifica Anagrafica", expanded=False)
-    new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
-    new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
-    if commessa_info:
-        new_cm_name = st.text_input("Nome Commessa", value=commessa_info.get('nome_commessa', ''))
-        new_cm_status = st.selectbox("Stato Commessa", options=STATI_COMMESSA, index=STATI_COMMESSA.index(commessa_info.get('stato', STATI_COMMESSA[0])))
-    if st.button("Salva Modifiche", width='stretch'):
-        supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
-        if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
-        get_cached_data.clear()
-        st.session_state.chart_key += 1
-        st.rerun()
+    with st.expander("🏗️ Modifica Anagrafica", expanded=False):
+        new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
+        new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
+        if commessa_info:
+            new_cm_name = st.text_input("Nome Commessa", value=commessa_info.get('nome_commessa', ''))
+            new_cm_status = st.selectbox("Stato Commessa", options=STATI_COMMESSA, index=STATI_COMMESSA.index(commessa_info.get('stato', STATI_COMMESSA[0])))
+        if st.button("Salva Modifiche", width='stretch'):
+            supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
+            if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
+            get_cached_data.clear()
+            st.session_state.chart_key += 1
+            st.rerun()
             
     st.divider()
     st.subheader(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}")
