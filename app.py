@@ -294,21 +294,21 @@ def modal_gestione_clic(task_id, data_clic):
         nome_nuovo_tk = st.text_input("Nome del Nuovo Task")
         target_task_id = "NEW"
         ops = [o['nome'] for o in get_cached_data("Operatori")]
-        op_sel = st.multiselect("Seleziona Operatore", ops)
-        date_range = st.date_input(
+        op_sel_t = st.multiselect("Seleziona Operatore", ops)
+        date_range_t = st.date_input(
             "Periodo Log", 
             value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
             format="DD/MM/YYYY"
         )
-        nota = st.text_input("Nota log")  
+        nota_t = st.text_input("Nota log")  
         c1, c2 = st.columns(2)
         if c1.button("Registra Task", type="primary", width='stretch'):
-            if not op_sel:
+            if not op_sel_t:
                 st.warning("Seleziona almeno un operatore.")
-            elif len(date_range) < 2:
+            elif len(date_range_t) < 2:
                 st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
-                data_inizio, data_fine = date_range
+                data_inizio_t, data_fine_t = date_range_t
                 final_task_id = task_id
                 curr_cm_id = cms_dict.get(sel_cm)
                 if sel_cm == "➕ Nuova Commessa...":
@@ -324,13 +324,13 @@ def modal_gestione_clic(task_id, data_clic):
                 final_task_id = res_tk.data[0]['id']
 
                 nuovi_log = []
-                for op in op_sel:
+                for op in op_sel_t:
                     nuovi_log.append({
                         "task_id": final_task_id,
                         "operatore": op,
-                        "inizio": str(data_inizio),
-                        "fine": str(data_fine),
-                        "note": nota
+                        "inizio": str(data_inizio_t),
+                        "fine": str(data_fine_t),
+                        "note": nota_t
                     })
                 try:
                     supabase.table("Log_Tempi").insert(nuovi_log).execute()
