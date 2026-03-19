@@ -811,7 +811,7 @@ if l and tk and cm:
     df['Durata_ms'] = ((df['Fine'] + pd.Timedelta(days=1)) - df['Inizio']).dt.total_seconds() * 1000
 
     # --- AREA CONTROLLI (FIXED HEADER) ---
-    with st.container():
+    with st.expander():
         st.markdown('<div class="fixed-header">', unsafe_allow_html=True)
         # Riga 1: Progetti, Operatori, Scala
         c1, c2, c3 = st.columns([3, 3, 4])
