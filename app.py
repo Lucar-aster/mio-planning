@@ -325,7 +325,7 @@ def modal_gestione_clic(task_id, data_clic):
 
                 nuovi_log_t = []
                 for op in op_sel_t:
-                    nuovi_log.append({
+                    nuovi_log_t.append({
                         "task_id": final_task_id,
                         "operatore": op,
                         "inizio": str(data_inizio_t),
@@ -366,7 +366,7 @@ def modal_gestione_clic(task_id, data_clic):
                 data_inizio_l, data_fine_l = date_range_l
                 nuovi_log_l = []
                 for op in op_sel_l:
-                    nuovi_log.append({
+                    nuovi_log_l.append({
                         "task_id": task_id,
                         "operatore": op,
                         "inizio": str(data_inizio_l),
