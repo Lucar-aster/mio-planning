@@ -812,7 +812,6 @@ if l and tk and cm:
 
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
-        st.markdown('<div class="fixed-header">', unsafe_allow_html=True)
         # Riga 1: Progetti, Operatori, Scala
         c1, c2, c3 = st.columns([3, 3, 4])
         f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()), label_visibility="collapsed", placeholder="Progetti")
