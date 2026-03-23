@@ -293,6 +293,7 @@ def modal_gestione_clic(task_id, data_clic):
         
         nome_nuovo_tk = st.text_input("Nome del Nuovo Task")
         target_task_id = "NEW"
+        new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat")
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_t = st.multiselect("Seleziona Operatore", ops)
         date_range_t = st.date_input(
@@ -319,7 +320,7 @@ def modal_gestione_clic(task_id, data_clic):
                 res_tk = supabase.table("Task").insert({
                     "nome_task": nome_nuovo_tk, 
                     "commessa_id": curr_cm_id, 
-                    "stato": STATI_TASK[1]
+                    "stato": new_tk_status_1
                 }).execute()
                 final_task_id = res_tk.data[0]['id']
 
