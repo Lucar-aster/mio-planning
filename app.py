@@ -690,7 +690,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if vista_compressa:
             y_val = c_label
         else:
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 20))
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 30))
             y_val = (c_label, t_label) # Tupla per multi-indice
         
         y_labels_pulsanti.append(y_val)
@@ -728,7 +728,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             if vista_compressa:
                 y_labels.append(c_label)
             else:
-                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 20))
+                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
                 y_labels.append([c_label, t_label])
 
         
