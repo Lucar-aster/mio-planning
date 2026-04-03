@@ -360,7 +360,7 @@ def modal_gestione_clic(task_id, data_clic):
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
-            supabase.table("Task").update("stato": new_tk_status_2}).eq("id", task_id).execute()
+            supabase.table("Task").update({"stato": new_tk_status_2}).eq("id", task_id).execute()
             if not op_sel_l:
                 st.warning("Seleziona almeno un operatore.")
             elif len(date_range_l) < 2:
