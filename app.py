@@ -356,9 +356,11 @@ def modal_gestione_clic(task_id, data_clic):
         )
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
+        new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
+            supabase.table("Task").update("stato": new_tk_status_2}).eq("id", task_id).execute()
             if not op_sel_l:
                 st.warning("Seleziona almeno un operatore.")
             elif len(date_range_l) < 2:
