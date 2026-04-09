@@ -1019,23 +1019,25 @@ with tabs[2]: # NUOVA TAB AGENDA
 
         # Opzioni specifiche per la vista Agenda Verticale
         agenda_options = {
-            "initialView": "timeGridDay", # Vista verticale oraria
+            "initialView": "listDay", # Vista verticale oraria
             "headerToolbar": {
                 "left": "prev,next today",
                 "center": "title",
-                "right": "timeGridDay,timeGridWeek"
+                "right": "listDay,listWeek,listMonth"
             },
-            "slotMinTime": "07:00:00", # La giornata inizia alle 7
-            "slotMaxTime": "20:00:00", # La giornata finisce alle 20
-            "allDaySlot": False,
-            "slotDuration": "00:30:00",
-            "selectable": True,
-            "height": 800
+            "buttonText": {
+                "listDay": "Giorno",
+                "listWeek": "Settimana",
+                "listMonth": "Mese"
+            },
+            "noEventsContent": "Nessun task per questa data",
+            "locale": "it", # Se vuoi i testi in italiano
+            "height": 700
         }
 
         calendar(
             events=cal_events_agenda,
-            options=agenda_options,
+            options=list_options,
             key="calendar_agenda_vertical" # KEY UNICA per non andare in conflitto con l'altra tab
         )
         
