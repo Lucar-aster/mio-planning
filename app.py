@@ -1037,7 +1037,7 @@ with tabs[2]: # NUOVA TAB AGENDA
 
         calendar(
             events=cal_events_agenda,
-            options=list_options,
+            options=agenda_options,
             key="calendar_agenda_vertical" # KEY UNICA per non andare in conflitto con l'altra tab
         )
         
