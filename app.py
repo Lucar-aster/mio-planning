@@ -880,7 +880,7 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
         (df_p['fine'] >= start_search)
     ].copy()
     
-tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: # TIMELINE
     if not df.empty:
@@ -988,8 +988,58 @@ with tabs[1]: # CALENDARIO
     else:
         st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
+with tabs[2]: # NUOVA TAB AGENDA
+    if not df.empty:
+        st.subheader("Diario Giornaliero Verticale")
+        
+        cal_events_agenda = []
+        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
+        
+        for _, row in df_p.iterrows():
+            try:
+                # PULIZIA STRINGHE (Essenziale per evitare JSON.parse error)
+                clean_title = str(f"{row['operatore']} | {row['Task']}").replace('"', "'").replace('\n', ' ')
+                clean_note = str(row.get('note', '')).replace('"', "'").replace('\n', ' ')
 
-with tabs[2]: # DATI
+                # Per l'agenda usiamo il formato ISO completo con l'ora
+                # Assicurati che row["Inizio"] sia un oggetto datetime
+                s_date = row["Inizio"].strftime("%Y-%m-%dT%H:%M:%S")
+                e_date = row["Fine"].strftime("%Y-%m-%dT%H:%M:%S")
+                
+                cal_events_agenda.append({
+                    "id": str(row["id"]),
+                    "title": clean_title,
+                    "start": s_date,
+                    "end": e_date,
+                    "color": color_map.get(row["operatore"], "#3D85C6"),
+                    "extendedProps": {"nota": clean_note}
+                })
+            except:
+                continue
+
+        # Opzioni specifiche per la vista Agenda Verticale
+        agenda_options = {
+            "initialView": "timeGridDay", # Vista verticale oraria
+            "headerToolbar": {
+                "left": "prev,next today",
+                "center": "title",
+                "right": "timeGridDay,timeGridWeek"
+            },
+            "slotMinTime": "07:00:00", # La giornata inizia alle 7
+            "slotMaxTime": "20:00:00", # La giornata finisce alle 20
+            "allDaySlot": False,
+            "slotDuration": "00:30:00",
+            "selectable": True,
+            "height": 800
+        }
+
+        calendar(
+            events=cal_events_agenda,
+            options=agenda_options,
+            key="calendar_agenda_vertical" # KEY UNICA per non andare in conflitto con l'altra tab
+        )
+        
+with tabs[3]: # DATI
     st.header("📋 Gestione Log Esistenti")
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
@@ -1001,7 +1051,7 @@ with tabs[2]: # DATI
                 supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "note": r['note']}).eq("id", r['id']).execute()
             get_cached_data.clear(); st.rerun()
 
-with tabs[3]: # SETUP
+with tabs[4]: # SETUP
     st.header("⚙️ Setup di Sistema")
     s1, s2, s3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
     
@@ -1103,7 +1153,7 @@ with s3:
                 
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
-with tabs[4]: # STATS
+with tabs[5]: # STATS
     logs = get_cached_data("Log_Tempi")
     df_l = pd.DataFrame(logs)
     comm = get_cached_data("Commesse")
