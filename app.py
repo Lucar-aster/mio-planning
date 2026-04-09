@@ -900,6 +900,11 @@ with tabs[1]: # CALENDARIO
         
         for _, row in df_p.iterrows():
             try:
+                # TRASFORMAZIONE E PULIZIA TESTO PER EVITARE ERRORE JSON.PARSE
+                raw_title = f"{row['operatore']} | {row['Task']}"
+                clean_title = str(raw_title).replace('"', "'").replace('\n', ' ').replace('\r', '')
+                raw_note = row.get('note', '')
+                clean_note = str(raw_note).replace('"', "'").replace('\n', ' ').replace('\r', '')
                 # Trasformiamo in stringa pura YYYY-MM-DD
                 s_date = row["Inizio"].strftime("%Y-%m-%d")
                 # FullCalendar vuole la fine esclusiva (+1 giorno)
@@ -907,12 +912,12 @@ with tabs[1]: # CALENDARIO
                 
                 cal_events.append({
                     "id": str(row["id"]),
-                    "title": f"{row['operatore']} | {row['Task']}",
+                    "title": clean_title,
                     "start": s_date,
                     "end": e_date,
                     "color": color_map.get(row["operatore"], "#3D85C6"),
                     "allDay": True,
-                    "extendedProps": {"nota": row.get('note', '')}
+                    "extendedProps": {"nota": clean_note}
                 })
             except:
                 continue
