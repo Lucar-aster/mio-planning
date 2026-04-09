@@ -988,9 +988,9 @@ with tabs[1]: # CALENDARIO
     else:
         st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
-with tabs[2]: # NUOVA TAB AGENDA
+with tabs[2]: # AGENDA
     if not df.empty:
-        st.subheader("Diario Giornaliero Verticale")
+        st.subheader("Diario Verticale")
         
         cal_events_agenda = []
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
@@ -1032,6 +1032,8 @@ with tabs[2]: # NUOVA TAB AGENDA
             },
             "noEventsContent": "Nessun task per questa data",
             "locale": "it", # Se vuoi i testi in italiano
+            "height": "auto",  # <--- Rimuove la scrollbar e adatta l'altezza al contenuto
+            "handleWindowResize": True,
             "height": 700
         }
 
