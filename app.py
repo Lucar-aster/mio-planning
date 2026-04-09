@@ -1033,6 +1033,7 @@ with tabs[2]: # AGENDA
             "noEventsContent": "Nessun task per questa data",
             "locale": "it", # Se vuoi i testi in italiano
             "height": "auto",  # <--- Rimuove la scrollbar e adatta l'altezza al contenuto
+            "contentHeight": "auto",
             "handleWindowResize": True,
             "height": 700
         }
