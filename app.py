@@ -1048,6 +1048,10 @@ with tabs[2]: # AGENDA
                     height: auto !important;
                     min-height: 100% !important;
                 }
+                .fc-view-harness {
+                    height: auto !important;
+                    min-height: 400px; /* Altezza minima per non apparire schiacciato */
+                }
             """
         )
         
