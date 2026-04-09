@@ -1048,6 +1048,7 @@ with tabs[2]: # AGENDA
                     height: auto !important;
                     min-height: 100% !important;
                 }
+            """
         )
         
 with tabs[3]: # DATI
