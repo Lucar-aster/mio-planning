@@ -1041,7 +1041,13 @@ with tabs[2]: # AGENDA
         calendar(
             events=cal_events_agenda,
             options=agenda_options,
-            key="calendar_agenda_vertical" # KEY UNICA per non andare in conflitto con l'altra tab
+            key="calendar_agenda_vertical",
+            custom_css="""
+                /* 1. Forza il contenitore principale a non avere limiti di altezza */
+                .fc {
+                    height: auto !important;
+                    min-height: 100% !important;
+                }
         )
         
 with tabs[3]: # DATI
