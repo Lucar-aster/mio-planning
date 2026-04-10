@@ -1032,7 +1032,7 @@ with tabs[2]: # AGENDA
                 "listMonth": "Mese"
             },
             "noEventsContent": "Nessun task per questa data",
-            "displayEventTime": false,
+            "displayEventTime": False,
             "locale": "it", # Se vuoi i testi in italiano
             "height": 1000,  # <--- Rimuove la scrollbar e adatta l'altezza al contenuto
         }
