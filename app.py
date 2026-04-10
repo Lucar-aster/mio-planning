@@ -991,7 +991,7 @@ with tabs[1]: # CALENDARIO
 with tabs[2]: # AGENDA
     
     if not df.empty:
-        st.subheader("Diario Verticale")
+        st.subheader("Agenda Verticale")
         
         cal_events_agenda = []
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
@@ -999,7 +999,7 @@ with tabs[2]: # AGENDA
         for _, row in df_p.iterrows():
             try:
                 # PULIZIA STRINGHE (Essenziale per evitare JSON.parse error)
-                clean_title = str(f"{row['operatore']} | {row['Commessa']} | {row['Task']}").replace('"', "'").replace('\n', ' ')
+                clean_title = str(f"{row['operatore']} | {row['Commessa']} | {row['Task']} - {row['note']}").replace('"', "'").replace('\n', ' ')
                 clean_note = str(row.get('note', '')).replace('"', "'").replace('\n', ' ')
 
                 # Per l'agenda usiamo il formato ISO completo con l'ora
