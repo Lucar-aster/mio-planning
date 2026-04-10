@@ -989,14 +989,7 @@ with tabs[1]: # CALENDARIO
         st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
 with tabs[2]: # AGENDA
-    st.markdown("""
-        <style>
-            iframe[title="streamlit_calendar.calendar"] {
-                height: auto !important;
-                min-height: 800px; /* Regola questo valore in base al carico medio */
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    
     if not df.empty:
         st.subheader("Diario Verticale")
         
@@ -1043,28 +1036,12 @@ with tabs[2]: # AGENDA
             "height": "auto",  # <--- Rimuove la scrollbar e adatta l'altezza al contenuto
             "contentHeight": "auto",
             "handleWindowResize": True,
-            "height": 700
         }
 
         calendar(
             events=cal_events_agenda,
             options=agenda_options,
             key="calendar_agenda_vertical",
-            custom_css="""
-                /* 1. Forza il contenitore principale a non avere limiti di altezza */
-                .fc {
-                    height: auto !important;
-                    min-height: 100% !important;
-                }
-                .fc-scroller {
-                    height: auto !important;
-                    overflow: visible !important;
-                }
-                .fc-view-harness {
-                    height: auto !important;
-                    min-height: 400px; /* Altezza minima per non apparire schiacciato */
-                }
-            """
         )
         
 with tabs[3]: # DATI
