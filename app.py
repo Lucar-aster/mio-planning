@@ -989,6 +989,14 @@ with tabs[1]: # CALENDARIO
         st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
 with tabs[2]: # AGENDA
+    st.markdown("""
+        <style>
+            iframe[title="streamlit_calendar.calendar"] {
+                height: auto !important;
+                min-height: 800px; /* Regola questo valore in base al carico medio */
+            }
+        </style>
+    """, unsafe_allow_html=True)
     if not df.empty:
         st.subheader("Diario Verticale")
         
