@@ -880,7 +880,7 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
         (df_p['fine'] >= start_search)
     ].copy()
     
-tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
+tabs = st.tabs(["📊 Timeline", "📊 Timeline Analitica", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: # TIMELINE
     if not df.empty:
@@ -890,8 +890,98 @@ with tabs[0]: # TIMELINE
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
+        
+with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
+    if not df.empty:
+        st.subheader("📊 Timeline Analitica")
+        
+        # 1. Preparazione Dati (Usiamo df_p come nel tuo codice)
+        df_det = df_p.copy()
+        
+        # Mappe emoji esistenti nel tuo codice
+        mappa_emoji = {"Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡", "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"}
+        mappa_emoji_task = {"Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", "Completato 🟢": "🟢", "Sospeso 🟠": "🟠"}
+        
+        # Creiamo un set di dati "esploso": ogni riga di df_p diventa una riga Y unica
+        fig_det = go.Figure()
+        
+        # Colori operatori (come nel tuo frammento)
+        color_map_ops = {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}
+        
+        # Ordiniamo per Commessa e Task per tenere i log vicini
+        df_det = df_det.sort_values(by=['Commessa', 'Task', 'Inizio'])
 
-with tabs[1]: # CALENDARIO
+        y_labels_unici = []
+        
+        for i, (_, row) in enumerate(df_det.iterrows()):
+            e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+            e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+            
+            # Etichetta unica per riga: Commessa + Task + Operatore + ID nascosto (per forzare righe separate)
+            y_label = (
+                f"{e_cm} {row['Commessa']}<br>"
+                f"{e_tk} {row['Task']} | 👤 {row['operatore']}"
+                f"<span style='display:none'>_{row['id']}</span>"
+            )
+            y_labels_unici.append(y_label)
+            
+            # Calcolo durata in millisecondi (come nel tuo codice originale)
+            durata_ms = (row['Fine'] - row['Inizio']).total_seconds() * 1000
+            
+            # Aggiunta della Barra dell'attività
+            fig_det.add_trace(go.Bar(
+                base=[row['Inizio']],
+                x=[durata_ms],
+                y=[y_label],
+                orientation='h',
+                marker=dict(color=color_map_ops.get(row['operatore'], "#8dbad2"), cornerradius=10),
+                width=0.4,
+                showlegend=False,
+                customdata=[[row['id'], row['operatore'], row['Inizio'], row['Fine'], row['Commessa'], row['Task'], row.get('note', ''), row['task_id']]],
+                hovertemplate="<b>%{customdata[4]}</b><br>%{customdata[5]}<br>Log: %{customdata[6]}<extra></extra>"
+            ))
+            
+            # Aggiunta del TESTO della nota a destra della barra
+            nota_testo = str(row.get('note', '')).strip()
+            if nota_testo and nota_testo != 'None':
+                short_note = f" ➜ {nota_testo[:80]}..." if len(nota_testo) > 80 else f" ➜ {nota_testo}"
+                fig_det.add_annotation(
+                    x=row['Fine'],
+                    y=y_label,
+                    text=f"<i>{short_note}</i>",
+                    showarrow=False,
+                    xanchor="left",
+                    font=dict(size=11, color="#555"),
+                    xshift=10
+                )
+
+        # Configurazione Layout (coerente con il tuo stile)
+        fig_det.update_layout(
+            height=300 + (len(df_det) * 45), # Altezza dinamica per riga
+            margin=dict(l=10, r=250, t=60, b=0), # Margine destro ampio per i log
+            xaxis=dict(
+                type="date", 
+                side="top", 
+                range=x_range, # Usa x_range calcolato per tabs[0]
+                tickfont=dict(size=10)
+            ),
+            yaxis=dict(
+                autorange="reversed",
+                showgrid=True,
+                showdividers=True,
+                fixedrange=True
+            ),
+            dragmode='pan'
+        )
+
+        # Linea del giorno attuale (come nel tuo codice)
+        fig_det.add_vline(x=datetime.now().timestamp() * 1000, line_width=2, line_color="red", line_dash="dash")
+
+        # Visualizzazione
+        st.plotly_chart(fig_det, use_container_width=True, config={'displayModeBar': False})
+
+
+with tabs[2]: # CALENDARIO
     if not df.empty:
                
         # 1. Preparazione Eventi (Formato ISO rigoroso)
@@ -988,7 +1078,7 @@ with tabs[1]: # CALENDARIO
     else:
         st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
-with tabs[2]: # AGENDA
+with tabs[3]: # AGENDA
     
     if not df.empty:
         st.subheader("Agenda Verticale")
@@ -1043,7 +1133,7 @@ with tabs[2]: # AGENDA
             key="calendar_agenda_vertical",
         )
         
-with tabs[3]: # DATI
+with tabs[4]: # DATI
     st.header("📋 Gestione Log Esistenti")
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
@@ -1055,7 +1145,7 @@ with tabs[3]: # DATI
                 supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "note": r['note']}).eq("id", r['id']).execute()
             get_cached_data.clear(); st.rerun()
 
-with tabs[4]: # SETUP
+with tabs[5]: # SETUP
     st.header("⚙️ Setup di Sistema")
     s1, s2, s3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
     
@@ -1157,7 +1247,7 @@ with s3:
                 
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
-with tabs[5]: # STATS
+with tabs[6]: # STATS
     logs = get_cached_data("Log_Tempi")
     df_l = pd.DataFrame(logs)
     comm = get_cached_data("Commesse")
