@@ -970,7 +970,7 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
                 
                 # Tupla a 3 livelli (Commessa, Task, ID_Log_Nascosto)
                 # L'ID_Log forza Plotly a creare righe separate per ogni log
-                log_id_hidden = f"<span style='display:none'>{row['id']}</span>"
+                log_id_hidden = f"Log #{row['id'][-4:]}"
                 y_val = (c_label, t_label, log_id_hidden)
                 
                 y_labels_tuple.append(y_val)
@@ -988,11 +988,11 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
             fig_det.add_trace(go.Bar(
                 base=basi,
                 x=durate,
-                y=list(zip(*y_labels_tuple)),
+                y=list(zip(*y_labels_tuple)) if y_labels_tuple else [],
                 orientation='h',
                 name=op,
                 marker=dict(color=color_map_ops.get(op, "#8dbad2"), cornerradius=12),
-                width=0.6,
+                width=0.4,
                 customdata=custom_datas,
                 hovertemplate="<b>%{customdata[4]}</b><br>%{customdata[5]}<br>%{customdata[1]}<extra></extra>"
             ))
@@ -1026,7 +1026,7 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
             ),
             yaxis=dict(
                 autorange="reversed", showgrid=True, showdividers=True, 
-                fixedrange=True, tickson="boundaries"
+                fixedrange=True, tickson="boundaries", type='category'
             ),
             showlegend=False
         )
