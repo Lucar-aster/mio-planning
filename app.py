@@ -969,8 +969,9 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
                 
                 # Tupla a 3 livelli (Commessa, Task, ID_Log_Nascosto)
+                str_id = str(row['id'])
                 # L'ID_Log forza Plotly a creare righe separate per ogni log
-                log_id_hidden = f"Log #{row['id'][-4:]}"
+                log_id_hidden = f"Log #{str_id[-4:]}"
                 y_val = (c_label, t_label, log_id_hidden)
                 
                 y_labels_tuple.append(y_val)
