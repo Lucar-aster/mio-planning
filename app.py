@@ -895,90 +895,115 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
     if not df.empty:
         st.subheader("📊 Timeline Analitica")
         
-        # 1. Preparazione Dati (Usiamo df_p come nel tuo codice)
-        df_det = df_p.copy()
-        
-        # Mappe emoji esistenti nel tuo codice
-        mappa_emoji = {"Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡", "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"}
-        mappa_emoji_task = {"Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", "Completato 🟢": "🟢", "Sospeso 🟠": "🟠"}
-        
-        # Creiamo un set di dati "esploso": ogni riga di df_p diventa una riga Y unica
-        fig_det = go.Figure()
-        
-        # Colori operatori (come nel tuo frammento)
+        # 1. Preparazione dati e mappe (identiche al tuo codice)
+        df_merged = merge_consecutive_logs(df_p) # Usiamo la tua funzione di merge se necessario
         color_map_ops = {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}
         
-        # Ordiniamo per Commessa e Task per tenere i log vicini
-        df_det = df_det.sort_values(by=['Commessa', 'Task', 'Inizio'])
+        fig_det = go.Figure()
 
-        y_labels_unici = []
-        
-        for i, (_, row) in enumerate(df_det.iterrows()):
-            e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-            e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+        mappa_emoji = {
+            "Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡",
+            "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"
+        }
+        mappa_emoji_task = {
+            "Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", 
+            "Completato 🟢": "🟢", "Sospeso 🟠": "🟠",
+        }
+
+        # 2. Costruzione delle tracce (Una riga per ogni LOG)
+        # Ordiniamo per mantenere la gerarchia visiva
+        df_ordered = df_merged.sort_values(by=['Commessa', 'Task', 'Inizio'])
+
+        for op in df_ordered['operatore'].unique():
+            df_op = df_ordered[df_ordered['operatore'] == op]
             
-            # Etichetta unica per riga: Commessa + Task + Operatore + ID nascosto (per forzare righe separate)
-            y_label = (
-                f"{e_cm} {row['Commessa']}<br>"
-                f"{e_tk} {row['Task']} | 👤 {row['operatore']}"
-                f"<span style='display:none'>_{row['id']}</span>"
-            )
-            y_labels_unici.append(y_label)
-            
-            # Calcolo durata in millisecondi (come nel tuo codice originale)
-            durata_ms = (row['Fine'] - row['Inizio']).total_seconds() * 1000
-            
-            # Aggiunta della Barra dell'attività
+            y_labels_tuple = []
+            durate = []
+            basi = []
+            custom_datas = []
+            note_testuali = []
+            fine_tempi = []
+
+            for _, row in df_op.iterrows():
+                e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+                e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+
+                c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
+                
+                # TRUCCO: Usiamo una tupla a 3 livelli. 
+                # Il terzo livello contiene l'ID log (nascosto) per forzare la riga separata
+                log_id_hidden = f"<span style='display:none'>{row['id']}</span>"
+                y_val = (c_label, t_label, log_id_hidden)
+                
+                y_labels_tuple.append(y_val)
+                basi.append(row['Inizio'])
+                durate.append(row['Durata_ms'])
+                fine_tempi.append(row['Fine'])
+                note_testuali.append(str(row.get('note', '')).strip())
+                
+                custom_datas.append([
+                    row['id'], row['operatore'], row['Inizio'], row['Fine'], 
+                    row['Commessa'], row['Task'], row.get('note_html', ''), row['task_id']
+                ])
+
+            # Aggiunta traccia BAR (identica allo stile originale)
             fig_det.add_trace(go.Bar(
-                base=[row['Inizio']],
-                x=[durata_ms],
-                y=[y_label],
+                base=basi,
+                x=durate,
+                y=list(zip(*y_labels_tuple)), # Decompressione della tupla a 3 livelli
                 orientation='h',
-                marker=dict(color=color_map_ops.get(row['operatore'], "#8dbad2"), cornerradius=10),
-                width=0.4,
-                showlegend=False,
-                customdata=[[row['id'], row['operatore'], row['Inizio'], row['Fine'], row['Commessa'], row['Task'], row.get('note', ''), row['task_id']]],
-                hovertemplate="<b>%{customdata[4]}</b><br>%{customdata[5]}<br>Log: %{customdata[6]}<extra></extra>"
+                name=op,
+                marker=dict(color=color_map_ops.get(op, "#8dbad2"), cornerradius=12),
+                width=0.6, # Leggermente più larga per accomodare il testo
+                customdata=custom_datas,
+                hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[6]}<extra></extra>"
             ))
-            
-            # Aggiunta del TESTO della nota a destra della barra
-            nota_testo = str(row.get('note', '')).strip()
-            if nota_testo and nota_testo != 'None':
-                short_note = f" ➜ {nota_testo[:80]}..." if len(nota_testo) > 80 else f" ➜ {nota_testo}"
-                fig_det.add_annotation(
-                    x=row['Fine'],
-                    y=y_label,
-                    text=f"<i>{short_note}</i>",
-                    showarrow=False,
-                    xanchor="left",
-                    font=dict(size=11, color="#555"),
-                    xshift=10
-                )
 
-        # Configurazione Layout (coerente con il tuo stile)
+            # Aggiunta Annotazioni Note a fianco
+            for i in range(len(note_testuali)):
+                if note_testuali[i] and note_testuali[i] != 'None':
+                    short_n = f" ➜ {note_testuali[i][:80]}..." if len(note_testuali[i]) > 80 else f" ➜ {note_testuali[i]}"
+                    fig_det.add_annotation(
+                        x=fine_tempi[i],
+                        y=y_labels_tuple[i],
+                        text=f"<i>{short_n}</i>",
+                        showarrow=False,
+                        xanchor="left",
+                        font=dict(size=10, color="#555"),
+                        xshift=8
+                    )
+
+        # 3. Layout (Copiato dal tuo originale)
+        n_r = len(df_ordered)
         fig_det.update_layout(
-            height=300 + (len(df_det) * 45), # Altezza dinamica per riga
-            margin=dict(l=10, r=250, t=60, b=0), # Margine destro ampio per i log
+            height=300 + (n_r * 35), # Spazio aumentato per i log separati
+            margin=dict(l=10, r=200, t=40, b=0),
+            shapes=all_shapes, # Usa le linee grigie e weekend calcolati prima
+            barmode='group',
+            bargap=0.1,
+            dragmode='pan',
             xaxis=dict(
                 type="date", 
                 side="top", 
-                range=x_range, # Usa x_range calcolato per tabs[0]
-                tickfont=dict(size=10)
+                range=x_range, 
+                tickvals=tick_range + pd.Timedelta(hours=12), 
+                ticktext=tick_text
             ),
             yaxis=dict(
-                autorange="reversed",
-                showgrid=True,
-                showdividers=True,
-                fixedrange=True
+                autorange="reversed", 
+                showgrid=True, 
+                showdividers=True, 
+                fixedrange=True,
+                tickson="boundaries"
             ),
-            dragmode='pan'
+            showlegend=False
         )
 
-        # Linea del giorno attuale (come nel tuo codice)
-        fig_det.add_vline(x=datetime.now().timestamp() * 1000, line_width=2, line_color="red", line_dash="dash")
+        # Linea Oggi
+        fig_det.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
 
-        # Visualizzazione
-        st.plotly_chart(fig_det, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_det, use_container_width=True, key="gantt_detailed_logs", config={'displayModeBar': False})
 
 
 with tabs[2]: # CALENDARIO
