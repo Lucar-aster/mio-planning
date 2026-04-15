@@ -895,16 +895,31 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
     if not df.empty:
         st.subheader("📊 Timeline Analitica")
 
-        # Scegliamo la frequenza in base alla scala
+        # --- 0. CALCOLO VARIABILI DI SCALA (Mancanti nel tuo errore) ---
+        oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Calcoliamo x_range come fai nella Tab 0
+        if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
+            x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
+        else:
+            d_val = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
+            x_range = [oggi_dt - timedelta(days=d_val), oggi_dt + timedelta(days=d_val)]
+        
+        # Definiamo delta_giorni (la causa dell'errore)
+        delta_giorni = (x_range[1] - x_range[0]).days
+        
+        # --- 1. CALCOLO TICK_RANGE E TICK_TEXT (Per l'asse X) ---
+        start_buffer = x_range[0] - timedelta(days=180)
+        end_buffer = x_range[1] + timedelta(days=180)
+
         if delta_giorni > 60:
             tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
-        elif delta_giorni >20:
-           full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-           tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
+        elif delta_giorni > 20:
+            full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+            tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
         else:
             tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-
-         # 3. Generiamo i testi solo per i giorni filtrati
+        
         tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
         
         # --- 1. CALCOLO SHAPES (Linee e Weekend) INDIPENDENTE ---
