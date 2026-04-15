@@ -895,8 +895,23 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
     if not df.empty:
         st.subheader("📊 Timeline Analitica")
         
-        # 1. Preparazione dati e mappe (identiche al tuo codice)
-        df_merged = merge_consecutive_logs(df_p) # Usiamo la tua funzione di merge se necessario
+        # --- 1. CALCOLO SHAPES (Linee e Weekend) INDIPENDENTE ---
+        # Questo risolve l'errore NameError: name 'all_shapes' is not defined
+        all_shapes_det = []
+        curr = x_range[0] - timedelta(days=60)
+        while curr <= x_range[1] + timedelta(days=60):
+            # Linea griglia giornaliera
+            all_shapes_det.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", 
+                                     line=dict(color="#e0e0e0", width=1), layer="below"))
+            # Rettangolo weekend
+            if curr.weekday() >= 5:
+                all_shapes_det.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), 
+                                         y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", 
+                                         opacity=0.5, line_width=0, layer="below"))
+            curr += timedelta(days=1)
+
+        # --- 2. PREPARAZIONE DATI ---
+        df_merged = merge_consecutive_logs(df_p)
         color_map_ops = {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}
         
         fig_det = go.Figure()
@@ -910,19 +925,14 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
             "Completato 🟢": "🟢", "Sospeso 🟠": "🟠",
         }
 
-        # 2. Costruzione delle tracce (Una riga per ogni LOG)
-        # Ordiniamo per mantenere la gerarchia visiva
+        # Ordinamento gerarchico
         df_ordered = df_merged.sort_values(by=['Commessa', 'Task', 'Inizio'])
 
         for op in df_ordered['operatore'].unique():
             df_op = df_ordered[df_ordered['operatore'] == op]
             
             y_labels_tuple = []
-            durate = []
-            basi = []
-            custom_datas = []
-            note_testuali = []
-            fine_tempi = []
+            durate, basi, fine_tempi, note_testuali, custom_datas = [], [], [], [], []
 
             for _, row in df_op.iterrows():
                 e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
@@ -931,8 +941,8 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
                 c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
                 
-                # TRUCCO: Usiamo una tupla a 3 livelli. 
-                # Il terzo livello contiene l'ID log (nascosto) per forzare la riga separata
+                # Tupla a 3 livelli (Commessa, Task, ID_Log_Nascosto)
+                # L'ID_Log forza Plotly a creare righe separate per ogni log
                 log_id_hidden = f"<span style='display:none'>{row['id']}</span>"
                 y_val = (c_label, t_label, log_id_hidden)
                 
@@ -947,20 +957,20 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
                     row['Commessa'], row['Task'], row.get('note_html', ''), row['task_id']
                 ])
 
-            # Aggiunta traccia BAR (identica allo stile originale)
+            # Aggiunta barre (Stile originale)
             fig_det.add_trace(go.Bar(
                 base=basi,
                 x=durate,
-                y=list(zip(*y_labels_tuple)), # Decompressione della tupla a 3 livelli
+                y=list(zip(*y_labels_tuple)),
                 orientation='h',
                 name=op,
                 marker=dict(color=color_map_ops.get(op, "#8dbad2"), cornerradius=12),
-                width=0.6, # Leggermente più larga per accomodare il testo
+                width=0.6,
                 customdata=custom_datas,
-                hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[6]}<extra></extra>"
+                hovertemplate="<b>%{customdata[4]}</b><br>%{customdata[5]}<br>%{customdata[1]}<extra></extra>"
             ))
 
-            # Aggiunta Annotazioni Note a fianco
+            # Annotazioni note a destra
             for i in range(len(note_testuali)):
                 if note_testuali[i] and note_testuali[i] != 'None':
                     short_n = f" ➜ {note_testuali[i][:80]}..." if len(note_testuali[i]) > 80 else f" ➜ {note_testuali[i]}"
@@ -974,28 +984,22 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
                         xshift=8
                     )
 
-        # 3. Layout (Copiato dal tuo originale)
+        # --- 3. LAYOUT ---
         n_r = len(df_ordered)
         fig_det.update_layout(
-            height=300 + (n_r * 35), # Spazio aumentato per i log separati
-            margin=dict(l=10, r=200, t=40, b=0),
-            shapes=all_shapes, # Usa le linee grigie e weekend calcolati prima
+            height=300 + (n_r * 40), # Spazio per i log separati
+            margin=dict(l=10, r=200, t=40, b=10),
+            shapes=all_shapes_det, # Usa la variabile definita sopra
             barmode='group',
-            bargap=0.1,
             dragmode='pan',
             xaxis=dict(
-                type="date", 
-                side="top", 
-                range=x_range, 
+                type="date", side="top", range=x_range,
                 tickvals=tick_range + pd.Timedelta(hours=12), 
                 ticktext=tick_text
             ),
             yaxis=dict(
-                autorange="reversed", 
-                showgrid=True, 
-                showdividers=True, 
-                fixedrange=True,
-                tickson="boundaries"
+                autorange="reversed", showgrid=True, showdividers=True, 
+                fixedrange=True, tickson="boundaries"
             ),
             showlegend=False
         )
@@ -1003,7 +1007,7 @@ with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
         # Linea Oggi
         fig_det.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
 
-        st.plotly_chart(fig_det, use_container_width=True, key="gantt_detailed_logs", config={'displayModeBar': False})
+        st.plotly_chart(fig_det, use_container_width=True, key="gantt_detailed_logs_tab3", config={'displayModeBar': False})
 
 
 with tabs[2]: # CALENDARIO
