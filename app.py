@@ -894,6 +894,18 @@ with tabs[0]: # TIMELINE
 with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
     if not df.empty:
         st.subheader("📊 Timeline Analitica")
+
+        # Scegliamo la frequenza in base alla scala
+        if delta_giorni > 60:
+            tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
+        elif delta_giorni >20:
+           full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+           tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
+        else:
+            tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+
+         # 3. Generiamo i testi solo per i giorni filtrati
+        tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
         
         # --- 1. CALCOLO SHAPES (Linee e Weekend) INDIPENDENTE ---
         # Questo risolve l'errore NameError: name 'all_shapes' is not defined
