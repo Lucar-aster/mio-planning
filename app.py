@@ -849,15 +849,13 @@ def render_gantt_fragment_esploso(df_plot, color_map, oggi_dt, x_range, delta_gi
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
         c_label = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
         
-        # TRUCCO INVISIBILE: Aggiungiamo un numero variabile di caratteri invisibili ("\u200B")
-        # Questo costringe Plotly a creare una riga separata per OGNI log, senza mostrare testo sporco.
-        separatore_invisibile = "\u200B" * (i + 1)
+        label_id_log = f"Log #{r['id']}"
         
         if vista_compressa:
-            y_val = (c_label, separatore_invisibile) # Tupla a 2
+            y_val = (c_label, label_id_log) # Tupla a 2
         else:
             t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 30))
-            y_val = (c_label, t_label, separatore_invisibile) # Tupla a 3
+            y_val = (c_label, t_label, label_id_log) # Tupla a 3
         
         y_labels_pulsanti.append(y_val)
         
