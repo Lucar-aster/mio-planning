@@ -804,58 +804,73 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 @st.fragment(run_every=60)
 def render_gantt_fragment_esploso(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_merged = merge_consecutive_logs(df_plot)
+    
+    # MODIFICA 1: Non uniamo i log consecutivi, altrimenti non possiamo esploderli.
+    # Copiamo e ordiniamo il dataframe originale.
+    df_merged = df_plot.copy().sort_values(by=['Commessa', 'Task', 'Inizio'])
+    
+    df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
 
     mappa_emoji = {
-        "Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡",
-        "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"
+    "Quotazione 🟣": "🟣",
+    "Pianificata 🔵": "🔵",
+    "In corso 🟡": "🟡",
+    "Completata 🟢": "🟢",
+    "Sospesa 🟠": "🟠",
+    "Cancellata 🔴": "🔴"
     }
 
     mappa_emoji_task = {
-        "Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", 
-        "Completato 🟢": "🟢", "Sospeso 🟠": "🟠",
+    "Pianificato 🔵": "🔵",
+    "In corso 🟡": "🟡",
+    "In attesa ⚪": "⚪", 
+    "Completato 🟢": "🟢",
+    "Sospeso 🟠": "🟠",
     }
     
     vista_compressa = st.session_state.vista_compressa
 
-    # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA (Esplosa per ogni log) ---
+# --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
     click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
     ms_per_day = 24 * 3600 * 1000
     grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
+    y_labels_pulsanti = []
     
-    y_vals_per_riga = []
+    all_bases = []
+    all_xs = []
+    all_ys = []
+    all_customdata = []
 
-    # Creiamo le etichette Y uniche per OGNI log
-    for i, row in df_merged.iterrows():
-        e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-        e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
-        c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+    # MODIFICA 2: Iteriamo su TUTTI i log (df_merged) e non sui task univoci,
+    # perché ora l'area di clic deve coprire ogni singola riga esplosa.
+    for i, (_, r) in enumerate(df_merged.iterrows()):
+        e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
+        c_label = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
         
-        # TRUCCO: Aggiungiamo l'ID in HTML invisibile per forzare la riga separata
-        hidden_id = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['id']}</span>"
+        # TRUCCO INVISIBILE: Aggiungiamo un numero variabile di caratteri invisibili ("\u200B")
+        # Questo costringe Plotly a creare una riga separata per OGNI log, senza mostrare testo sporco.
+        separatore_invisibile = "\u200B" * (i + 1)
         
         if vista_compressa:
-            y_val = (c_label, hidden_id)
+            y_val = (c_label, separatore_invisibile) # Tupla a 2
         else:
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
-            y_val = (c_label, t_label, hidden_id) # Tupla a 3 livelli
-            
-        y_vals_per_riga.append((y_val, row['task_id']))
-
-    # Generiamo i segmenti cliccabili per ogni riga esplosa
-    for y_val, task_id in y_vals_per_riga:
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 30))
+            y_val = (c_label, t_label, separatore_invisibile) # Tupla a 3
+        
+        y_labels_pulsanti.append(y_val)
+        
         for d in click_dates:
             grid_bases.append(d)
             grid_xs.append(ms_per_day)
             grid_ys.append(y_val)
-            grid_customdata.append(["LOG_FITTIZIO", task_id, d.date()])
+            grid_customdata.append(["LOG_FITTIZIO", r['task_id'], d.date()])
 
-    # Traccia fittizia per i clic
     fig.add_trace(go.Bar(
         base=grid_bases,
         x=grid_xs,
-        y=list(zip(*grid_ys)), # Decompressione sicura per le tuple
+        y=list(zip(*grid_ys)), # Usiamo SEMPRE la decompressione per il multi-indice
         orientation='h',
         marker=dict(color="rgba(0,0,0,0)"), 
         showlegend=False,
@@ -865,56 +880,50 @@ def render_gantt_fragment_esploso(df_plot, color_map, oggi_dt, x_range, delta_gi
         offset=-0.45
     ))
             
-    note_annotations = []
-
-    # --- INSERIMENTO BARRE DEI LOG ---
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
         
-        for _, row in df_op.iterrows():
+        for idx, row in df_op.iterrows():
             e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
             e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
 
             c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-            hidden_id = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['id']}</span>"
+            
+            # Replicare il trucco invisibile cercando l'indice esatto nella lista totale
+            idx_globale = df_merged.index.get_loc(idx)
+            separatore_invisibile = "\u200B" * (idx_globale + 1)
 
             if vista_compressa:
-                y_val = (c_label, hidden_id)
+                y_val = (c_label, separatore_invisibile)
+                y_labels.append(y_val)
             else:
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
-                y_val = (c_label, t_label, hidden_id)
-            
-            y_labels.append(y_val)
+                y_val = (c_label, t_label, separatore_invisibile)
+                y_labels.append(y_val)
 
-            # Preparazione Testo Nota per il grafico
-            nota_testo = str(row.get('note', '')).strip()
-            if nota_testo and nota_testo != 'None' and nota_testo != 'nan':
-                short_note = f" ➜ {nota_testo[:90]}..." if len(nota_testo) > 90 else f" ➜ {nota_testo}"
-                note_annotations.append({
-                    'x': row['Fine'],
-                    'y': y_val,
-                    'text': f"<i>{short_note}</i>"
-                })
+            # MODIFICA 3: ANNOTAZIONE NOTE
+            nota = str(row.get('note', ''))
+            if nota and nota not in ['None', 'nan', '']:
+                fig.add_annotation(
+                    x=row['Fine'],
+                    y=y_val, # Coordinate Y esatte del singolo log
+                    text=f" ➜ <i>{nota[:100]}</i>",
+                    showarrow=False,
+                    xanchor="left",
+                    xshift=10,
+                    font=dict(size=10, color="#555")
+                )
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=list(zip(*y_labels)), orientation='h', name=op,
+            base=df_op['Inizio'], 
+            x=df_op['Durata_ms'], 
+            y=list(zip(*y_labels)), # Usiamo SEMPRE la decompressione 
+            orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
-    
-    # --- AGGIUNTA ANNOTAZIONI (Testo a destra) ---
-    for ann in note_annotations:
-        fig.add_annotation(
-            x=ann['x'],
-            y=ann['y'],
-            text=ann['text'],
-            showarrow=False,
-            xanchor="left",
-            font=dict(size=11, color="#444"),
-            xshift=8
-        )
         
     # --- Gestione Asse X Dinamica ---
     start_buffer = x_range[0] - timedelta(days=180)
@@ -938,22 +947,21 @@ def render_gantt_fragment_esploso(df_plot, color_map, oggi_dt, x_range, delta_gi
             all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
         curr += timedelta(days=1)
         
-    # Calcolo altezza basata sul numero TOTALE di log (ogni log ha la sua riga)
-    n_r = len(df_merged)
+    n_r = len(df_merged) # Il numero di righe è pari al numero di log totali
 
     fig.update_layout(
         clickmode='event+select',
-        height=300 + (n_r * 30), # Leggermente più alto per far respirare le righe
+        height=300 + (n_r * 40), # Altezza proporzionata ai log
         showlegend=False,
-        # MARGINE DESTRO AUMENTATO (r=300) per leggere le note senza tagliarle
-        margin=dict(l=10, r=300, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
+        margin=dict(l=10, r=400, t=40, b=0), # Margine R=400 essenziale per leggere le note a destra
+        shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
-        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True, tickson="boundaries"),
+        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
-    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_esploso_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
+    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}_esploso", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         pts = selected["selection"]["points"]
@@ -967,7 +975,7 @@ def render_gantt_fragment_esploso(df_plot, color_map, oggi_dt, x_range, delta_gi
             
             elif d:
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
-
+                
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
