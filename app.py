@@ -800,6 +800,174 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
                 # Gestione log esistente (come nel tuo codice originale)
                 modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
+# --- 7.1. GANTT FRAGMENT ESPLOSO---
+@st.fragment(run_every=60)
+def render_gantt_fragment_esploso(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
+    if df_plot.empty: st.info("Nessun dato trovato."); return
+    df_merged = merge_consecutive_logs(df_plot)
+    fig = go.Figure()
+
+    mappa_emoji = {
+        "Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡",
+        "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"
+    }
+
+    mappa_emoji_task = {
+        "Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", 
+        "Completato 🟢": "🟢", "Sospeso 🟠": "🟠",
+    }
+    
+    vista_compressa = st.session_state.vista_compressa
+
+    # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA (Esplosa per ogni log) ---
+    click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
+    ms_per_day = 24 * 3600 * 1000
+    grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
+    
+    y_vals_per_riga = []
+
+    # Creiamo le etichette Y uniche per OGNI log
+    for i, row in df_merged.iterrows():
+        e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+        e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+        c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+        
+        # TRUCCO: Aggiungiamo l'ID in HTML invisibile per forzare la riga separata
+        hidden_id = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['id']}</span>"
+        
+        if vista_compressa:
+            y_val = (c_label, hidden_id)
+        else:
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
+            y_val = (c_label, t_label, hidden_id) # Tupla a 3 livelli
+            
+        y_vals_per_riga.append((y_val, row['task_id']))
+
+    # Generiamo i segmenti cliccabili per ogni riga esplosa
+    for y_val, task_id in y_vals_per_riga:
+        for d in click_dates:
+            grid_bases.append(d)
+            grid_xs.append(ms_per_day)
+            grid_ys.append(y_val)
+            grid_customdata.append(["LOG_FITTIZIO", task_id, d.date()])
+
+    # Traccia fittizia per i clic
+    fig.add_trace(go.Bar(
+        base=grid_bases,
+        x=grid_xs,
+        y=list(zip(*grid_ys)), # Decompressione sicura per le tuple
+        orientation='h',
+        marker=dict(color="rgba(0,0,0,0)"), 
+        showlegend=False,
+        hoverinfo='none',
+        customdata=grid_customdata,
+        width=0.9,
+        offset=-0.45
+    ))
+            
+    note_annotations = []
+
+    # --- INSERIMENTO BARRE DEI LOG ---
+    for op in df_merged['operatore'].unique():
+        df_op = df_merged[df_merged['operatore'] == op]
+        y_labels = []
+        
+        for _, row in df_op.iterrows():
+            e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
+            e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
+
+            c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
+            hidden_id = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['id']}</span>"
+
+            if vista_compressa:
+                y_val = (c_label, hidden_id)
+            else:
+                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
+                y_val = (c_label, t_label, hidden_id)
+            
+            y_labels.append(y_val)
+
+            # Preparazione Testo Nota per il grafico
+            nota_testo = str(row.get('note', '')).strip()
+            if nota_testo and nota_testo != 'None' and nota_testo != 'nan':
+                short_note = f" ➜ {nota_testo[:90]}..." if len(nota_testo) > 90 else f" ➜ {nota_testo}"
+                note_annotations.append({
+                    'x': row['Fine'],
+                    'y': y_val,
+                    'text': f"<i>{short_note}</i>"
+                })
+        
+        fig.add_trace(go.Bar(
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=list(zip(*y_labels)), orientation='h', name=op,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
+        ))
+    
+    # --- AGGIUNTA ANNOTAZIONI (Testo a destra) ---
+    for ann in note_annotations:
+        fig.add_annotation(
+            x=ann['x'],
+            y=ann['y'],
+            text=ann['text'],
+            showarrow=False,
+            xanchor="left",
+            font=dict(size=11, color="#444"),
+            xshift=8
+        )
+        
+    # --- Gestione Asse X Dinamica ---
+    start_buffer = x_range[0] - timedelta(days=180)
+    end_buffer = x_range[1] + timedelta(days=180)
+    
+    if delta_giorni > 60:
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
+    elif delta_giorni >20:
+       full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+       tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
+    else:
+        tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
+
+    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
+    
+    all_shapes = []
+    curr = x_range[0] - timedelta(days=60)
+    while curr <= x_range[1] + timedelta(days=60):
+        all_shapes.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
+        if curr.weekday() >= 5:
+            all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
+        curr += timedelta(days=1)
+        
+    # Calcolo altezza basata sul numero TOTALE di log (ogni log ha la sua riga)
+    n_r = len(df_merged)
+
+    fig.update_layout(
+        clickmode='event+select',
+        height=300 + (n_r * 30), # Leggermente più alto per far respirare le righe
+        showlegend=False,
+        # MARGINE DESTRO AUMENTATO (r=300) per leggere le note senza tagliarle
+        margin=dict(l=10, r=300, t=40, b=0), shapes=all_shapes, barmode='group', bargap=0.1, bargroupgap=0, dragmode='pan',
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
+        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True, tickson="boundaries"),
+        legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
+    )
+    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
+    
+    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_esploso_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
+
+    if selected and "selection" in selected and "points" in selected["selection"]:
+        pts = selected["selection"]["points"]
+        if pts:
+            d = pts[0].get("customdata", [])
+            
+            if d and d[0] == "LOG_FITTIZIO":
+                data_str = d[2]
+                data_oggetto = pd.to_datetime(data_str).date()
+                modal_gestione_clic(task_id=d[1], data_clic=data_oggetto)
+            
+            elif d:
+                modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
@@ -893,150 +1061,14 @@ with tabs[0]: # TIMELINE
         
 with tabs[1]: # TIMELINE DETTAGLIATA (Log separati per riga)
     if not df.empty:
-        st.subheader("📊 Timeline Analitica")
-
-        # --- 0. CALCOLO VARIABILI DI SCALA (Mancanti nel tuo errore) ---
         oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Calcoliamo x_range come fai nella Tab 0
-        if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
+        if scala == "Personalizzato" and f_custom and len(f_custom) == 2: 
             x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         else:
-            d_val = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
-            x_range = [oggi_dt - timedelta(days=d_val), oggi_dt + timedelta(days=d_val)]
-        
-        # Definiamo delta_giorni (la causa dell'errore)
-        delta_giorni = (x_range[1] - x_range[0]).days
-        
-        # --- 1. CALCOLO TICK_RANGE E TICK_TEXT (Per l'asse X) ---
-        start_buffer = x_range[0] - timedelta(days=180)
-        end_buffer = x_range[1] + timedelta(days=180)
-
-        if delta_giorni > 60:
-            tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
-        elif delta_giorni > 20:
-            full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-            tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
-        else:
-            tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-        
-        tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
-        
-        # --- 1. CALCOLO SHAPES (Linee e Weekend) INDIPENDENTE ---
-        # Questo risolve l'errore NameError: name 'all_shapes' is not defined
-        all_shapes_det = []
-        curr = x_range[0] - timedelta(days=60)
-        while curr <= x_range[1] + timedelta(days=60):
-            # Linea griglia giornaliera
-            all_shapes_det.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", 
-                                     line=dict(color="#e0e0e0", width=1), layer="below"))
-            # Rettangolo weekend
-            if curr.weekday() >= 5:
-                all_shapes_det.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), 
-                                         y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", 
-                                         opacity=0.5, line_width=0, layer="below"))
-            curr += timedelta(days=1)
-
-        # --- 2. PREPARAZIONE DATI ---
-        df_merged = merge_consecutive_logs(df_p)
-        color_map_ops = {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}
-        
-        fig_det = go.Figure()
-
-        mappa_emoji = {
-            "Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡",
-            "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"
-        }
-        mappa_emoji_task = {
-            "Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", 
-            "Completato 🟢": "🟢", "Sospeso 🟠": "🟠",
-        }
-
-        # Ordinamento gerarchico
-        df_ordered = df_merged.sort_values(by=['Commessa', 'Task', 'Inizio'])
-
-        for op in df_ordered['operatore'].unique():
-            df_op = df_ordered[df_ordered['operatore'] == op]
+            d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
+            x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
             
-            y_labels_tuple = []
-            durate, basi, fine_tempi, note_testuali, custom_datas = [], [], [], [], []
-
-            for _, row in df_op.iterrows():
-                e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-                e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
-
-                c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
-                
-                # Tupla a 3 livelli (Commessa, Task, ID_Log_Nascosto)
-                str_id = str(row['id'])
-                # L'ID_Log forza Plotly a creare righe separate per ogni log
-                log_id_hidden = f"Log #{str_id[-4:]}"
-                y_val = (c_label, t_label, log_id_hidden)
-                
-                y_labels_tuple.append(y_val)
-                basi.append(row['Inizio'])
-                durate.append(row['Durata_ms'])
-                fine_tempi.append(row['Fine'])
-                note_testuali.append(str(row.get('note', '')).strip())
-                
-                custom_datas.append([
-                    row['id'], row['operatore'], row['Inizio'], row['Fine'], 
-                    row['Commessa'], row['Task'], row.get('note_html', ''), row['task_id']
-                ])
-
-            # Aggiunta barre (Stile originale)
-            fig_det.add_trace(go.Bar(
-                base=basi,
-                x=durate,
-                y=list(zip(*y_labels_tuple)) if y_labels_tuple else [],
-                orientation='h',
-                name=op,
-                marker=dict(color=color_map_ops.get(op, "#8dbad2"), cornerradius=12),
-                width=0.4,
-                customdata=custom_datas,
-                hovertemplate="<b>%{customdata[4]}</b><br>%{customdata[5]}<br>%{customdata[1]}<extra></extra>"
-            ))
-
-            # Annotazioni note a destra
-            for i in range(len(note_testuali)):
-                if note_testuali[i] and note_testuali[i] != 'None':
-                    short_n = f" ➜ {note_testuali[i][:80]}..." if len(note_testuali[i]) > 80 else f" ➜ {note_testuali[i]}"
-                    fig_det.add_annotation(
-                        x=fine_tempi[i],
-                        y=y_labels_tuple[i],
-                        text=f"<i>{short_n}</i>",
-                        showarrow=False,
-                        xanchor="left",
-                        font=dict(size=10, color="#555"),
-                        xshift=8
-                    )
-
-        # --- 3. LAYOUT ---
-        n_r = len(df_ordered)
-        fig_det.update_layout(
-            height=300 + (n_r * 40), # Spazio per i log separati
-            margin=dict(l=10, r=200, t=40, b=10),
-            shapes=all_shapes_det, # Usa la variabile definita sopra
-            barmode='group',
-            dragmode='pan',
-            xaxis=dict(
-                type="date", side="top", range=x_range,
-                tickvals=tick_range + pd.Timedelta(hours=12), 
-                ticktext=tick_text
-            ),
-            yaxis=dict(
-                autorange="reversed", showgrid=True, showdividers=True, 
-                fixedrange=True, tickson="boundaries", type='category'
-            ),
-            showlegend=False
-        )
-
-        # Linea Oggi
-        fig_det.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
-
-        st.plotly_chart(fig_det, use_container_width=True, key="gantt_detailed_logs_tab3", config={'displayModeBar': False})
-
+        render_gantt_fragment_esploso(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
 
 with tabs[2]: # CALENDARIO
     if not df.empty:
