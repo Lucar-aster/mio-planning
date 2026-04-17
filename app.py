@@ -804,7 +804,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 @st.fragment(run_every=60)
 def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task', 'note']].drop_duplicates()
+    df_tasks_univoci = df_plot.copy().sort_values(by=['Commessa', 'Task', 'Inizio'])
     fig = go.Figure()
 
     mappa_emoji = {
