@@ -843,11 +843,12 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
         c_label = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
         note_label = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{r['note']}</span>"
+		t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 40))
+		
         if vista_compressa:
-            y_val = (c_label, note_label)
+            y_val = (c_label, t_label)
         else:
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 40))
-            y_val = (c_label, t_label + "<br>"+ note_label) # Tupla per multi-indice
+            y_val = (c_label, t_label, note_label) # Tupla per multi-indice
         
         y_labels_pulsanti.append(y_val)
         
@@ -862,7 +863,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
     fig.add_trace(go.Bar(
         base=grid_bases,
         x=grid_xs,
-        y=grid_ys if vista_compressa else list(zip(*grid_ys)),
+        y=list(zip(*grid_ys)),
         orientation='h',
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
@@ -881,16 +882,16 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
 			
             c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
             note_label1 = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['note']}</span>"
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 40))
 			
             if vista_compressa:
-                y_labels.append((c_label, note_label1))
+                y_labels.append((c_label, t_label))
             else:
-                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 40))
-                y_labels.append((c_label, t_label + "<br>"+ note_label1))
+                y_labels.append((c_label, t_label, note_label1))
 
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.6,
 	    	text =df_op['note'],
 			textposition="outside",
