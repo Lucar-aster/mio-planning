@@ -880,13 +880,13 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
             e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
 			
             c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-            note_label = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['note']}</span>"
+            note_label1 = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['note']}</span>"
 			
             if vista_compressa:
-                y_labels.append((c_label, note_label))
+                y_labels.append((c_label, note_label1))
             else:
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
-                y_labels.append((c_label, t_label + "<br>"+ note_label))
+                y_labels.append((c_label, t_label + "<br>"+ note_label1))
 
         
         fig.add_trace(go.Bar(
