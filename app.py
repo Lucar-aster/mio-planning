@@ -846,7 +846,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
         if vista_compressa:
             y_val = (c_label, note_label)
         else:
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 30))
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 40))
             y_val = (c_label, t_label + "<br>"+ note_label) # Tupla per multi-indice
         
         y_labels_pulsanti.append(y_val)
@@ -885,7 +885,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
             if vista_compressa:
                 y_labels.append((c_label, note_label1))
             else:
-                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
+                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 40))
                 y_labels.append((c_label, t_label + "<br>"+ note_label1))
 
         
@@ -930,7 +930,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
 
     fig.update_layout(
         clickmode='event+select',
-        height=400 + (n_r * 60),
+        height=400 + (n_r * 75),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
