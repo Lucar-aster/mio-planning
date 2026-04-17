@@ -886,7 +886,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
                 y_labels.append((c_label, note_label))
             else:
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
-                y_labels.append((c_label, t_label + "<br>"+ note_invisibile))
+                y_labels.append((c_label, t_label + "<br>"+ note_label))
 
         
         fig.add_trace(go.Bar(
