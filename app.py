@@ -837,7 +837,8 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
     all_xs = []
     all_ys = []
     all_customdata = []
-
+    map_log_to_y = {}
+	
     for i, (_, r) in enumerate(df_tasks_univoci.iterrows()):
         e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
@@ -849,7 +850,8 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
             y_val = (c_label, t_label)
         else:
             y_val = (c_label, t_label, note_label) # Tupla per multi-indice
-        
+            map_log_to_y[r['id']] = y_val
+			
         y_labels_pulsanti.append(y_val)
         
         for d in click_dates:
@@ -875,23 +877,11 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
             
     for op in df_plot['operatore'].unique():
         df_op = df_plot[df_plot['operatore'] == op]
-        y_labels = []
-        for _, row in df_op.iterrows():
-            e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
-            e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
-			
-            c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-            note_label1 = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{row['note']}</span>"
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 40))
-			
-            if vista_compressa:
-                y_labels.append((c_label, t_label))
-            else:
-                y_labels.append((c_label, t_label, note_label1))
-
+        y_labels_op = [map_log_to_y[note] for note in df_op['note']]
+        
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=list(zip(*y_labels)), orientation='h', name=op,
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=list(zip(*y_labels_op)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.6,
 	    	text =df_op['note'],
 			textposition="outside",
@@ -931,7 +921,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
 
     fig.update_layout(
         clickmode='event+select',
-        height=400 + (n_r * 75),
+        height=300 + (n_r * 75),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
