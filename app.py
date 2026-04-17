@@ -891,7 +891,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
         
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.6,
 	    	text =df_op['note'],
 			textposition="outside",
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note'], df_op['task_id'])),
@@ -930,7 +930,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
 
     fig.update_layout(
         clickmode='event+select',
-        height=300 + (n_r * 25),
+        height=300 + (n_r * 45),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
