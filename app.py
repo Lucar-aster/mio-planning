@@ -842,12 +842,12 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
         e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
         e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
         c_label = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
-        note_label = f"{r['note']}"
+        note_label = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{r['note']}</span>"
         if vista_compressa:
             y_val = (c_label, note_label)
         else:
-            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']} {r['note']}", 30))
-            y_val = (c_label, t_label) # Tupla per multi-indice
+            t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 30))
+            y_val = (c_label, t_label + "<br>"+ note_invisibile) # Tupla per multi-indice
         
         y_labels_pulsanti.append(y_val)
         
@@ -880,18 +880,21 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
             e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
 
             c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
-
+			note_bar = f"{r['note']}"
+			note_label = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{r['note']}</span>"
+			
             if vista_compressa:
-                y_labels.append(c_label)
+                y_labels.append((c_label, note_label))
             else:
-                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']} {r['note']}", 30))
-                y_labels.append([c_label, t_label])
+                t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
+                y_labels.append((c_label, t_label + "<br>"+ note_invisibile))
 
         
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-	    text = note_label,
+	    	text =df_op['note'],
+			textposition="outside"
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
