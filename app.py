@@ -847,7 +847,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
             y_val = (c_label, note_label)
         else:
             t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 30))
-            y_val = (c_label, t_label + "<br>"+ note_invisibile) # Tupla per multi-indice
+            y_val = (c_label, t_label + "<br>"+ note_label) # Tupla per multi-indice
         
         y_labels_pulsanti.append(y_val)
         
