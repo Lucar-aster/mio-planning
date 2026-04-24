@@ -13,6 +13,17 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
 
+def genera_orari():
+    orari = []
+    start = datetime.strptime("08:00", "%H:%M")
+    end = datetime.strptime("17:00", "%H:%M")
+    while start <= end:
+        orari.append(start.strftime("%H:%M"))
+        start += timedelta(minutes=15)
+    return orari
+
+ORARI_LAVORO = genera_orari()
+
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
 KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
@@ -301,7 +312,11 @@ def modal_gestione_clic(task_id, data_clic):
             value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
             format="DD/MM/YYYY"
         )
+		c1, c2 = st.columns(2)
+    	ora_i = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
+    	ora_f = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
         nota_t = st.text_input("Nota log")  
+		
         c1, c2 = st.columns(2)
         if c1.button("Registra Task", type="primary", width='stretch'):
             if not op_sel_t:
@@ -310,6 +325,11 @@ def modal_gestione_clic(task_id, data_clic):
                 st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
                 data_inizio_t, data_fine_t = date_range_t
+				ora_inizio_t = f"{data_inizio_t} {ora_i}:00"
+				ora_fine_t = f"{data_fine_t} {ora_f}:00"
+				if datetime.strptime(ora_i, "%H:%M") >= datetime.strptime(ora_f, "%H:%M"):
+            		st.error("L'ora di fine deve essere successiva all'ora di inizio!")
+            		return
                 final_task_id = task_id
                 curr_cm_id = cms_dict.get(sel_cm)
                 if sel_cm == "➕ Nuova Commessa...":
@@ -329,8 +349,8 @@ def modal_gestione_clic(task_id, data_clic):
                     nuovi_log_t.append({
                         "task_id": final_task_id,
                         "operatore": op,
-                        "inizio": str(data_inizio_t),
-                        "fine": str(data_fine_t),
+                        "inizio": ora_inizio_t,
+                        "fine": ora_fine_t,
                         "note": nota_t
                     })
                 try:
@@ -357,6 +377,9 @@ def modal_gestione_clic(task_id, data_clic):
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
+		c1, c2 = st.columns(2)
+    	ora_il = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
+    	ora_fl = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
@@ -367,13 +390,18 @@ def modal_gestione_clic(task_id, data_clic):
                 st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
                 data_inizio_l, data_fine_l = date_range_l
+				ora_inizio_tl = f"{data_inizio_t} {ora_i}:00"
+				ora_fine_tl = f"{data_fine_t} {ora_f}:00"
+				if datetime.strptime(ora_i, "%H:%M") >= datetime.strptime(ora_f, "%H:%M"):
+            		st.error("L'ora di fine deve essere successiva all'ora di inizio!")
+            		return
                 nuovi_log_l = []
                 for op in op_sel_l:
                     nuovi_log_l.append({
                         "task_id": task_id,
                         "operatore": op,
-                        "inizio": str(data_inizio_l),
-                        "fine": str(data_fine_l),
+                        "inizio": ora_inizio_tl,
+                        "fine": ora_fine_tl,
                         "note": nota_l
                     })
                 try:
