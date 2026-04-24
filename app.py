@@ -1004,7 +1004,10 @@ if l and tk and cm:
 
 	# --- CORREZIONE PER LOG 00:00:00 ---
     # Se inizio e fine sono uguali, aggiungiamo 1 ora di default per visualizzarli
-    mask_uguali = df['Inizio'] == df['Fine']
+	mask_mezzanotte = (df['Inizio'].dt.hour == 0) & (df['Inizio'].dt.minute == 0) & (df['Inizio'].dt.second == 0)
+    df.loc[mask_mezzanotte, 'Inizio'] = df.loc[mask_mezzanotte, 'Inizio'] + pd.Timedelta(hours=8)
+	
+    mask_uguali = df['Inizio'] >= df['Fine']
     df.loc[mask_uguali, 'Fine'] = df.loc[mask_uguali, 'Inizio'] + pd.Timedelta(hours=8)
     # -----------------------------------
 	
