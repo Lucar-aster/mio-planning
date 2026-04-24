@@ -327,9 +327,9 @@ def modal_gestione_clic(task_id, data_clic):
                 data_inizio_t, data_fine_t = date_range_t
                 ora_inizio_t = f"{data_inizio_t} {ora_i}:00"
                 ora_fine_t = f"{data_fine_t} {ora_f}:00"
-				if datetime.strptime(ora_i, "%H:%M") >= datetime.strptime(ora_f, "%H:%M"):
-            		st.error("L'ora di fine deve essere successiva all'ora di inizio!")
-            		return
+                if datetime.strptime(ora_i, "%H:%M") >= datetime.strptime(ora_f, "%H:%M"):
+                    st.error("L'ora di fine deve essere successiva all'ora di inizio!")
+                    return
                 final_task_id = task_id
                 curr_cm_id = cms_dict.get(sel_cm)
                 if sel_cm == "➕ Nuova Commessa...":
