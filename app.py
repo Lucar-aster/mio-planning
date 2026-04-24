@@ -996,9 +996,18 @@ if l and tk and cm:
     df = pd.DataFrame(l)
     
     # MODIFICA: Rimossi i .dt.normalize() per preservare ore e minuti
-    df['Inizio'] = pd.to_datetime(df['inizio'])
-    df['Fine'] = pd.to_datetime(df['fine'])
-    
+    df['Inizio'] = pd.to_datetime(df['inizio'], errors='coerce')
+    df['Fine'] = pd.to_datetime(df['fine'], errors='coerce')
+	
+	# Rimuove righe con date non valide
+    df = df.dropna(subset=['Inizio', 'Fine'])
+
+	# --- CORREZIONE PER LOG 00:00:00 ---
+    # Se inizio e fine sono uguali, aggiungiamo 1 ora di default per visualizzarli
+    mask_uguali = df['Inizio'] == df['Fine']
+    df.loc[mask_uguali, 'Fine'] = df.loc[mask_uguali, 'Inizio'] + pd.Timedelta(hours=8)
+    # -----------------------------------
+	
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('n', "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
     df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
