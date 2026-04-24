@@ -313,8 +313,8 @@ def modal_gestione_clic(task_id, data_clic):
             format="DD/MM/YYYY"
         )
         c1, c2 = st.columns(2)
-        ora_i = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
-        ora_f = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
+        ora_i = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0, key="ora_inizio_nuovo_task") # Default 08:00
+        ora_f = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1, key="ora_fine_nuovo_task") # Default 17:00
         nota_t = st.text_input("Nota log")  
 		
         c1, c2 = st.columns(2)
@@ -378,8 +378,8 @@ def modal_gestione_clic(task_id, data_clic):
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
         c1, c2 = st.columns(2)
-        ora_il = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
-        ora_fl = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
+        ora_il = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0, key="ora_inizio_nuovo_log") # Default 08:00
+        ora_fl = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1, key="ora_fine_nuovo_log") # Default 17:00
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
