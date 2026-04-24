@@ -312,10 +312,9 @@ def modal_gestione_clic(task_id, data_clic):
             value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
             format="DD/MM/YYYY"
         )
-		
-		c1, c2 = st.columns(2)
-    	ora_i = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
-    	ora_f = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
+        c1, c2 = st.columns(2)
+        ora_i = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
+        ora_f = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
         nota_t = st.text_input("Nota log")  
 		
         c1, c2 = st.columns(2)
