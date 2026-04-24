@@ -377,9 +377,9 @@ def modal_gestione_clic(task_id, data_clic):
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
-		c1, c2 = st.columns(2)
-    	ora_il = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
-    	ora_fl = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
+        c1, c2 = st.columns(2)
+        ora_il = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0) # Default 08:00
+        ora_fl = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1) # Default 17:00
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
@@ -390,11 +390,11 @@ def modal_gestione_clic(task_id, data_clic):
                 st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
                 data_inizio_l, data_fine_l = date_range_l
-				ora_inizio_tl = f"{data_inizio_t} {ora_i}:00"
-				ora_fine_tl = f"{data_fine_t} {ora_f}:00"
-				if datetime.strptime(ora_i, "%H:%M") >= datetime.strptime(ora_f, "%H:%M"):
-            		st.error("L'ora di fine deve essere successiva all'ora di inizio!")
-            		return
+                ora_inizio_tl = f"{data_inizio_t} {ora_i}:00"
+                ora_fine_tl = f"{data_fine_t} {ora_f}:00"
+                if datetime.strptime(ora_i, "%H:%M") >= datetime.strptime(ora_f, "%H:%M"):
+                    st.error("L'ora di fine deve essere successiva all'ora di inizio!")
+                    return
                 nuovi_log_l = []
                 for op in op_sel_l:
                     nuovi_log_l.append({
