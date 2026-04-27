@@ -785,7 +785,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     while curr <= x_range[1] + timedelta(days=60):
         all_shapes.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
         if curr.weekday() >= 5:
-            all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
+            all_shapes.append(dict(type="rect", x0=curr.replace(hour=8, minute=0), x1=curr.replace(hour=17, minute=0), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
         curr += timedelta(days=1)
         
     vista_compressa = st.session_state.vista_compressa
