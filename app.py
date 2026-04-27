@@ -1079,13 +1079,13 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     end_search = pd.to_datetime(f_range[1])
     
     # Assicuriamoci che le colonne inizio/fine siano datetime
-    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
-    df_p['fine'] = pd.to_datetime(df_p['fine'])
+    df_p['Inizio'] = pd.to_datetime(df_p['Inizio'])
+    df_p['Fine'] = pd.to_datetime(df_p['Fine'])
     
     # Applichiamo il filtro di intersezione
     df_p = df_p[
-        (df_p['inizio'] <= end_search) & 
-        (df_p['fine'] >= start_search)
+        (df_p['Inizio'] <= end_search) & 
+        (df_p['Fine'] >= start_search)
     ].copy()
     
 tabs = st.tabs(["📊 Timeline", "📊 Timeline Analitica", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
