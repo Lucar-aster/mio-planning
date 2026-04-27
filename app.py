@@ -775,7 +775,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y %H:%M} - %{customdata[3]|%H:%M}<br>%{customdata[6]}<extra></extra>"
         ))
         
