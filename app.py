@@ -688,18 +688,16 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 	df_op['Inizio'] = pd.to_datetime(df_op['inizio'])
 	df_op['Fine'] = pd.to_datetime(df_op['fine'])
     df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-    customdata = []
-    for _, r in df_op.iterrows():
-        customdata.append((
-            r.get('id', 0),
-            r.get('operatore', ''),
-            r['Inizio'].strftime('%H:%M'),
-            r['Fine'].strftime('%H:%M'),
-            r.get('commessa', ''),
-            r.get('task', ''),
-            r.get('note', ''),
-            r.get('task_id', 0)
-        ))
+    customdata = list(zip(
+        df_op['id'], 
+        df_op['operatore'], 
+        df_op['Inizio'].astype(str), 
+        df_op['Fine'].astype(str), 
+        df_op['commessa'], 
+        df_op['task'], 
+        df_op['note_html'], 
+        df_op['task_id']
+    ))
 	
 	fig = go.Figure()
 
@@ -1070,7 +1068,7 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[min_d, max(max_d, datetime.now().date()+ timedelta(days=1))], # Range preimpostato sui dati esistenti
+                value=[min_d, max(max_d, today)], # Range preimpostato sui dati esistenti
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 key="filter_date_range"
@@ -1100,7 +1098,7 @@ if l and tk and cm:
 # Filtro temporale (FIXATO)
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     # Convertiamo i limiti del filtro in datetime
-    start_search = pd.to_datetime(f_range[0]).replace(hour=0, minute=0, second=0)
+    start_search = pd.to_datetime(f_range[0])
     end_search = pd.to_datetime(f_range[1]).replace(hour=23, minute=59, second=59)
     
     # Applichiamo il filtro di intersezione
