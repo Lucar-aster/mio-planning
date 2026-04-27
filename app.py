@@ -826,7 +826,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
-    fig.add_vline(x=datetime.now() * 1000, line_width=2, line_color="red")
+    fig.add_vline(x=(datetime.combine(ora_attuale.date(), datetime.min.time()).timestamp() * 1000) + ((datetime.now().hour * 3600 + datetime.now().minute * 60 + datetime.now().second) * 1000), line_width=2, line_color="red")
     
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
