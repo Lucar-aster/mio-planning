@@ -1067,7 +1067,7 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[min_d, max(max_d, datetime.now().date())], # Range preimpostato sui dati esistenti
+                value=[min_d, max(max_d, datetime.now().date()+ timedelta(days=1))], # Range preimpostato sui dati esistenti
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 key="filter_date_range"
@@ -1098,7 +1098,11 @@ if l and tk and cm:
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     # Convertiamo i limiti del filtro in datetime
     start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1]).replace(hour=23, minute=59, second=59)
+    end_search = pd.to_datetime(f_range[1]))
+
+	# Assicuriamoci che le colonne inizio/fine siano datetime
+    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
+    df_p['fine'] = pd.to_datetime(df_p['fine'])
     
     # Applichiamo il filtro di intersezione
     df_p = df_p[
