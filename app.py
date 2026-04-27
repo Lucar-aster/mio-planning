@@ -1098,7 +1098,7 @@ if l and tk and cm:
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     # Convertiamo i limiti del filtro in datetime
     start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1]))
+    end_search = pd.to_datetime(f_range[1])
 
 	# Assicuriamoci che le colonne inizio/fine siano datetime
     df_p['inizio'] = pd.to_datetime(df_p['inizio'])
