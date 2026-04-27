@@ -1079,8 +1079,8 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     end_search = pd.to_datetime(f_range[1])
     
     # Assicuriamoci che le colonne inizio/fine siano datetime
-    df_p['Inizio'] = pd.to_datetime(df_p['Inizio'])
-    df_p['Fine'] = pd.to_datetime(df_p['Fine'])
+    df_p['Inizio'] = pd.to_datetime(df_p['inizio'])
+    df_p['Fine'] = pd.to_datetime(df_p['fine'])
     
     # Applichiamo il filtro di intersezione
     df_p = df_p[
