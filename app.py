@@ -685,7 +685,7 @@ def get_it_date_label(dt, delta):
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_merged = merge_consecutive_logs(df_plot)
-    df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
+    df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
 
     mappa_emoji = {
@@ -756,8 +756,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         offset=-0.45
     ))
             
-    for op in df_merged['operatore'].unique():
-        df_op = df_merged[df_merged['operatore'] == op]
+    for op in df_plot['operatore'].unique():
+        df_op = df_plot[df_plot['operatore'] == op]
         y_labels = []
         for _, row in df_op.iterrows():
             e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
@@ -806,7 +806,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         
     vista_compressa = st.session_state.vista_compressa
     
-    unique_rows = df_merged['Commessa'].unique() if vista_compressa else df_merged[['Commessa', 'Task']].drop_duplicates()
+    unique_rows = df_plot['Commessa'].unique() if vista_compressa else df_plot[['Commessa', 'Task']].drop_duplicates()
     n_r = len(unique_rows)
 
     fig.update_layout(
