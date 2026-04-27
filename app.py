@@ -641,18 +641,6 @@ def modal_clona_avanzata():
 def merge_consecutive_logs(df):
     if df.empty: return df
     
-    # --- FIX: Forza la correzione degli orari 00:00 direttamente qui ---
-    df = df.copy() # Previene alert di Pandas
-    mask_mezzanotte = (df['Inizio'].dt.hour == 0) & (df['Inizio'].dt.minute == 0)
-    df.loc[mask_mezzanotte, 'Inizio'] = df.loc[mask_mezzanotte, 'Inizio'] + pd.Timedelta(hours=8)
-    
-    mask_uguali = (df['Inizio'] >= df['Fine']) | ((df['Fine'].dt.hour == 0) & (df['Fine'].dt.minute == 0))
-    df.loc[mask_uguali, 'Fine'] = df.loc[mask_uguali, 'Inizio'] + pd.Timedelta(hours=8)
-    
-    # Ricalcolo preventivo della durata
-    df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000
-    # -------------------------------------------------------------------
-
     df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
     merged = []
     
