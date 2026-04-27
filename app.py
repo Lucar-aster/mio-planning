@@ -1085,12 +1085,8 @@ if l and tk and cm:
 # Filtro temporale (FIXATO)
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     # Convertiamo i limiti del filtro in datetime
-    start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1])
-
-	# Assicuriamoci che le colonne inizio/fine siano datetime
-    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
-    df_p['fine'] = pd.to_datetime(df_p['fine'])
+    start_search = pd.to_datetime(f_range[0]).replace(hour=0, minute=0, second=0)
+    end_search = pd.to_datetime(f_range[1]).replace(hour=23, minute=59, second=59)
     
     # Applichiamo il filtro di intersezione
     df_p = df_p[
