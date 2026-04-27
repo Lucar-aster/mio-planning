@@ -1002,9 +1002,6 @@ if l and tk and cm:
     df['Inizio'] = pd.to_datetime(df['inizio'], errors='coerce')
     df['Fine'] = pd.to_datetime(df['fine'], errors='coerce')
 	
-	# Rimuove righe con date non valide
-    df = df.dropna(subset=['Inizio', 'Fine'])
-
 	# --- CORREZIONE PER LOG 00:00:00 ---
     # Se inizio e fine sono uguali, aggiungiamo 1 ora di default per visualizzarli
     mask_mezzanotte = (df['Inizio'].dt.hour == 0) & (df['Inizio'].dt.minute == 0) & (df['Inizio'].dt.second == 0)
