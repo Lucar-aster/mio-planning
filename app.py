@@ -697,8 +697,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
     # Creiamo segmenti solo per i giorni visibili (x_range) per non appesantire il browser
     click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-	click_starts = [d.replace(hour=8, minute=0) for d in click_dates]
-	durata_clic_ms = 9 * 3600 * 1000
+    click_starts = [d.replace(hour=8, minute=0) for d in click_dates]
+    durata_clic_ms = 9 * 3600 * 1000
 	
     ms_per_day = 24 * 3600 * 1000
     grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
