@@ -1007,7 +1007,7 @@ if l and tk and cm:
     mask_mezzanotte = (df['Inizio'].dt.hour == 0) & (df['Inizio'].dt.minute == 0) & (df['Inizio'].dt.second == 0)
     df.loc[mask_mezzanotte, 'Inizio'] = df.loc[mask_mezzanotte, 'Inizio'] + pd.Timedelta(hours=8)
 
-    mask_uguali = df['Inizio'] >= df['Fine']
+    mask_uguali = (df['Inizio'] >= df['Fine']) | ((df['Fine'].dt.hour == 0) & (df['Fine'].dt.minute == 0))
     df.loc[mask_uguali, 'Fine'] = df.loc[mask_uguali, 'Inizio'] + pd.Timedelta(hours=8)
     # -----------------------------------
 	
