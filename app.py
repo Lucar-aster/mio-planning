@@ -684,9 +684,24 @@ def get_it_date_label(dt, delta):
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_merged = merge_consecutive_logs(df_plot)
+    df_op.columns = [c.lower() for c in df_op.columns]
+	df_op['Inizio'] = pd.to_datetime(df_op['inizio'])
+	df_op['Fine'] = pd.to_datetime(df_op['fine'])
     df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-    fig = go.Figure()
+    customdata = []
+    for _, r in df_op.iterrows():
+        customdata.append((
+            r.get('id', 0),
+            r.get('operatore', ''),
+            r['Inizio'].strftime('%H:%M'),
+            r['Fine'].strftime('%H:%M'),
+            r.get('commessa', ''),
+            r.get('task', ''),
+            r.get('note', ''),
+            r.get('task_id', 0)
+        ))
+	
+	fig = go.Figure()
 
     mappa_emoji = {
     "Quotazione 🟣": "🟣",
@@ -751,7 +766,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
-        customdata=grid_customdata,
+        customdata=customdata,
         width=0.9,
         offset=-0.45
     ))
