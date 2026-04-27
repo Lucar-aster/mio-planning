@@ -721,8 +721,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y_labels_pulsanti.append(y_val)
         
         for d in click_dates:
-		    click_starts = d.replace(hour=8, minute=0)
-			durata_clic_ms = 9 * 3600 * 1000
+            click_starts = d.replace(hour=8, minute=0)
+            durata_clic_ms = 9 * 3600 * 1000
             grid_bases.append(click_starts)
             grid_xs.append(durata_clic_ms)
             grid_ys.append(y_val)
