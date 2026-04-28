@@ -1068,7 +1068,7 @@ if l and tk and cm:
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[min_d, max(max_d, today)], # Range preimpostato sui dati esistenti
+                value=[min_d, max(max_d, date.today())], # Range preimpostato sui dati esistenti
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 key="filter_date_range"
