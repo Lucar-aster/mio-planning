@@ -699,7 +699,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         df_op['task_id']
     ))
 	
-	fig = go.Figure()
+    fig = go.Figure()
 
     mappa_emoji = {
     "Quotazione 🟣": "🟣",
