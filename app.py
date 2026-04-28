@@ -919,7 +919,7 @@ if l and tk and cm:
     df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
     df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "Pianificato 🔵"))
     df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000
-    df.loc[df['Durata_ms'] <= 0, 'Durata_ms'] = 3600 * 1000
+    df.loc[df['Durata_ms'] <= 3600, 'Durata_ms'] = 3600 * 1000
 
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
