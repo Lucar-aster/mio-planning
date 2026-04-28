@@ -1063,7 +1063,7 @@ if l and tk and cm:
 
         with s3:
             # Filtro intervallo date (Date Range)
-			today = datetime.now().date()
+            today = datetime.now().date()
             min_d = pd.to_datetime(df['Inizio']).min().date()
             max_d = pd.to_datetime(df['Fine']).max().date()
             # Default: oggi -> +30 giorni (o quello che preferisci)
