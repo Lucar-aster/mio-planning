@@ -913,7 +913,7 @@ if l and tk and cm:
     tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'Pianificato 🔵')} for t in tk}
     cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
     df = pd.DataFrame(l)
-    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']), pd.to_datetime(df['fine'])
+    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.tz_localize(None), pd.to_datetime(df['fine']).dt.tz_localize(None)
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('n', "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
     df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
