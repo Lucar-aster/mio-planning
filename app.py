@@ -683,21 +683,9 @@ def get_it_date_label(dt, delta):
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_op.columns = [c.lower() for c in df_op.columns]
-    df_op['Inizio'] = pd.to_datetime(df_op['inizio'])
-    df_op['Fine'] = pd.to_datetime(df_op['fine'])
+    
     df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-    customdata = list(zip(
-        df_op['id'], 
-        df_op['operatore'], 
-        df_op['Inizio'].astype(str), 
-        df_op['Fine'].astype(str), 
-        df_op['commessa'], 
-        df_op['task'], 
-        df_op['note_html'], 
-        df_op['task_id']
-    ))
+    
 	
     fig = go.Figure()
 
@@ -783,7 +771,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             else:
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
                 y_labels.append([c_label, t_label])
-
+        
+        if df_plot.empty: st.info("Nessun dato trovato."); return
+        df_op.columns = [c.lower() for c in df_op.columns]
+        df_op['Inizio'] = pd.to_datetime(df_op['inizio'])
+        df_op['Fine'] = pd.to_datetime(df_op['fine'])
         
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
