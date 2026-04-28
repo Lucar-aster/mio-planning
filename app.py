@@ -670,6 +670,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         orientation='h',
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
+        hovertemplate=None,
         hoverinfo='none',
         customdata=grid_customdata,
         width=0.9,
