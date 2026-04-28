@@ -686,7 +686,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     if df_plot.empty: st.info("Nessun dato trovato."); return
     df_op.columns = [c.lower() for c in df_op.columns]
     df_op['Inizio'] = pd.to_datetime(df_op['inizio'])
-	df_op['Fine'] = pd.to_datetime(df_op['fine'])
+    df_op['Fine'] = pd.to_datetime(df_op['fine'])
     df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     customdata = list(zip(
         df_op['id'], 
