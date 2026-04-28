@@ -655,7 +655,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y_labels_pulsanti.append(y_val)
         
         for d in click_dates:
-		    base_giorno = pd.Timestamp(d).replace(hour=0, minute=0, second=0, microsecond=0)
+            base_giorno = pd.Timestamp(d).replace(hour=0, minute=0, second=0, microsecond=0)
             grid_bases.append(base_giorno)
             grid_xs.append(ms_per_day)
             grid_ys.append(y_val)
