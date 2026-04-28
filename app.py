@@ -752,7 +752,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
-        customdata=customdata,
         width=0.9,
         offset=-0.45
     ))
