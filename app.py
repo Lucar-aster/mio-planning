@@ -505,7 +505,7 @@ def modal_log():
     oggi = datetime.now().date()
     with c1:
         data_i = c1.date_input("Inizio", value=oggi)
-        ora_i = st.time_input("Ora Inizio", value=time(8, 0)) data_f , , c2.date_input("Fine", value=oggi)
+        ora_i = st.time_input("Ora Inizio", value=time(8, 0))
     with c2:
         data_f = c2.date_input("Fine", value=oggi)
         ora_f = st.time_input("Ora Fine", value=time(17, 0))
