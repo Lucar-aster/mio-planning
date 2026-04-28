@@ -331,8 +331,8 @@ def modal_gestione_clic(task_id, data_clic):
                     nuovi_log_t.append({
                         "task_id": final_task_id,
                         "operatore": op,
-                        "inizio": str(data_inizio_t),
-                        "fine": str(data_fine_t),
+                        "inizio": str(dt_inizio_t),
+                        "fine": str(dt_fine_t),
                         "note": nota_t
                     })
                 try:
@@ -433,8 +433,8 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         column_config={
             "id": None, "task_id": None,
             "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
-            "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY HH:mm", step=15),
-            "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY HH:mm", step=15),
+            "inizio": st.column_config.DatetimeColumn("Inizio", format="DD/MM/YYYY HH:mm", step=15),
+            "fine": st.column_config.DatetimeColumn("Fine", format="DD/MM/YYYY HH:mm", step=15),
             "note": st.column_config.TextColumn("Note", width="large"),
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
