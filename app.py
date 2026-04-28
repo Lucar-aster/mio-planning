@@ -2,7 +2,7 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import textwrap
 from streamlit_calendar import calendar
 
@@ -12,10 +12,6 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
-
-# --- NUOVA COSTANTE ORARI ---
-ORARI_LAVORO = [f"{h:02d}:{m:02d}" for h in range(8, 18) for m in [0, 15, 30, 45]]
-ORARI_LAVORO = ORARI_LAVORO[:ORARI_LAVORO.index("17:00")+1] # Si ferma esattamente alle 17:00
 
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -284,10 +280,7 @@ def modal_gestione_clic(task_id, data_clic):
     with st.expander("📑 Nuovo Task con Log", expanded=False):
         cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
         lista_nomi_cm = list(cms_dict.keys())
-        
-        # Pre-selezioniamo la commessa cliccata se esiste
         idx_default = lista_nomi_cm.index(commessa_info['nome_commessa']) if commessa_info and commessa_info['nome_commessa'] in lista_nomi_cm else 0
-        
         lista_scelte_cm = lista_nomi_cm + ["➕ Nuova Commessa..."]
         sel_cm = st.selectbox("Commessa di destinazione", options=lista_scelte_cm, index=idx_default)
         
@@ -300,24 +293,23 @@ def modal_gestione_clic(task_id, data_clic):
         new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat")
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_t = st.multiselect("Seleziona Operatore", ops)
-        
-        # MODIFICA: Invece del range unico, Data singola + Orari
-        data_t = st.date_input("Data Log", value=data_clic, format="DD/MM/YYYY", key="d_t")
-        col_o1, col_o2 = st.columns(2)
-        ora_i_t = col_o1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0, key="oi_t")
-        ora_f_t = col_o2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1, key="of_t")
-
+        date_range_t = st.date_input(
+            "Periodo Log", 
+            value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
+            format="DD/MM/YYYY"
+        )
+        ct1, ct2 = st.columns(2)
+        ora_i_t = ct1.time_input("Ora Inizio", value=time(8, 0), key="oit")
+        ora_f_t = ct2.time_input("Ora Fine", value=time(17, 0), key="oft")
         nota_t = st.text_input("Nota log")  
         c1, c2 = st.columns(2)
         if c1.button("Registra Task", type="primary", width='stretch'):
             if not op_sel_t:
                 st.warning("Seleziona almeno un operatore.")
-            elif datetime.strptime(ora_i_t, "%H:%M") >= datetime.strptime(ora_f_t, "%H:%M"):
-                st.warning("L'ora di fine deve essere successiva all'ora di inizio.")
+            elif len(date_range_t) < 2:
+                st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
-                data_inizio_t = f"{data_t} {ora_i_t}:00"
-                data_fine_t = f"{data_t} {ora_f_t}:00"
-                
+                data_inizio_t, data_fine_t = date_range_t
                 final_task_id = task_id
                 curr_cm_id = cms_dict.get(sel_cm)
                 if sel_cm == "➕ Nuova Commessa...":
@@ -333,34 +325,35 @@ def modal_gestione_clic(task_id, data_clic):
                 final_task_id = res_tk.data[0]['id']
 
                 nuovi_log_t = []
+                dt_inizio_t = datetime.combine(date_range_t[0], ora_i_t).isoformat()
+                dt_fine_t = datetime.combine(date_range_t[1], ora_f_t).isoformat()
                 for op in op_sel_t:
                     nuovi_log_t.append({
                         "task_id": final_task_id,
                         "operatore": op,
-                        "inizio": data_inizio_t,
-                        "fine": data_fine_t,
+                        "inizio": str(data_inizio_t),
+                        "fine": str(data_fine_t),
                         "note": nota_t
                     })
                 try:
                     supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
                     st.success(f"Inserito Task e {len(op_sel_t)} log con successo!")
-                    get_cached_data.clear()
-                    st.session_state.chart_key += 1
-                    st.rerun()
+                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
                 except Exception as e:
                     st.error(f"Errore durante l'inserimento: {e}")
         
-        if c2.button("Annulla", width='stretch', key="annulla_t"): 
-            get_cached_data.clear()
-            st.session_state.chart_key += 1
-            st.rerun()
+        if c2.button("Annulla", width='stretch', key="annulla_t"): get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
-        # MODIFICA: Invece del range unico, Data singola + Orari
-        data_l = st.date_input("Data Log", value=data_clic, format="DD/MM/YYYY", key="d_l")
-        col_o3, col_o4 = st.columns(2)
-        ora_i_l = col_o3.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0, key="oi_l")
-        ora_f_l = col_o4.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1, key="of_l")
+        date_range_l = st.date_input(
+            "Periodo Log", 
+            value=(data_clic, data_clic), # Range predefinito (Inizio, Fine)
+            format="DD/MM/YYYY",
+            key="date_range_l"
+        )
+        cl1, cl2 = st.columns(2)
+        ora_i_l = cl1.time_input("Ora Inizio", value=time(8, 0), key="oil")
+        ora_f_l = cl2.time_input("Ora Fine", value=time(17, 0), key="ofl")
 
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
@@ -369,65 +362,47 @@ def modal_gestione_clic(task_id, data_clic):
         c1, c2 = st.columns(2)
         if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
             supabase.table("Task").update({"stato": new_tk_status_2}).eq("id", task_id).execute()
-            if not op_sel_l:
-                st.warning("Seleziona almeno un operatore.")
-            elif datetime.strptime(ora_i_l, "%H:%M") >= datetime.strptime(ora_f_l, "%H:%M"):
-                st.warning("L'ora di fine deve essere successiva all'ora di inizio.")
+            if not op_sel_l: st.warning("Seleziona almeno un operatore.")
+            elif len(date_range_l) < 2: st.warning("Seleziona sia la data di inizio che quella di fine nel calendario.")
             else:
-                data_inizio_l = f"{data_l} {ora_i_l}:00"
-                data_fine_l = f"{data_l} {ora_f_l}:00"
-                
+                data_inizio_l= datetime.combine(date_range_l[0], ora_i_l).isoformat()
+                data_fine_l = datetime.combine(date_range_l[1], ora_f_l).isoformat()
                 nuovi_log_l = []
                 for op in op_sel_l:
                     nuovi_log_l.append({
                         "task_id": task_id,
                         "operatore": op,
-                        "inizio": data_inizio_l,
-                        "fine": data_fine_l,
+                        "inizio": str(data_inizio_l),
+                        "fine": str(data_fine_l),
                         "note": nota_l
                     })
                 try:
                     supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
                     st.success(f"Inseriti {len(op_sel_l)} log con successo!")
-                    get_cached_data.clear()
-                    st.session_state.chart_key += 1
-                    st.rerun()
+                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
                 except Exception as e:
                     st.error(f"Errore durante l'inserimento: {e}")
         
-        if c2.button("Annulla", width='stretch', key="annulla_l"): 
-            get_cached_data.clear()
-            st.session_state.chart_key += 1
-            st.rerun()
+        if c2.button("Annulla", width='stretch', key="annulla_l"): get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
     st.markdown("""<style>div[data-testid="stDialog"] div[role="dialog"] { width: 90vw !important; max-width: 1300px !important; }</style>""", unsafe_allow_html=True)
-    
-    # --- 1. DATI DALLA CACHE ---
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
-    # Recuperiamo anche la lista nomi operatori per il menu a tendina nella tabella
     ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
-    
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
-    
     current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
-    if not current_task_info:
-        st.error("Dati task non trovati."); return
-    
+    if not current_task_info: st.error("Dati task non trovati."); return
     curr_cm_id = current_task_info['commessa_id']
     curr_cm_nome = cms_id_to_nome.get(curr_cm_id, list(cms_dict.keys())[0])
-
-    # --- 2. UI SPOSTAMENTO RAPIDO (Intestazione) ---
+    # --- UI SPOSTAMENTO RAPIDO (Intestazione) ---
     st.info("💡 Modifica i dettagli qui sotto. Se cambi 'Commessa/Task' sopra, sposterai TUTTI i log visualizzati.")
     col_c, col_t, col_s = st.columns(3)
-    
     with col_c:
         list_cm = list(cms_dict.keys())
         sel_cm_nome = st.selectbox("Sposta in Commessa:", options=list_cm, index=list_cm.index(curr_cm_nome), key="ed_cm")
         sel_cm_id = cms_dict[sel_cm_nome]
-    
     with col_t:
         tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
         task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
@@ -435,78 +410,54 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         idx_tk = list_tk.index(current_task_info['nome_task']) if current_task_info['nome_task'] in list_tk else 0
         sel_task_nome = st.selectbox("Sposta in Task:", options=list_tk, index=idx_tk, key="ed_tk")
         id_task_target = task_opts[sel_task_nome]
-
     with col_s:
         current_status = next((t['stato'] for t in tasks_filtrati if t['nome_task'] == sel_task_nome), STATI_TASK[0])
         nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_status))
 
     st.divider()
-
-    # --- 3. DATA EDITOR CON CAMBIO OPERATORE ---
+    # --- DATA EDITOR CON CAMBIO OPERATORE ---
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
     df_sub = pd.DataFrame(all_logs)
     
     if not df_sub.empty:
-        # MODIFICA: Manteniamo il datetime per permettere la modifica oraria
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio'])
         df_sub['fine'] = pd.to_datetime(df_sub['fine'])
-        
-        # Filtro basato sulla data
         mask = (df_sub['inizio'].dt.date >= pd.to_datetime(current_start).date()) & (df_sub['inizio'].dt.date <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].copy()
         df_sub["Elimina"] = False
 
-    if df_sub.empty:
-        st.warning("Nessun log trovato."); return
-
-    # Editor con colonna Operatore come Selectbox e DatetimeColumn per Inizio/Fine
+    if df_sub.empty: st.warning("Nessun log trovato."); return
+    # Editor con colonna Operatore come Selectbox
     edited_df = st.data_editor(
         df_sub,
         column_config={
             "id": None, "task_id": None,
-            "operatore": st.column_config.SelectboxColumn(
-                "Operatore",
-                options=ops_list,
-                width="medium",
-                required=True
-            ),
-            "inizio": st.column_config.DatetimeColumn("Inizio", format="DD/MM/YYYY HH:mm", step=900),
-            "fine": st.column_config.DatetimeColumn("Fine", format="DD/MM/YYYY HH:mm", step=900),
+            "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+            "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY HH:mm", step=15),
+            "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY HH:mm", step=15),
             "note": st.column_config.TextColumn("Note", width="large"),
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
-        disabled=["id", "task_id"],
-        width='stretch', hide_index=True, key="editor_v10"
+        disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
     )
-
-    # --- 4. SALVATAGGIO ---
+    # --- SALVATAGGIO ---
     c1, c2 = st.columns(2)
     if c1.button("Salva Tutto", type="primary", width='stretch'):
-        # A. Stato Task
         supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
-        
-        # B. Loop Log
         for _, row in edited_df.iterrows():
-            if row["Elimina"]:
-                supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
+            if row["Elimina"]: supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
             else:
                 supabase.table("Log_Tempi").update({
                     "task_id": id_task_target,
                     "operatore": row["operatore"], # Salva il nuovo operatore scelto nella riga
-                    "inizio": str(row["inizio"]),
-                    "fine": str(row["fine"]),
+                    "inizio": str(row["inizio"].isoformat()),
+                    "fine": str(row["fine"].isoformat()),
                     "note": str(row["note"]) if row["note"] else ""
                 }).eq("id", row["id"]).execute()
             
-        st.success("Dati aggiornati!")
-        get_cached_data.clear()
-        st.session_state.chart_key += 1
-        st.rerun()
+        st.success("Dati aggiornati!"); get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
-    if c2.button("Annulla", width='stretch'): 
-        get_cached_data.clear()
-        st.session_state.chart_key += 1
-        st.rerun()
+    if c2.button("Annulla", width='stretch'): get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
@@ -529,81 +480,67 @@ def modal_task():
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     cm_data, tk_data, ops_list = get_cached_data("Commesse"), get_cached_data("Task"), [o['nome'] for o in get_cached_data("Operatori")]
-    
     op_ms = st.multiselect("Operatore", options=ops_list, key="new_log_ops_ms")
-    
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="new_log_cm_sb")
     sel_cm_id = cms_dict[sel_cm_nome]
-    
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
     task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
     # Creiamo una mappa inversa per recuperare lo stato attuale se il task esiste
     task_status_map = {t['nome_task']: t.get('stato', STATI_TASK[1]) for t in tasks_filtrati}
-    
     task_list = list(task_opts.keys()) + ["➕ Aggiungi nuovo task..."]
     sel_task = st.selectbox("Task", options=task_list, key="new_log_tk_sb")
     
     new_task_name = ""
-    default_status_index = 1 # "In Corso" o quello definito in STATI_TASK
-    
+    default_status_index = 1
     if sel_task == "➕ Aggiungi nuovo task...":
         new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti")
     else:
-        # Se il task esiste, cerchiamo di pre-selezionare il suo stato attuale nella selectbox
         current_status = task_status_map.get(sel_task, STATI_TASK[1])
-        if current_status in STATI_TASK:
-            default_status_index = STATI_TASK.index(current_status)
+        if current_status in STATI_TASK: default_status_index = STATI_TASK.index(current_status)
 
-    # Il campo stato è ora fuori dall'if: sempre visibile
     new_task_status = st.selectbox("Stato Task", options=STATI_TASK, index=default_status_index)
     
-    # MODIFICA: Logica oraria invece di Inizio/Fine come Date Intere
-    oggi = datetime.now().date()
-    data_log = st.date_input("Data Log", value=oggi)
     c1, c2 = st.columns(2)
-    ora_i = c1.selectbox("Ora Inizio", options=ORARI_LAVORO, index=0, key="ml_oi")
-    ora_f = c2.selectbox("Ora Fine", options=ORARI_LAVORO, index=len(ORARI_LAVORO)-1, key="ml_of")
+    oggi = datetime.now().date()
+    with c1:
+        data_i = c1.date_input("Inizio", value=oggi)
+        ora_i = st.time_input("Ora Inizio", value=time(8, 0)) data_f , , c2.date_input("Fine", value=oggi)
+    with c2:
+        data_f = c2.date_input("Fine", value=oggi)
+        ora_f = st.time_input("Ora Fine", value=time(17, 0))
 
     nota = st.text_area("Note")
     
     if st.button("Registra Log", width='stretch', type="primary"):
         if not op_ms: st.error("⚠️ Seleziona operatore!"); return
-        
         target_id = None
-        
         if sel_task == "➕ Aggiungi nuovo task...":
             if new_task_name.strip():
-                # Inserimento nuovo Task con lo stato scelto
                 res = supabase.table("Task").insert({
                     "nome_task": new_task_name.strip(), 
                     "commessa_id": sel_cm_id, 
                     "stato": new_task_status.strip()
                 }).execute()
                 if res.data: target_id = res.data[0]['id']
-            else:
-                st.error("Nome task mancante"); return
+            else: st.error("Nome task mancante"); return
         else:
-            # Task esistente: aggiorniamo lo stato sul DB prima di procedere
             target_id = task_opts[sel_task]
             supabase.table("Task").update({"stato": new_task_status.strip()}).eq("id", target_id).execute()
         
         if target_id:
-            inizio_dt = f"{data_log} {ora_i}:00"
-            fine_dt = f"{data_log} {ora_f}:00"
-            
-            # Creazione dei log per ogni operatore selezionato
+            dt_i = datetime.combine(data_i, ora_i).isoformat()
+            dt_f = datetime.combine(data_f, ora_f).isoformat()
             for op_name in op_ms:
                 supabase.table("Log_Tempi").insert({
                     "operatore": op_name, 
                     "task_id": target_id, 
-                    "inizio": inizio_dt, 
-                    "fine": fine_dt, 
+                    "inizio": dt_i, 
+                    "fine": dt_f, 
                     "note": nota
                 }).execute()
             
-            get_cached_data.clear()
-            st.rerun()
+            get_cached_data.clear(); st.rerun()
             
 @st.dialog("📂 Clona Commessa con Date")
 def modal_clona_avanzata():
@@ -632,46 +569,31 @@ def modal_clona_avanzata():
                 res_tk = supabase.table("Task").insert({"nome_task": t['nome_task'], "commessa_id": new_cm_id, "stato": t.get('stato', 'Pianificato 🔵')}).execute()
                 if res_tk.data: old_to_new_tasks[t['id']] = res_tk.data[0]['id']
             if copia_log and logs_vecchi:
-                # MODIFICA: Preserviamo le ore, aggiungendo %H:%M:%S
-                nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d %H:%M:%S'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d %H:%M:%S'), "note": l.get('note', "")} for l in logs_vecchi]
+                nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "note": l.get('note', "")} for l in logs_vecchi]
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.rerun()
 
 # --- 6. LOGICA MERGE ---
 def merge_consecutive_logs(df):
     if df.empty: return df
-    
     df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
     merged = []
-    
     for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
         current_row = None
         for _, row in group.iterrows():
             nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
             nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m')}</i>: {nota_testo}" if nota_testo else ""
-            
             if current_row is None: 
                 current_row = row.to_dict()
                 current_row['note_html'] = nota_formattata
             else:
-                # Se i log sono consecutivi (entro 24h), uniscili
                 if row['Inizio'] <= (pd.to_datetime(current_row['Fine']) + timedelta(days=1)):
-                    # La fine diventa la più lontana tra le due
-                    nuova_fine = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
-                    current_row['Fine'] = nuova_fine
-                    
-                    # Ricalcola la durata in millisecondi esatti post-unione
-                    current_row['Durata_ms'] = (nuova_fine - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
-                    
-                    if nota_formattata: 
-                        current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
+                    current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
+                    current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine']) + timedelta(days=1)) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
+                    if nota_formattata: current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
                 else:
-                    merged.append(current_row)
-                    current_row = row.to_dict()
-                    current_row['note_html'] = nota_formattata
-                    
+                    merged.append(current_row); current_row = row.to_dict(); current_row['note_html'] = nota_formattata
         if current_row: merged.append(current_row)
-        
     return pd.DataFrame(merged)
 
 def get_it_date_label(dt, delta):
@@ -683,10 +605,9 @@ def get_it_date_label(dt, delta):
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    
-    df_tasks_univoci = df_plot[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
-    
-	
+    if df_plot.empty: st.info("Nessun dato trovato."); return
+    df_merged = merge_consecutive_logs(df_plot)
+    df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
 
     mappa_emoji = {
@@ -711,7 +632,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
     # Creiamo segmenti solo per i giorni visibili (x_range) per non appesantire il browser
     click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-	
     ms_per_day = 24 * 3600 * 1000
     grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
     y_labels_pulsanti = []
@@ -735,10 +655,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y_labels_pulsanti.append(y_val)
         
         for d in click_dates:
-            click_starts = d.replace(hour=8, minute=0)
-            durata_clic_ms = 9 * 3600 * 1000
-            grid_bases.append(click_starts)
-            grid_xs.append(durata_clic_ms)
+            grid_bases.append(d)
+            grid_xs.append(ms_per_day)
             grid_ys.append(y_val)
             # Salviamo [Tipo, Task_ID, Data_Giorno]
             grid_customdata.append(["LOG_FITTIZIO", r['task_id'], d.date()])
@@ -752,12 +670,13 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         marker=dict(color="rgba(0,0,0,0)"), # Trasparente
         showlegend=False,
         hoverinfo='none',
+        customdata=grid_customdata,
         width=0.9,
         offset=-0.45
     ))
             
-    for op in df_plot['operatore'].unique():
-        df_op = df_plot[df_plot['operatore'] == op]
+    for op in df_merged['operatore'].unique():
+        df_op = df_merged[df_merged['operatore'] == op]
         y_labels = []
         for _, row in df_op.iterrows():
             e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
@@ -770,17 +689,13 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             else:
                 t_label = "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))
                 y_labels.append([c_label, t_label])
-        
-        if df_plot.empty: st.info("Nessun dato trovato."); return
-        df_op.columns = [c.lower() for c in df_op.columns]
-        df_op['Inizio'] = pd.to_datetime(df_op['inizio'])
-        df_op['Fine'] = pd.to_datetime(df_op['fine'])
+
         
         fig.add_trace(go.Bar(
             base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note'], df_op['task_id'])),
-            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y %H:%M} - %{customdata[3]|%H:%M}<br>%{customdata[6]}<extra></extra>"
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
         
     # --- Gestione Asse X Dinamica ---
@@ -803,14 +718,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     all_shapes = []
     curr = x_range[0] - timedelta(days=60)
     while curr <= x_range[1] + timedelta(days=60):
-        all_shapes.append(dict(type="line", x0=curr.replace(hour=8, minute=0), x1=curr.replace(hour=8, minute=0), y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
+        all_shapes.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
         if curr.weekday() >= 5:
-            all_shapes.append(dict(type="rect", x0=curr.replace(hour=8, minute=0), x1=curr.replace(hour=17, minute=0), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
+            all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
         curr += timedelta(days=1)
         
     vista_compressa = st.session_state.vista_compressa
     
-    unique_rows = df_plot['Commessa'].unique() if vista_compressa else df_plot[['Commessa', 'Task']].drop_duplicates()
+    unique_rows = df_merged['Commessa'].unique() if vista_compressa else df_merged[['Commessa', 'Task']].drop_duplicates()
     n_r = len(unique_rows)
 
     fig.update_layout(
@@ -818,19 +733,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(
-            type="date", 
-            ticklabelmode="period", 
-            side="top", 
-            range=x_range, 
-            tickvals=tick_range + pd.Timedelta(hours=12), 
-            ticktext=tick_text,
-            rangebreaks=[dict(bounds=[17, 8], pattern="hour")] # MODIFICA: Nasconde le ore notturne
-        ),
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
-    fig.add_vline(x=(datetime.combine(datetime.now().date(), datetime.min.time()).timestamp() * 1000) + ((datetime.now().hour * 3600 + datetime.now().minute * 60 + datetime.now().second) * 1000), line_width=2, line_color="red")
+    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
     
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
@@ -936,7 +843,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
 	    	text =df_op['note'],
 			textposition="outside",
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note'], df_op['task_id'])),
-            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y %H:%M} - %{customdata[3]|%H:%M}<br>%{customdata[6]}<extra></extra>"
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
         
     # --- Gestione Asse X Dinamica ---
@@ -974,15 +881,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
         height=300 + (n_r * 75),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, dragmode='pan',
-        xaxis=dict(
-            type="date", 
-            ticklabelmode="period", 
-            side="top", 
-            range=x_range, 
-            tickvals=tick_range + pd.Timedelta(hours=12), 
-            ticktext=tick_text,
-            rangebreaks=[dict(bounds=[17, 8], pattern="hour")] # MODIFICA: Nasconde le ore notturne
-        ),
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
@@ -1014,27 +913,13 @@ if l and tk and cm:
     tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'Pianificato 🔵')} for t in tk}
     cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
     df = pd.DataFrame(l)
-    
-    # MODIFICA: Rimossi i .dt.normalize() per preservare ore e minuti
-    df['Inizio'] = pd.to_datetime(df['inizio'], errors='coerce')
-    df['Fine'] = pd.to_datetime(df['fine'], errors='coerce')
-	
-	# --- CORREZIONE PER LOG 00:00:00 ---
-    # Se inizio e fine sono uguali, aggiungiamo 1 ora di default per visualizzarli
-    mask_mezzanotte = (df['Inizio'].dt.hour == 0) & (df['Inizio'].dt.minute == 0) & (df['Inizio'].dt.second == 0)
-    df.loc[mask_mezzanotte, 'Inizio'] = df.loc[mask_mezzanotte, 'Inizio'] + pd.Timedelta(hours=8)
-
-    mask_uguali = (df['Inizio'] >= df['Fine']) | ((df['Fine'].dt.hour == 0) & (df['Fine'].dt.minute == 0))
-    df.loc[mask_uguali, 'Fine'] = df.loc[mask_uguali, 'Inizio'] + pd.Timedelta(hours=8)
-    # -----------------------------------
-	
+    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']), pd.to_datetime(df['fine'])
     df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('n', "N/A"))
     df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
     df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
     df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "Pianificato 🔵"))
-    
-    # MODIFICA: Calcolo della durata esatta invece che (+ 1 giorno)
     df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000
+    df.loc[df['Durata_ms'] <= 0, 'Durata_ms'] = 3600 * 1000
 
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
@@ -1054,13 +939,12 @@ if l and tk and cm:
 
         with s3:
             # Filtro intervallo date (Date Range)
-            today = datetime.now().date()
-            min_d = pd.to_datetime(df['Inizio']).min().date()
-            max_d = pd.to_datetime(df['Fine']).max().date()
+            min_d = pd.to_datetime(df['inizio']).min().date()
+            max_d = pd.to_datetime(df['fine']).max().date()
             # Default: oggi -> +30 giorni (o quello che preferisci)
             f_range = st.date_input(
                 "Intervallo Date",
-                value=[min_d, max(max_d, today)], # Range preimpostato sui dati esistenti
+                value=[df['inizio'].min(), df['fine'].max()], # Range preimpostato sui dati esistenti
                 format="DD/MM/YYYY",
                 label_visibility="collapsed",
                 key="filter_date_range"
@@ -1091,12 +975,16 @@ if l and tk and cm:
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     # Convertiamo i limiti del filtro in datetime
     start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1]).replace(hour=23, minute=59, second=59)
+    end_search = pd.to_datetime(f_range[1])
+    
+    # Assicuriamoci che le colonne inizio/fine siano datetime
+    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
+    df_p['fine'] = pd.to_datetime(df_p['fine'])
     
     # Applichiamo il filtro di intersezione
     df_p = df_p[
-        (df_p['Inizio'] <= end_search) & 
-        (df_p['Fine'] >= start_search)
+        (df_p['inizio'] <= end_search) & 
+        (df_p['fine'] >= start_search)
     ].copy()
     
 tabs = st.tabs(["📊 Timeline", "📊 Timeline Analitica", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
@@ -1130,15 +1018,12 @@ with tabs[2]: # CALENDARIO
         
         for _, row in df_p.iterrows():
             try:
-                # TRASFORMAZIONE E PULIZIA TESTO PER EVITARE ERRORE JSON.PARSE
                 raw_title = f"{row['operatore']} | {row['Task']}"
                 clean_title = str(raw_title).replace('"', "'").replace('\n', ' ').replace('\r', '')
                 raw_note = row.get('note', '')
                 clean_note = str(raw_note).replace('"', "'").replace('\n', ' ').replace('\r', '')
-                # Trasformiamo in stringa pura YYYY-MM-DD
-                s_date = row["Inizio"].strftime("%Y-%m-%d")
-                # FullCalendar vuole la fine esclusiva (+1 giorno)
-                e_date = (row["Fine"] + timedelta(days=1)).strftime("%Y-%m-%d")
+                s_date = row["Inizio"].strftime("%Y-%m-%dT%H:%M:%S")
+                e_date = (row["Fine"]).strftime("%Y-%m-%dT%H:%M:%S")
                 
                 cal_events.append({
                     "id": str(row["id"]),
@@ -1146,7 +1031,7 @@ with tabs[2]: # CALENDARIO
                     "start": s_date,
                     "end": e_date,
                     "color": color_map.get(row["operatore"], "#3D85C6"),
-                    "allDay": True,
+                    "allDay": False,
                     "extendedProps": {"nota": clean_note}
                 })
             except:
@@ -1231,9 +1116,6 @@ with tabs[3]: # AGENDA
                 # PULIZIA STRINGHE (Essenziale per evitare JSON.parse error)
                 clean_title = str(f"{row['operatore']} | {row['Commessa']} | {row['Task']} - {row['note']}").replace('"', "'").replace('\n', ' ')
                 clean_note = str(row.get('note', '')).replace('"', "'").replace('\n', ' ')
-
-                # Per l'agenda usiamo il formato ISO completo con l'ora
-                # Assicurati che row["Inizio"] sia un oggetto datetime
                 s_date = row["Inizio"].strftime("%Y-%m-%dT%H:%M:%S")
                 e_date = row["Fine"].strftime("%Y-%m-%dT%H:%M:%S")
                 
@@ -1277,23 +1159,15 @@ with tabs[4]: # DATI
     st.header("📋 Gestione Log Esistenti")
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'note']].copy()
-        # MODIFICA: Manteniamo datetime per poter editare anche l'orario
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio'])
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine'])
-        
-        edited_log = st.data_editor(
-            df_edit, 
-            column_config={
-                "id": None,
-                "Inizio": st.column_config.DatetimeColumn("Inizio", format="DD/MM/YYYY HH:mm", step=900),
-                "Fine": st.column_config.DatetimeColumn("Fine", format="DD/MM/YYYY HH:mm", step=900)
-            }, 
-            width='stretch', 
-            hide_index=True
-        )
+        edited_log = st.data_editor(df_edit, column_config={"id": None, 
+                                    "Inizio": st.column_config.DatetimeColumn("Inizio", format="DD/MM/YYYY HH:mm"),
+                                    "Fine": st.column_config.DatetimeColumn("Fine", format="DD/MM/YYYY HH:mm")},
+                                    width='stretch', hide_index=True)
         if st.button("Salva Modifiche Tabella"):
             for _, r in edited_log.iterrows():
-                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "note": r['note']}).eq("id", r['id']).execute()
+                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']).isoformat(), "fine": str(r['Fine']).isoformat(), "note": r['note']}).eq("id", r['id']).execute()
             get_cached_data.clear(); st.rerun()
 
 with tabs[5]: # SETUP
