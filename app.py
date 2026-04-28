@@ -655,7 +655,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y_labels_pulsanti.append(y_val)
         
         for d in click_dates:
-            base_giorno = pd.to_datetime(d).replace(hour=0, minute=0, second=0, microsecond=0)
+            base_giorno = pd.to_datetime(d).replace(hour=0, minute=0, second=0, microsecond=0) + pd.Timedelta(hours=12)
             grid_bases.append(base_giorno)
             grid_xs.append(ms_per_day)
             grid_ys.append(y_val)
@@ -694,7 +694,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
+            base=df_op['Inizio'] + pd.Timedelta(hours=12), x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.9, offset=-0.45,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
@@ -735,7 +735,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range, ticktext=tick_text, tickformat="%d/%m\n%H:%M", dtick="D1", tickangle=0),
+        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text, tickformat="%d/%m\n%H:%M", dtick="D1", tickangle=0),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
