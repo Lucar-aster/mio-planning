@@ -733,7 +733,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range, ticktext=tick_text),
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
@@ -881,7 +881,7 @@ def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni
         height=300 + (n_r * 75),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, dragmode='pan',
-        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range, ticktext=tick_text),
+        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
