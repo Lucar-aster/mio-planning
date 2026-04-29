@@ -181,7 +181,7 @@ def modal_gestione_clic(task_id, data_clic):
                 supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
-        if c2.button("Annulla", width='stretch', key="annulla_t"): st.rerun()
+        if c2.button("Annulla", width='stretch', key="annulla_t"): st.session_state.chart_key += 1; st.rerun()
         
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
@@ -204,7 +204,7 @@ def modal_gestione_clic(task_id, data_clic):
                 supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
-        if c2.button("Annulla", width='stretch', key="annulla_l"): st.rerun()
+        if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.chart_key += 1; st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
@@ -291,7 +291,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
                 }).eq("id", row["id"]).execute()
         get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
-    if c2.button("Annulla", width='stretch'): st.rerun()
+    if c2.button("Annulla", width='stretch'): st.session_state.chart_key += 1; st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
@@ -362,7 +362,7 @@ def modal_log():
                     "inizio": str(data_i), "fine": str(data_f),
                     "ora_i": str(ora_i), "ora_f": str(ora_f), "note": nota
                 }).execute()
-            get_cached_data.clear(); st.rerun()
+            get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
             
 @st.dialog("📂 Clona Commessa con Date")
 def modal_clona_avanzata():
@@ -393,7 +393,7 @@ def modal_clona_avanzata():
             if copia_log and logs_vecchi:
                 nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "ora_i": l.get('ora_i', '08:00:00'), "ora_f": l.get('ora_f', '17:00:00'), "note": l.get('note', "")} for l in logs_vecchi]
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
-            get_cached_data.clear(); st.rerun()
+            get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
 # --- 6. FUNZIONI HELPER GRAFICHE ---
 def get_it_date_label(dt, delta):
