@@ -582,7 +582,7 @@ def merge_consecutive_logs(df):
         current_row = None
         for _, row in group.iterrows():
             nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
-            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m')}</i>: {nota_testo}" if nota_testo else ""
+            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m\n%H:%M')}</i>: {nota_testo}" if nota_testo else ""
             if current_row is None: 
                 current_row = row.to_dict()
                 current_row['note_html'] = nota_formattata
@@ -735,7 +735,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text, tickformat="%d/%m\n%H:%M", rangebreaks=[
+        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text, rangebreaks=[
         dict(bounds=[17, 8], pattern="hour"),
         ], dtick="D1", tickangle=0),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
