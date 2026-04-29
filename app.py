@@ -611,7 +611,7 @@ if l and tk and cm:
 
     df['durata_frazionale'] = df['frac_f'] - df['frac_i']
     MIN_DURATION_FRAC = 0.5 / 9.0
-    df['Visual_Durata_Frac'] = df['durata_frazionale'].apply(lambda x: max(x, MIN_DURATION_FRAC)
+    df['Visual_Durata_Frac'] = df['durata_frazionale'].apply(lambda x: max(x, MIN_DURATION_FRAC))
 	
     # Convertiamo l'Inizio e la Fine "visivi" del plot spostandoli avanti per la frazione calcolata
     df['Visual_Inizio'] = df['Inizio'] + pd.to_timedelta(df['frac_i'], unit='D')
