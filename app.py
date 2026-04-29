@@ -590,7 +590,7 @@ def formatta_nota(row):
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_merged = merge_consecutive_logs(df_plot)
+    df_merged = df_plot.copy()
     df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
 
