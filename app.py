@@ -632,7 +632,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
     # Creiamo segmenti solo per i giorni visibili (x_range) per non appesantire il browser
     click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    ms_per_day = 24 * 3600 * 1000
+    ms_per_day =9 * 3600 * 1000
     grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
     y_labels_pulsanti = []
     
@@ -655,7 +655,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         y_labels_pulsanti.append(y_val)
         
         for d in click_dates:
-            base_giorno = pd.to_datetime(d).replace(hour=0, minute=0, second=0, microsecond=0) + pd.Timedelta(hours=12)
+            base_giorno = pd.to_datetime(d).replace(hour=8, minute=0, second=0, microsecond=0)
             grid_bases.append(base_giorno)
             grid_xs.append(ms_per_day)
             grid_ys.append(y_val)
@@ -694,7 +694,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
         
         fig.add_trace(go.Bar(
-            base=df_op['Inizio'] + pd.Timedelta(hours=12), x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
+            base=df_op['Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.9, offset=-0.45,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
