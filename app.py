@@ -582,7 +582,7 @@ def merge_consecutive_logs(df):
         current_row = None
         for _, row in group.iterrows():
             nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
-            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m\n%H:%M')}</i>: {nota_testo}" if nota_testo else ""
+            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m\n%H:%M')} "-" {row['Fine'].strftime('%H:%M')}</i>: {nota_testo}" if nota_testo else ""
             if current_row is None: 
                 current_row = row.to_dict()
                 current_row['note_html'] = nota_formattata
