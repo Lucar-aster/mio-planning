@@ -831,8 +831,8 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     end_search = pd.to_datetime(f_range[1]) + pd.Timedelta(hours=23, minutes=59, seconds=59)
     
     # Assicuriamoci che le colonne inizio/fine siano datetime
-    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
-    df_p['fine'] = pd.to_datetime(df_p['fine'])
+    df_p['inizio'] = pd.to_datetime(df_p['inizio']).dt.tz_localize(None)
+    df_p['fine'] = pd.to_datetime(df_p['fine']).dt.tz_localize(None)
     
     # Applichiamo il filtro di intersezione
     df_p = df_p[
