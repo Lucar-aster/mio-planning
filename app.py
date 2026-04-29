@@ -613,7 +613,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     vista_compressa = st.session_state.vista_compressa
 
-    df_merged['nota_formattata'] = df_merged.apply(formatta_nota, axis=1)
+    df_merged['note_html'] = df_merged.apply(formatta_nota, axis=1)
     
 # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
     # Creiamo segmenti solo per i giorni visibili (x_range) per non appesantire il browser
