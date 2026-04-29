@@ -573,29 +573,6 @@ def modal_clona_avanzata():
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.rerun()
 
-# --- 6. LOGICA MERGE ---
-def merge_consecutive_logs(df):
-    if df.empty: return df
-    df = df.sort_values(['operatore', 'Commessa', 'Task', 'Inizio'])
-    merged = []
-    for _, group in df.groupby(['operatore', 'Commessa', 'Task']):
-        current_row = None
-        for _, row in group.iterrows():
-            nota_testo = str(row['note']).strip() if pd.notnull(row['note']) else ""
-            nota_formattata = f"• <i>{row['Inizio'].strftime('%d/%m\n%H:%M')} - {row['Fine'].strftime('%H:%M')}</i>: {nota_testo}" if nota_testo else ""
-            if current_row is None: 
-                current_row = row.to_dict()
-                current_row['note_html'] = nota_formattata
-            else:
-                if row['Inizio'] <= (pd.to_datetime(current_row['Fine'])):
-                    current_row['Fine'] = max(pd.to_datetime(current_row['Fine']), pd.to_datetime(row['Fine']))
-                    current_row['Durata_ms'] = ((pd.to_datetime(current_row['Fine'])) - pd.to_datetime(current_row['Inizio'])).total_seconds() * 1000
-                    if nota_formattata: current_row['note_html'] = (current_row['note_html'] + "<br>" + nota_formattata).strip("<br>")
-                else:
-                    merged.append(current_row); current_row = row.to_dict(); current_row['note_html'] = nota_formattata
-        if current_row: merged.append(current_row)
-    return pd.DataFrame(merged)
-
 def get_it_date_label(dt, delta):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
