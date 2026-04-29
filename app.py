@@ -731,7 +731,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         clickmode='event+select',
         height=300 + (n_r * 25),
         showlegend=False,
-        margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
+        margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'overlay', bargap=0.1, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", side="top", range=x_range, tickvals=[pd.to_datetime(t).replace(hour=12, minute=0) for t in tick_range], ticktext=tick_text, rangebreaks=[
         dict(bounds=[17, 8], pattern="hour"),
         ], dtick="D1", tickangle=0),
