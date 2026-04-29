@@ -700,12 +700,10 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[2]|%d/%m/%Y} - %{customdata[3]|%d/%m/%Y}<br>%{customdata[6]}<extra></extra>"
         ))
         
-    # --- Gestione Asse X Dinamica ---
-    # Definiamo i confini dell'area "cuscinetto" per il PAN
+    # --- Gestione Asse X Dinamica ---------------------------------------------
     start_buffer = x_range[0] - timedelta(days=180)
     end_buffer = x_range[1] + timedelta(days=180)
     
-    # Scegliamo la frequenza in base alla scala
     if delta_giorni > 60:
         tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
     elif delta_giorni >20:
@@ -714,7 +712,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     else:
         tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
 
-     # 3. Generiamo i testi solo per i giorni filtrati
     tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
     
     all_shapes = []
@@ -724,7 +721,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if curr.weekday() >= 5:
             all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
         curr += timedelta(days=1)
-        
+     # ----------------------------------------------------------------------------   
     vista_compressa = st.session_state.vista_compressa
     
     unique_rows = df_merged['Commessa'].unique() if vista_compressa else df_merged[['Commessa', 'Task']].drop_duplicates()
@@ -735,14 +732,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         height=300 + (n_r * 25),
         showlegend=False,
         margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
-        xaxis=dict(type="date", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text, rangebreaks=[
+        xaxis=dict(type="date", side="top", range=x_range, tickvals=[pd.to_datetime(t).replace(hour=12, minute=0) for t in tick_range], ticktext=tick_text, rangebreaks=[
         dict(bounds=[17, 8], pattern="hour"),
         ], dtick="D1", tickangle=0),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"),
         legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
     fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
-    st.write(df_plot[['Inizio', 'Fine', 'Durata_ms']].head())
+    
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
