@@ -602,6 +602,13 @@ def get_it_date_label(dt, delta):
     if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
+def formatta_nota(row):
+    nota_testo = str(row.get('note', '')) if pd.notnull(row.get('note', '')) else ""
+    if nota_testo:
+        # Usiamo il trattino come separatore testuale (senza errori di sottrazione)
+        return f"• <i>{row['Inizio'].strftime('%d/%m %H:%M')} - {row['Fine'].strftime('%H:%M')}</i>: {nota_testo}"
+    return ""
+
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
@@ -629,6 +636,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     vista_compressa = st.session_state.vista_compressa
 
+    df_merged['nota_formattata'] = df_merged.apply(formatta_nota, axis=1)
+    
 # --- NUOVA LOGICA: AREA DI CLIC GIORNALIERA DINAMICA ---
     # Creiamo segmenti solo per i giorni visibili (x_range) per non appesantire il browser
     click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
