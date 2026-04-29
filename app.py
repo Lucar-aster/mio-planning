@@ -772,7 +772,7 @@ if l and tk and cm:
     df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
     df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "Pianificato 🔵"))
     df['Durata_ms'] = (df['Fine'] - df['Inizio']).dt.total_seconds() * 1000
-    df.loc[df['Durata_ms'] <= 3600, 'Durata_ms'] = 3600 * 1000
+    df.loc[df['Durata_ms'] <= 3600000, 'Durata_ms'] = 3600000
 
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
@@ -828,7 +828,7 @@ if l and tk and cm:
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     # Convertiamo i limiti del filtro in datetime
     start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1])
+    end_search = pd.to_datetime(f_range[1]) + pd.Timedelta(hours=23, minutes=59, seconds=59)
     
     # Assicuriamoci che le colonne inizio/fine siano datetime
     df_p['inizio'] = pd.to_datetime(df_p['inizio'])
