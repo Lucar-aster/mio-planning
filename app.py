@@ -157,11 +157,19 @@ def modal_gestione_clic(task_id, data_clic):
         op_sel_t = st.multiselect("Seleziona Operatore", ops)
         
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
+
+        ot1, ot2 = st.columns(2)
+        if auto_orait = ot1.checkbox("Usa ora attuale", value=True):
+            ora_i_t = datetime.now().time()
+            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_val.strftime('%H:%M')}")
+        else:
+            ora_i_t = c_time1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
         
-        c_time1, c_time2 = st.columns(2)
-        ora_i_t = c_time1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
-        ora_f_t = c_time2.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
-        
+        if auto_oraft = ot2.checkbox("Log aperto (senza ora fine)", value=True):
+            ora_f_t = none
+        else
+            ora_f_t = c_time2.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
+				
         nota_t = st.text_input("Nota log")  
         c1, c2 = st.columns(2)
         if c1.button("Registra Task", type="primary", width='stretch'):
@@ -185,10 +193,18 @@ def modal_gestione_clic(task_id, data_clic):
         
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
+
+        ol1, ol2 = st.columns(2)
+        if auto_orait = ol1.checkbox("Usa ora attuale", value=True):
+            ora_i_t = datetime.now().time()
+            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_val.strftime('%H:%M')}")
+        else:
+            ora_i_t = c_time3.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
         
-        c_time3, c_time4 = st.columns(2)
-        ora_i_l = c_time3.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
-        ora_f_l = c_time4.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
+        if auto_oraft = ol2.checkbox("Log aperto (senza ora fine)", value=True):
+            ora_f_t = none
+        else
+            ora_f_t = c_time4.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
@@ -402,6 +418,32 @@ def get_it_date_label(dt, delta):
     if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 
+log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')]
+if not log_aperti.empty:
+    st.markdown("### ⏱️ Log in Corso")
+    for _, row in log_aperti.iterrows():
+        with st.container():
+            # Layout: Info Log | Tempo Trascorso | Pulsante Stop
+            c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+            
+            # Calcolo tempo trascorso
+            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
+            trascorso = datetime.now() - inizio_dt
+            ore, resto = divmod(trascorso.seconds, 3600)
+            minuti, _ = divmod(resto, 60)
+            
+            c1.markdown(f"**{row['operatore']}** - {row['Task']}")
+            c2.write(f"Iniziato alle: {row['ora_i'][:5]}")
+            c3.warning(f"⏳ da {ore}h {minuti}m")
+            
+            if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
+                ora_fine_adesso = datetime.now().strftime('%H:%M:%S')
+                supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                st.success("Log chiuso!")
+                get_cached_data.clear()
+                st.rerun()
+    st.divider()
+    
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
@@ -592,31 +634,43 @@ if l and tk and cm:
     
     # SETUP ORARI: Valori di Default e calcolo frazione di giornata per 08:00 - 17:00
     if 'ora_i' not in df.columns: df['ora_i'] = '08:00:00'
-    if 'ora_f' not in df.columns: df['ora_f'] = '17:00:00'
+    if 'ora_f' not in df.columns: df['ora_f'] = None
     
     df['ora_i'] = df['ora_i'].fillna('08:00:00').astype(str)
-    df['ora_f'] = df['ora_f'].fillna('17:00:00').astype(str)
+    
 
     def orario_a_frazione(t_str):
         try:
-            if not t_str or t_str == 'nan': return 0.0
+            if not t_str or t_str == 'nan' or t_str == 'None': return 0.0
             t = pd.to_datetime(t_str, format='%H:%M:%S', errors='coerce').time()
             if pd.isna(t): return 0.0
             # 8:00 corrisponde allo 0 della cella, 17:00 corrisponde a 1 (totale 9 ore)
             return (t.hour + t.minute / 60.0 - 8.0) / 9.0
-        except: return 0.0
+        except: return None
+    def calcola_logica_visuale(row):
+        f_i = orario_a_frazione(row['ora_i'])
+        if f_i is None: f_i = 0.0 # Fallback se manca ora inizio
 
-    df['frac_i'] = df['ora_i'].apply(orario_a_frazione)
-    df['frac_f'] = df['ora_f'].apply(orario_a_frazione)
+        if pd.isna(row['ora_f']) or row['ora_f'] == 'None' or row['ora_f'] == '':
+            ora_attuale_str = datetime.now().strftime('%H:%M:%S')
+            f_f = orario_a_frazione(ora_attuale_str)
+            # Limitiamo la fine al range visibile (max 17:00)
+            if f_f is None: f_f = 1.0 
+            f_f = min(max(f_f, f_i), 1.0)
+        else:
+            f_f = orario_a_frazione(row['ora_f'])
+            if f_f is None: f_f = 1.0
 
-    df['durata_frazionale'] = df['frac_f'] - df['frac_i']
-    MIN_DURATION_FRAC = 0.5 / 9.0
-    df['Visual_Durata_Frac'] = df['durata_frazionale'].apply(lambda x: max(x, MIN_DURATION_FRAC))
+        min_dur = 0.5 / 9.0
+        durata_fraz = max(f_f - f_i, min_dur)
+        return pd.Series([f_i, f_f, durata_fraz])
+    
+    df[['frac_i', 'frac_f', 'Visual_Durata_Frac']] = df.apply(calcola_logica_visuale, axis=1)
 	
     # Convertiamo l'Inizio e la Fine "visivi" del plot spostandoli avanti per la frazione calcolata
     df['Visual_Inizio'] = df['Inizio'] + pd.to_timedelta(df['frac_i'], unit='D')
-    df['Visual_Fine'] = df['Fine'] + pd.to_timedelta(df['frac_f'], unit='D')
     df['Durata_ms'] = df['Visual_Durata_Frac'] * 24 * 3600 * 1000
+    df['Visual_Fine'] = df['Visual_Inizio'] + pd.to_timedelta(df['Visual_Durata_Frac'], unit='D')
     
     # Prepariamo la formattazione della nota aggiungendoci l'ora e i minuti
     df['note_html'] = df.apply(lambda row: f"• <i>{row['Inizio'].strftime('%d/%m')} [{row['ora_i'][:5]}-{row['ora_f'][:5]}]</i>: {row.get('note', '')}", axis=1)
