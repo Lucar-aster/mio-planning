@@ -589,7 +589,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     frac_oggi = (ora_attuale_decimale - 8.0) / 9.0
     frac_oggi = max(0, min(1, frac_oggi))
     pos_linea_rossa = adesso.replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000 + (frac_oggi * 24 * 3600 * 1000)
-    fig.add_vline(x=pos_linea_rossa, line_width=2, line_color="red", annotation_text=adesso.strftime("%H:%M"), annotation_position="left")
+    fig.add_vline(x=pos_linea_rossa, line_width=2, line_color="red", annotation_text=adesso.strftime("%H:%M"), annotation_position="top right")
     
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
 
