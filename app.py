@@ -301,10 +301,12 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_status))
 
     st.divider()
-
+    
+    id_to_tag_nome = {t['id']: t['nome'] for t in res_tags.data}
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
-
+    
     df_sub = pd.DataFrame(all_logs)
+    
     ordine_colonne = [
         "operatore",
         "tag",
@@ -317,6 +319,10 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         "task_id"
     ]
     df_sub = df_sub[ordine_colonne]
+    
+    if not df_sub.empty and 'tag' in df_sub.columns:
+    # Trasformiamo la colonna tag usando la mappa inversa
+    df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
     
     if not df_sub.empty:
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
