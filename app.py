@@ -492,7 +492,7 @@ def genera_colore_opaco(testo):
     
 @st.dialog("🔖 Nuovo tag")
 def modal_tag():
-nuovo_tag_n = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_n")
+	nuovo_tag_n = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_n")
         if nuovo_tag_n:
             if nuovo_tag_n not in lista_tag:
                 colore_generato = genera_colore_opaco(nuovo_tag_n)
