@@ -268,6 +268,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
+    tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
     
@@ -303,7 +304,8 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
 
     df_sub = pd.DataFrame(all_logs)
     ordine_colonne = [
-        "operatore", 
+        "operatore",
+        "tag",
 	    "note",
         "inizio", 
         "fine", 
@@ -333,6 +335,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         column_config={
             "id": None, "task_id": None,
             "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+            "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"), 
             "note": st.column_config.TextColumn("Note", width="large"),
             "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
             "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
@@ -350,7 +353,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
             if row["Elimina"]: supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
             else:
                 supabase.table("Log_Tempi").update({
-                    "task_id": id_task_target, "operatore": row["operatore"],
+                    "task_id": id_task_target, "operatore": row["operatore"], "tag": row["tag"],
                     "inizio": str(row["inizio"]), "fine": str(row["fine"]),
                     "ora_i": str(row["ora_i"]), "ora_f": str(row["ora_f"]),
                     "note": str(row["note"]) if row["note"] else ""
