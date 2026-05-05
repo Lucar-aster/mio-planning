@@ -426,7 +426,7 @@ def get_it_date_label(dt, delta):
  # --- SEZIONE LOG APERTI ---
 log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
 st.markdown("### ⏱️ Log in Corso")
-    for _, row in log_aperti.iterrows():
+	for _, row in log_aperti.iterrows():
         with st.container():# Layout: Info Log | Tempo Trascorso | Pulsante Stop
             c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
             inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
