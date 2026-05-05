@@ -158,7 +158,7 @@ def modal_gestione_clic(task_id, data_clic):
         
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
 
-        ot1, ot2 = st.columns(2)
+        auto_orait, auto_oraft = st.columns(2)
         auto_orait = st.checkbox("Usa ora attuale", value=True)
         auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True)
 	
@@ -198,15 +198,18 @@ def modal_gestione_clic(task_id, data_clic):
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
 
         ol1, ol2 = st.columns(2)
-        if auto_orait = ol1.checkbox("Usa ora attuale", value=True):
+		auto_orail = ol1.checkbox("Usa ora attuale", value=True)
+		auto_orafl = ol2.checkbox("Log aperto (senza ora fine)", value=True)
+		
+        if auto_orail:
             ora_i_t = datetime.now().time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_val.strftime('%H:%M')}")
         else:
             ora_i_t = c_time3.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
         
-        if auto_oraft = ol2.checkbox("Log aperto (senza ora fine)", value=True):
+        if auto_orafl:
             ora_f_t = none
-        else
+        else:
             ora_f_t = c_time4.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
