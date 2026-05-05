@@ -164,7 +164,7 @@ def modal_gestione_clic(task_id, data_clic):
 	
         if auto_orait:
             ora_i_t = datetime.now().time()
-            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_val.strftime('%H:%M')}")
+            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = c_time1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
         
@@ -203,7 +203,7 @@ def modal_gestione_clic(task_id, data_clic):
 		
         if auto_orail:
             ora_i_t = datetime.now().time()
-            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_val.strftime('%H:%M')}")
+            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = c_time3.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
         
