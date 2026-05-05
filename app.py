@@ -773,7 +773,7 @@ if l and tk and cm:
         if b1.button("➕ Commessa", width='stretch'): modal_commessa()
         if b2.button("📑 Task", width='stretch'): modal_task()
         if b3.button("⏱️ Log", width='stretch'): modal_log()
-		if b7.button("🔖 Tag", width='stretch'): modal_tag()
+        if b7.button("🔖 Tag", width='stretch'): modal_tag()
         if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
         label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
         if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
