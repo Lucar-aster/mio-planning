@@ -491,16 +491,16 @@ def genera_colore_opaco(testo):
     return hsl_to_hex(tinta, saturazione, luminosita)
     
 @st.dialog("🔖 Nuovo tag")
-    def modal_tag():
-    nuovo_tag_n = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_n")
-            if nuovo_tag_n:
-                if nuovo_tag_n not in lista_tag:
-                    colore_generato = genera_colore_opaco(nuovo_tag_n)
-                    # Inserimento immediato nel DB Tag per renderlo disponibile
-                    supabase.table("Tag").insert({"nome": nuovo_tag_n}).execute()
-                    st.success(f"Tag '{nuovo_tag_n}' creato!")
-                    get_cached_data.clear()
-                    st.rerun()
+def modal_tag():
+nuovo_tag_n = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_n")
+        if nuovo_tag_n:
+            if nuovo_tag_n not in lista_tag:
+                colore_generato = genera_colore_opaco(nuovo_tag_n)
+                # Inserimento immediato nel DB Tag per renderlo disponibile
+                supabase.table("Tag").insert({"nome": nuovo_tag_n}).execute()
+                st.success(f"Tag '{nuovo_tag_n}' creato!")
+                get_cached_data.clear()
+                st.rerun()
                     
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
