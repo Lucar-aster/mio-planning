@@ -198,8 +198,8 @@ def modal_gestione_clic(task_id, data_clic):
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
 
         ol1, ol2 = st.columns(2)
-		auto_orail = ol1.checkbox("Usa ora attuale", value=True)
-		auto_orafl = ol2.checkbox("Log aperto (senza ora fine)", value=True)
+        auto_orail = ol1.checkbox("Usa ora attuale", value=True)
+        auto_orafl = ol2.checkbox("Log aperto (senza ora fine)", value=True)
 		
         if auto_orail:
             ora_i_t = datetime.now().time()
