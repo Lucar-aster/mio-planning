@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytz
 from datetime import datetime, timedelta, time, timezone
+from zoneinfo import ZoneInfo
 import textwrap
 from streamlit_calendar import calendar
 
@@ -13,7 +14,7 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
-tz = timezone(timedelta(hours=2))
+tz = ZoneInfo("Europe/Rome")
 
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -694,7 +695,9 @@ if l and tk and cm:
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
             c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
-            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
+			data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
+            ora_inizio = pd.to_datetime(row['ora_i']).time()
+            inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz_italy)
             trascorso = datetime.now(tz) - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
