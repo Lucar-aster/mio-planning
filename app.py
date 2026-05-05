@@ -149,6 +149,8 @@ def modal_gestione_clic(task_id, data_clic):
     commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
     tags_data = get_cached_data("Tag")
     lista_tag = sorted([t['nome'] for t in tags_data])
+    res_tags = supabase.table("Tag").select("id, nome").execute()
+    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     
     with st.expander("🏗️ Modifica Anagrafica", expanded=False):
         new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
@@ -173,7 +175,8 @@ def modal_gestione_clic(task_id, data_clic):
         new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat")
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_t = st.multiselect("Seleziona Operatore", ops)
-        tag_scelti_t = st.selectbox("Seleziona Tag", options=lista_tag, key="tag_scelti_t")
+        tag_scelti_t = st.selectbox("Seleziona Tag", options=lista_tag, key="tag_sclt_t")
+        id_tag_scelto_t = mappa_tags.get(tag_scelti_t, key="tag_map_t")
         nuovo_tag_t = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_t")
         if nuovo_tag_t:
             if nuovo_tag_t not in lista_tag:
@@ -182,7 +185,6 @@ def modal_gestione_clic(task_id, data_clic):
                 st.success(f"Tag '{nuovo_tag_t}' creato!")
                 get_cached_data.clear()
                 st.rerun()
-        str_tags_t = ", ".join(tag_scelti_t)
         
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
 
@@ -211,7 +213,7 @@ def modal_gestione_clic(task_id, data_clic):
                 res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
                 final_task_id = res_tk.data[0]['id']
 
-                nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None, "note": nota_t, "tag": str_tags_t} for op in op_sel_t]
+                nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None, "note": nota_t, "tag": id_tag_scelto_t} for op in op_sel_t]
                 supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
@@ -233,6 +235,7 @@ def modal_gestione_clic(task_id, data_clic):
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
         tag_scelti_l = st.selectbox("Seleziona Tag", options=lista_tag, key="tag_scelti_l")
+        id_tag_scelto_l = mappa_tags.get(tag_scelti_l, key="tag_map_l")
         nuovo_tag_l = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_l")
         if nuovo_tag_l:
             if nuovo_tag_l not in lista_tag:
@@ -241,7 +244,6 @@ def modal_gestione_clic(task_id, data_clic):
                 st.success(f"Tag '{nuovo_tag_l}' creato!")
                 get_cached_data.clear()
                 st.rerun()
-        str_tags_l = ", ".join(tag_scelti_l)
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
@@ -250,7 +252,7 @@ def modal_gestione_clic(task_id, data_clic):
             if not op_sel_l or len(date_range_l) < 2: st.warning("Seleziona operatore e range date.")
             else:
                 data_inizio_l, data_fine_l = date_range_l
-                nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": ora_i_l.strftime('%H:%M:%S'), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l, "tag": str_tags_l} for op in op_sel_l]
+                nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": ora_i_l.strftime('%H:%M:%S'), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l, "tag": id_tag_scelto_l} for op in op_sel_l]
                 supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
