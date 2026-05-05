@@ -653,8 +653,26 @@ if l and tk and cm:
     df['Visual_Fine'] = df['Visual_Inizio'] + pd.to_timedelta(df['Visual_Durata_Frac'], unit='D')
     
     # Prepariamo la formattazione della nota aggiungendoci l'ora e i minuti
-    df['note_html'] = df.apply(lambda row: f"• <i>{row['Inizio'].strftime('%d/%m')} [{row['ora_i'][:5]}-{row['ora_f'][:5]}]</i>: {row.get('note', '')}", axis=1)
+    def formatta_nota(row):
+        # Formattazione data
+        data_str = row['Inizio'].strftime('%d/%m') if hasattr(row['Inizio'], 'strftime') else str(row['Inizio'])
+        
+        # Gestione ora inizio
+        ora_i = str(row['ora_i'])[:5] if pd.notna(row['ora_i']) else "??:??"
+        
+        # Gestione ora fine (se è NaN o None, scriviamo "...")
+        if pd.isna(row['ora_f']) or row['ora_f'] == 'None' or row['ora_f'] == '':
+            ora_f = "In corso"
+        else:
+            ora_f = str(row['ora_f'])[:5]
+        
+        nota = row.get('note', '') if pd.notna(row.get('note')) else ""
+        
+        return f"• <i>{data_str} [{ora_i}-{ora_f}]</i>: {nota}"
 
+    # Applichiamo la funzione
+    df['note_html'] = df.apply(formatta_nota, axis=1)
+    
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
         c1, c2, c3 = st.columns([3, 3, 4])
