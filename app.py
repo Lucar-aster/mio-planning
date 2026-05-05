@@ -179,7 +179,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_t")
 	
         if auto_orait:
-            ora_i_t = datetime.now().time()
+            ora_i_t = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
@@ -218,7 +218,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_orafl = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_l")
 		
         if auto_orail:
-            ora_i_l = datetime.now().time()
+            ora_i_l = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
