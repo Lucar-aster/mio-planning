@@ -179,7 +179,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_t")
 	
         if auto_orait:
-            ora_i_t = datetime.now(tz).time()
+            ora_i_t = datetime.now().time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
@@ -218,7 +218,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_orafl = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_l")
 		
         if auto_orail:
-            ora_i_l = datetime.now(tz).time()
+            ora_i_l = datetime.now().time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
@@ -697,7 +697,7 @@ if l and tk and cm:
             c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
             data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
             ora_inizio = pd.to_datetime(row['ora_i']).time()
-            inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz_italy)
+            inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
             trascorso = datetime.now(tz) - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
