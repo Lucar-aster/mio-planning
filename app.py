@@ -179,7 +179,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_t")
 	
         if auto_orait:
-            ora_i_t = datetime.now(tz).strftime('%H:%M')
+            ora_i_t = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
@@ -204,7 +204,7 @@ def modal_gestione_clic(task_id, data_clic):
                 res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
                 final_task_id = res_tk.data[0]['id']
 
-                nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": str(ora_i_t), "ora_f": str(ora_f_t), "note": nota_t} for op in op_sel_t]
+                nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": str(ora_i_t).str[:8], "ora_f": str(ora_f_t).str[:8], "note": nota_t} for op in op_sel_t]
                 supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
@@ -218,7 +218,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_orafl = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_l")
 		
         if auto_orail:
-            ora_i_l = datetime.now(tz).strftime('%H:%M')
+            ora_i_l = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
@@ -238,7 +238,7 @@ def modal_gestione_clic(task_id, data_clic):
             if not op_sel_l or len(date_range_l) < 2: st.warning("Seleziona operatore e range date.")
             else:
                 data_inizio_l, data_fine_l = date_range_l
-                nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": str(ora_i_l), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l} for op in op_sel_l]
+                nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": str(ora_i_l).str[:8], "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l} for op in op_sel_l]
                 supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
