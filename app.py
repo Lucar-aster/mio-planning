@@ -347,15 +347,17 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         },
         disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
     )
-    id_tag_scelto = mappa_tags.get("tag")
+    
     c1, c2 = st.columns(2)
     if c1.button("Salva Tutto", type="primary", width='stretch'):
         supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
         for _, row in edited_df.iterrows():
             if row["Elimina"]: supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
             else:
+                nome_tag_selezionato = row["tag"]
+                id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
                 supabase.table("Log_Tempi").update({
-                    "task_id": id_task_target, "operatore": row["operatore"], "tag": id_tag_scelto,
+                    "task_id": id_task_target, "operatore": row["operatore"], "tag": id_tag_da_salvare,
                     "inizio": str(row["inizio"]), "fine": str(row["fine"]),
                     "ora_i": str(row["ora_i"]), "ora_f": str(row["ora_f"]),
                     "note": str(row["note"]) if row["note"] else ""
