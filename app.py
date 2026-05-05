@@ -694,8 +694,8 @@ if l and tk and cm:
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
             c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
-            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time(tz))
-            trascorso = datetime.now(tz) - inizio_dt
+            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
+            trascorso = datetime.now() - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
             c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['operatore']}</strong> - {row['Task']}</p>", unsafe_allow_html=True)
