@@ -170,7 +170,7 @@ def modal_gestione_clic(task_id, data_clic):
         
         if auto_oraft:
             ora_f_t = none
-        else
+        else:
             ora_f_t = c_time2.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
 				
         nota_t = st.text_input("Nota log")  
