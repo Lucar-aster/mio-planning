@@ -235,7 +235,7 @@ def modal_gestione_clic(task_id, data_clic):
         tag_scelti_l = st.multiselect("Seleziona Tag", options=lista_tag, key="tag_scelti_l")
         nuovo_tag_l = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_l")
         if nuovo_tag_l:
-            if nuovo_lag_l not in lista_tag:
+            if nuovo_tag_l not in lista_tag:
                 # Inserimento immediato nel DB Tag per renderlo disponibile
                 supabase.table("Tag").insert({"nome": nuovo_tag}).execute()
                 st.success(f"Tag '{nuovo_tag}' creato!")
