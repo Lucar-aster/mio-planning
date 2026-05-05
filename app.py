@@ -182,7 +182,7 @@ def modal_gestione_clic(task_id, data_clic):
                 st.success(f"Tag '{nuovo_tag}' creato!")
                 get_cached_data.clear()
                 st.rerun()
-        str_tags_t = ", ".join(tag_scelti)
+        str_tags_t = ", ".join(tag_scelti_t)
         
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
 
@@ -241,7 +241,7 @@ def modal_gestione_clic(task_id, data_clic):
                 st.success(f"Tag '{nuovo_tag}' creato!")
                 get_cached_data.clear()
                 st.rerun()
-        str_tags_l = ", ".join(tag_scelti)
+        str_tags_l = ", ".join(tag_scelti_l)
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
