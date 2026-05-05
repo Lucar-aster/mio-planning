@@ -705,7 +705,7 @@ if l and tk and cm:
                 st.success("Log chiuso!")
                 get_cached_data.clear()
                 st.rerun()
-    st.divider() 
+    
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
         c1, c2, c3 = st.columns([3, 3, 4])
