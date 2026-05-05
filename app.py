@@ -159,8 +159,8 @@ def modal_gestione_clic(task_id, data_clic):
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
 
         auto_orait, auto_oraft = st.columns(2)
-        auto_orait = st.checkbox("Usa ora attuale", value=True)
-        auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True)
+        auto_orait = st.checkbox("Usa ora attuale", value=True, key="ao_i_t")
+        auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_t")
 	
         if auto_orait:
             ora_i_t = datetime.now().time()
@@ -197,9 +197,9 @@ def modal_gestione_clic(task_id, data_clic):
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
 
-        ol1, ol2 = st.columns(2)
-        auto_orail = ol1.checkbox("Usa ora attuale", value=True)
-        auto_orafl = ol2.checkbox("Log aperto (senza ora fine)", value=True)
+        auto_orail, auto_orafl = st.columns(2)
+        auto_orail = st.checkbox("Usa ora attuale", value=True, key="ao_i_l")
+        auto_orafl = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_l")
 		
         if auto_orail:
             ora_i_t = datetime.now().time()
