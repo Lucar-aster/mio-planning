@@ -423,26 +423,7 @@ def get_it_date_label(dt, delta):
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
     if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
- # --- SEZIONE LOG APERTI ---
-log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
-st.markdown("### ⏱️ Log in Corso")
-for _, row in log_aperti.iterrows():
-    with st.container():# Layout: Info Log | Tempo Trascorso | Pulsante Stop
-        c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
-        inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
-        trascorso = datetime.now() - inizio_dt
-        ore, resto = divmod(trascorso.seconds, 3600)
-        minuti, _ = divmod(resto, 60)
-        c1.markdown(f"**{row['operatore']}** - {row['Task']}")
-        c2.write(f"Iniziato alle: {row['ora_i'][:5]}")
-        c3.warning(f"⏳ da {ore}h {minuti}m")
-        if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
-            ora_fine_adesso = datetime.now().strftime('%H:%M:%S')
-            supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-            st.success("Log chiuso!")
-            get_cached_data.clear()
-            st.rerun()
-st.divider() 
+
 
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
@@ -692,7 +673,26 @@ if l and tk and cm:
 
     # Applichiamo la funzione
     df['note_html'] = df.apply(formatta_nota, axis=1)
-    
+    # --- SEZIONE LOG APERTI ---
+    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
+    st.markdown("### ⏱️ Log in Corso")
+    for _, row in log_aperti.iterrows():
+        with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
+            c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
+            trascorso = datetime.now() - inizio_dt
+            ore, resto = divmod(trascorso.seconds, 3600)
+            minuti, _ = divmod(resto, 60)
+            c1.markdown(f"**{row['operatore']}** - {row['Task']}")
+            c2.write(f"Iniziato alle: {row['ora_i'][:5]}")
+            c3.warning(f"⏳ da {ore}h {minuti}m")
+            if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
+                ora_fine_adesso = datetime.now().strftime('%H:%M:%S')
+                supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                st.success("Log chiuso!")
+                get_cached_data.clear()
+                st.rerun()
+    st.divider() 
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
         c1, c2, c3 = st.columns([3, 3, 4])
