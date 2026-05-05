@@ -250,7 +250,7 @@ def modal_gestione_clic(task_id, data_clic):
             if not op_sel_l or len(date_range_l) < 2: st.warning("Seleziona operatore e range date.")
             else:
                 data_inizio_l, data_fine_l = date_range_l
-                nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": ora_i_l.strftime('%H:%M:%S'), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l, "tag": str_tags_t} for op in op_sel_l]
+                nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": ora_i_l.strftime('%H:%M:%S'), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l, "tag": str_tags_l} for op in op_sel_l]
                 supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
