@@ -74,8 +74,8 @@ st.markdown(f"""
     }}
 	[data-testid="stVerticalBlock"] > div {{
     gap: 0.1rem !important;
-	margin-top: -2px !important;
-    margin-bottom: -2px !important;
+	margin-top: -1px !important;
+    margin-bottom: -1px !important;
     }}
 	.stButton > button {{
     height: 24px !important;
