@@ -347,7 +347,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         },
         disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
     )
-	id_tag_scelto = mappa_tags.get("tag")
+    id_tag_scelto = mappa_tags.get("tag")
     c1, c2 = st.columns(2)
     if c1.button("Salva Tutto", type="primary", width='stretch'):
         supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
