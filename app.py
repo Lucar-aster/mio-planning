@@ -173,8 +173,8 @@ def modal_gestione_clic(task_id, data_clic):
         new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat")
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_t = st.multiselect("Seleziona Operatore", ops)
-        tag_scelti_t = st.multiselect("Seleziona Tag", options=lista_tag)
-        nuovo_tag_t = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)")
+        tag_scelti_t = st.multiselect("Seleziona Tag", options=lista_tag, key="tag_scelti_t")
+        nuovo_tag_t = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_t")
         if nuovo_tag_t:
             if nuovo_tag_t not in lista_tag:
                 # Inserimento immediato nel DB Tag per renderlo disponibile
@@ -232,8 +232,8 @@ def modal_gestione_clic(task_id, data_clic):
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
-        tag_scelti_l = st.multiselect("Seleziona Tag", options=lista_tag)
-        nuovo_tag_l = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)")
+        tag_scelti_l = st.multiselect("Seleziona Tag", options=lista_tag, key="tag_scelti_l")
+        nuovo_tag_l = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_l")
         if nuovo_tag_l:
             if nuovo_lag_l not in lista_tag:
                 # Inserimento immediato nel DB Tag per renderlo disponibile
