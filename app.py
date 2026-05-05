@@ -3,7 +3,7 @@ from supabase import create_client
 import pandas as pd
 import plotly.graph_objects as go
 import pytz
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, timezone
 import textwrap
 from streamlit_calendar import calendar
 
@@ -13,7 +13,7 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
-tz = pytz.timezone('Europe/Rome')
+tz = timezone(timedelta(hours=2))
 
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -695,7 +695,7 @@ if l and tk and cm:
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
             c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
             inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
-            trascorso = datetime.now() - inizio_dt
+            trascorso = datetime.now(tz) - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
             c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['operatore']}</strong> - {row['Task']}</p>", unsafe_allow_html=True)
