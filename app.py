@@ -284,7 +284,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
 
     df_sub = pd.DataFrame(all_logs)
-	ordine_colonne = [
+    ordine_colonne = [
         "operatore", 
 	    "note",
         "inizio", 
