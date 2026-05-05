@@ -695,7 +695,7 @@ if l and tk and cm:
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
             c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
-			data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
+            data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
             ora_inizio = pd.to_datetime(row['ora_i']).time()
             inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz_italy)
             trascorso = datetime.now(tz) - inizio_dt
