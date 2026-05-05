@@ -6,6 +6,7 @@ import pytz
 from datetime import datetime, timedelta, time, timezone
 from zoneinfo import ZoneInfo
 import textwrap
+import hashlib
 from streamlit_calendar import calendar
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
@@ -463,8 +464,44 @@ def get_it_date_label(dt, delta):
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
     if delta > 40: return f"Sett. {dt.isocalendar()[1]}<br>{mesi[dt.month-1]}"
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
-
-
+	
+def genera_colore_opaco(testo):
+    # 1. Genera un hash univoco dal testo per avere sempre lo stesso colore per quel tag
+    hash_object = hashlib.md5(testo.encode())
+    hash_hex = hash_object.hexdigest()
+    
+    # 2. Converti l'inizio dell'hash in un numero per la Tinta (0-360)
+    # Usiamo il modulo 360 per restare nel cerchio cromatico
+    tinta = int(hash_hex[:8], 16) % 360
+    
+    # 3. Definiamo Saturazione e Luminosità per colori opachi
+    saturazione = 40  # Bassa per non essere vivace
+    luminosita = 55   # Media per equilibrio
+    
+    # 4. Funzione helper per convertire HSL in HEX
+    def hsl_to_hex(h, s, l):
+        l /= 100
+        a = s * min(l, 1 - l) / 100
+        def f(n):
+            k = (n + h / 30) % 12
+            color = l - a * max(min(k - 3, 9 - k, 1), -1)
+            return f'{round(255 * color):02x}'
+        return f'#{f(0)}{f(8)}{f(4)}'
+    
+    return hsl_to_hex(tinta, saturazione, luminosita)
+    
+@st.dialog("🔖 Nuovo tag")
+    def modal_tag():
+    nuovo_tag_n = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_n")
+            if nuovo_tag_n:
+                if nuovo_tag_n not in lista_tag:
+                    colore_generato = genera_colore_opaco(nuovo_tag_n)
+                    # Inserimento immediato nel DB Tag per renderlo disponibile
+                    supabase.table("Tag").insert({"nome": nuovo_tag_n}).execute()
+                    st.success(f"Tag '{nuovo_tag_n}' creato!")
+                    get_cached_data.clear()
+                    st.rerun()
+                    
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
@@ -732,10 +769,11 @@ if l and tk and cm:
             f_range = st.date_input("Intervallo Date", value=[df['inizio'].min(), df['fine'].max()], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b4, b5, b6 = st.columns(6)
+        b1, b2, b3, b7, b4, b5, b6 = st.columns(7)
         if b1.button("➕ Commessa", width='stretch'): modal_commessa()
         if b2.button("📑 Task", width='stretch'): modal_task()
         if b3.button("⏱️ Log", width='stretch'): modal_log()
+		if b7.button("🔖 Tag", width='stretch'): modal_tag()
         if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
         label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
         if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
