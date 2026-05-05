@@ -502,7 +502,7 @@ def modal_tag():
         if nuovo_tag_n not in lista_tag:
             colore_generato = genera_colore_opaco(nuovo_tag_n)
             # Inserimento immediato nel DB Tag per renderlo disponibile
-            supabase.table("Tag").insert({"nome": nuovo_tag_n}).execute()
+            supabase.table("Tag").insert({"nome": nuovo_tag_n, "colore": colore_generato}).execute()
             st.success(f"Tag '{nuovo_tag_n}' creato!")
             get_cached_data.clear()
             st.rerun()
