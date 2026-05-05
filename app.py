@@ -271,6 +271,8 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
+	
+    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     
     current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
     if not current_task_info: st.error("Dati task non trovati."); return
@@ -345,7 +347,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         },
         disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
     )
-
+	id_tag_scelto = mappa_tags.get("tag")
     c1, c2 = st.columns(2)
     if c1.button("Salva Tutto", type="primary", width='stretch'):
         supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
@@ -353,7 +355,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
             if row["Elimina"]: supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
             else:
                 supabase.table("Log_Tempi").update({
-                    "task_id": id_task_target, "operatore": row["operatore"], "tag": row["tag"],
+                    "task_id": id_task_target, "operatore": row["operatore"], "tag": id_tag_scelto,
                     "inizio": str(row["inizio"]), "fine": str(row["fine"]),
                     "ora_i": str(row["ora_i"]), "ora_f": str(row["ora_f"]),
                     "note": str(row["note"]) if row["note"] else ""
