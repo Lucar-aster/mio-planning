@@ -964,7 +964,7 @@ with tabs[5]:
             df_tag_setup = pd.DataFrame(raw_tag)
             config_colonne = {"id": None, "nome": st.column_config.TextColumn("Tag", required=True), "colore": st.column_config.TextColumn("Colore (HEX)")}
             ed_tag = st.data_editor(df_tag_setup, column_config=config_colonne, width='stretch', num_rows="dynamic", hide_index=True, key="setup_tag_vfinal")
-            col_helper = st.color_picker("Scegli un colore e copia il codice HEX nella tabella", "#8dbad2"key="col_tag_pick")
+            col_helper = st.color_picker("Scegli un colore e copia il codice HEX nella tabella", "#8dbad2", key="col_tag_pick")
             st.code(col_helper) 
             if st.button("Salva Operatori"): aggiorna_database_setup("Tag", tag_op, raw_tag)
 
