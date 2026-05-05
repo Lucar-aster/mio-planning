@@ -322,7 +322,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     
     if not df_sub.empty and 'tag' in df_sub.columns:
     # Trasformiamo la colonna tag usando la mappa inversa
-    df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
+        df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
     
     if not df_sub.empty:
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
