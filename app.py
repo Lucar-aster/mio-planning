@@ -211,7 +211,7 @@ def modal_gestione_clic(task_id, data_clic):
                 res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
                 final_task_id = res_tk.data[0]['id']
 
-                nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_T else None, "note": nota_t, "tag": str_tags_t} for op in op_sel_t]
+                nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None, "note": nota_t, "tag": str_tags_t} for op in op_sel_t]
                 supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
