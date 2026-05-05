@@ -159,9 +159,9 @@ def modal_gestione_clic(task_id, data_clic):
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
 
         ot1, ot2 = st.columns(2)
-		auto_orait = st.checkbox("Usa ora attuale", value=True)
-		auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True)
-		
+        auto_orait = st.checkbox("Usa ora attuale", value=True)
+        auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True)
+	
         if auto_orait:
             ora_i_t = datetime.now().time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_val.strftime('%H:%M')}")
