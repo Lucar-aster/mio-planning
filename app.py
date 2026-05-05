@@ -178,8 +178,8 @@ def modal_gestione_clic(task_id, data_clic):
         if nuovo_tag_t:
             if nuovo_tag_t not in lista_tag:
                 # Inserimento immediato nel DB Tag per renderlo disponibile
-                supabase.table("Tag").insert({"nome": nuovo_tag}).execute()
-                st.success(f"Tag '{nuovo_tag}' creato!")
+                supabase.table("Tag").insert({"nome": nuovo_tag_t}).execute()
+                st.success(f"Tag '{nuovo_tag_t}' creato!")
                 get_cached_data.clear()
                 st.rerun()
         str_tags_t = ", ".join(tag_scelti_t)
@@ -237,8 +237,8 @@ def modal_gestione_clic(task_id, data_clic):
         if nuovo_tag_l:
             if nuovo_tag_l not in lista_tag:
                 # Inserimento immediato nel DB Tag per renderlo disponibile
-                supabase.table("Tag").insert({"nome": nuovo_tag}).execute()
-                st.success(f"Tag '{nuovo_tag}' creato!")
+                supabase.table("Tag").insert({"nome": nuovo_tag_l}).execute()
+                st.success(f"Tag '{nuovo_tag_l}' creato!")
                 get_cached_data.clear()
                 st.rerun()
         str_tags_l = ", ".join(tag_scelti_l)
