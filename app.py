@@ -936,7 +936,7 @@ with tabs[4]:
 
 with tabs[5]: 
     st.header("⚙️ Setup di Sistema")
-    s1, s2, s3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "✅ Task"])
+    s1, s2, s4, s3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "🔖 Tag", "✅ Task"])
     
     with s1:
         df_cm_setup = pd.DataFrame(cm)
@@ -957,7 +957,18 @@ with tabs[5]:
             st.code(col_helper) 
             if st.button("Salva Operatori"): aggiorna_database_setup("Operatori", ed_op, raw_op)
 
-with s3:
+    with s4:
+        st.subheader("Gestione Tag")
+        raw_tag = get_cached_data("Tag")
+        if raw_tag:
+            df_tag_setup = pd.DataFrame(raw_tag)
+            config_colonne = {"id": None, "nome": st.column_config.TextColumn("Tag", required=True), "colore": st.column_config.TextColumn("Colore (HEX)")}
+            ed_tag = st.data_editor(df_tag_setup, column_config=config_colonne, width='stretch', num_rows="dynamic", hide_index=True, key="setup_tag_vfinal")
+            col_helper = st.color_picker("Scegli un colore e copia il codice HEX nella tabella", "#8dbad2"key="col_tag_pick")
+            st.code(col_helper) 
+            if st.button("Salva Operatori"): aggiorna_database_setup("Tag", tag_op, raw_tag)
+
+    with s3:
         st.subheader("Gestione Task")
         raw_tk = get_cached_data("Task")
         if raw_tk:
