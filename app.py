@@ -202,15 +202,15 @@ def modal_gestione_clic(task_id, data_clic):
         auto_orafl = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_l")
 		
         if auto_orail:
-            ora_i_t = datetime.now().time()
+            ora_i_l = datetime.now().time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
-            ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
+            ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
         
         if auto_orafl:
-            ora_f_t = None
+            ora_f_l = None
         else:
-            ora_f_t = st.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
+            ora_f_l = st.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
