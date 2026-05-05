@@ -271,7 +271,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
-	
+	res_tags = supabase.table("Tag").select("id, nome").execute()
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     
     current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
