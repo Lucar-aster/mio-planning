@@ -169,7 +169,7 @@ def modal_gestione_clic(task_id, data_clic):
             ora_i_t = c_time1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
         
         if auto_oraft:
-            ora_f_t = none
+            ora_f_t = None
         else:
             ora_f_t = c_time2.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
 				
@@ -208,7 +208,7 @@ def modal_gestione_clic(task_id, data_clic):
             ora_i_t = c_time3.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
         
         if auto_orafl:
-            ora_f_t = none
+            ora_f_t = None
         else:
             ora_f_t = c_time4.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
