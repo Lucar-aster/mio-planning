@@ -584,7 +584,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"), legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
-    adesso = datetime.now()
+    adesso = datetime.now(tz)
     ora_attuale_decimale = adesso.hour + adesso.minute / 60.0
     frac_oggi = (ora_attuale_decimale - 8.0) / 9.0
     frac_oggi = max(0, min(1, frac_oggi))
