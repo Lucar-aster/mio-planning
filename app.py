@@ -2,6 +2,7 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 import plotly.graph_objects as go
+import pytz
 from datetime import datetime, timedelta, time
 import textwrap
 from streamlit_calendar import calendar
@@ -12,6 +13,7 @@ st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
+tz = pytz.timezone('Europe/Rome')
 
 # --- 3. CONNESSIONE E CACHING ---
 URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
@@ -176,7 +178,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_oraft = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_t")
 	
         if auto_orait:
-            ora_i_t = datetime.now().time()
+            ora_i_t = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
@@ -215,7 +217,7 @@ def modal_gestione_clic(task_id, data_clic):
         auto_orafl = st.checkbox("Log aperto (senza ora fine)", value=True, key="ao_f_l")
 		
         if auto_orail:
-            ora_i_l = datetime.now().time()
+            ora_i_l = datetime.now(yz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
@@ -692,15 +694,15 @@ if l and tk and cm:
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
             c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
-            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
-            trascorso = datetime.now() - inizio_dt
+            inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time(tz))
+            trascorso = datetime.now(tz) - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
             c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['operatore']}</strong> - {row['Task']}</p>", unsafe_allow_html=True)
             c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
             c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
             if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
-                ora_fine_adesso = datetime.now().strftime('%H:%M:%S')
+                ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
                 supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
                 st.success("Log chiuso!")
                 get_cached_data.clear()
