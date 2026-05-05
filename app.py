@@ -675,17 +675,17 @@ if l and tk and cm:
     df['note_html'] = df.apply(formatta_nota, axis=1)
     # --- SEZIONE LOG APERTI ---
     log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
-    st.markdown("### ⏱️ Log in Corso")
+    st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
-            c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
+            c1, c2, c3, c4 = st.columns([3, 2, 2, 1], gap="small")
             inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
             trascorso = datetime.now() - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
-            c1.markdown(f"**{row['operatore']}** - {row['Task']}")
-            c2.write(f"Iniziato alle: {row['ora_i'][:5]}")
-            c3.warning(f"⏳ da {ore}h {minuti}m")
+            c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['operatore']}</strong> - {row['Task']}</p>", unsafe_allow_html=True)
+            c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
+            c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
             if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
                 ora_fine_adesso = datetime.now().strftime('%H:%M:%S')
                 supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
