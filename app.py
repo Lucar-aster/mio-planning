@@ -290,8 +290,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         "inizio", 
         "fine", 
         "ora_i", 
-        "ora_f",  
-        "Elimina", 
+        "ora_f",   
         "id", 
         "task_id"
     ]
