@@ -69,6 +69,17 @@ st.markdown(f"""
         [data-testid="stTabs"], [data-testid="stTab"], div[data-baseweb="tab-list"], [data-testid="stVerticalBlock"] > div {{ border: none !important; box-shadow: none !important; }}
         hr {{ display: none !important; margin: 0 !important; padding: 0 !important; }}
     }}
+	[data-testid="stVerticalBlock"] > div {{
+    gap: 0.1rem !important;
+    }}
+	.stButton > button {{
+    height: 24px !important;
+    line-height: 24px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    font-size: 12px !important;
+    min-height: 24px !important;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -678,7 +689,7 @@ if l and tk and cm:
     st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
-            c1, c2, c3, c4 = st.columns([3, 2, 2, 1], gap="small")
+            c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
             inizio_dt = datetime.combine(row['Inizio'], pd.to_datetime(row['ora_i']).time())
             trascorso = datetime.now() - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
