@@ -282,17 +282,28 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     st.divider()
 
     all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
+
     df_sub = pd.DataFrame(all_logs)
+	ordine_colonne = [
+        "operatore", 
+	    "note",
+        "inizio", 
+        "fine", 
+        "ora_i", 
+        "ora_f",  
+        "Elimina", 
+        "id", 
+        "task_id"
+    ]
+    df_sub = df_sub[ordine_colonne]
     
     if not df_sub.empty:
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
         df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
         
-        # Gestione Parsing Orari DB -> Formato visuale (Default 08:00 - 17:00)
-        df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i', '08:00:00'), format='%H:%M:%S', errors='coerce').dt.time
-        df_sub['ora_f'] = pd.to_datetime(df_sub.get('ora_f', '17:00:00'), format='%H:%M:%S', errors='coerce').dt.time
-        df_sub['ora_i'] = df_sub['ora_i'].fillna(time(8, 0))
-        df_sub['ora_f'] = df_sub['ora_f'].fillna(time(17, 0))
+        # Gestione Parsing Orari DB 
+        df_sub['ora_i'] = pd.to_datetime(df_sub.get['ora_i'], format='%H:%M:%S', errors='coerce').dt.time
+        df_sub['ora_f'] = pd.to_datetime(df_sub.get['ora_f'], format='%H:%M:%S', errors='coerce').dt.time
         
         mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].copy()
@@ -305,11 +316,11 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         column_config={
             "id": None, "task_id": None,
             "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+            "note": st.column_config.TextColumn("Note", width="large"),
             "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
             "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
             "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"),
             "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm"),
-            "note": st.column_config.TextColumn("Note", width="large"),
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
         disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
