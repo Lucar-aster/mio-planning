@@ -101,15 +101,18 @@ with header_col1:
 
 with header_col2:
     ops = get_cached_data("Operatori")
+	tags = get_cached_data("Tag")
     op_html = "".join([f'<div class="legend-pill" style="background-color:{o.get("colore", "#8dbad2")}">{o["nome"]}</div>' for o in ops])
     cm_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_COMMESSA])
     tk_html = "".join([f'<div class="legend-pill">{s}</div>' for s in STATI_TASK])
+	tag_html = "".join([f'<div class="legend-pill" style="background-color:{t.get("colore", "#8dbad2")}">{t["nome"]}</div>' for t in tags])
     
     st.markdown(f"""
         <div class="legend-container">
             <div class="legend-row"><span class="legend-label">👤 Operatori</span>{op_html}</div>
             <div class="legend-row"><span class="legend-label">🏗️ Progetti</span>{cm_html}</div>
             <div class="legend-row"><span class="legend-label">📋 Task</span>{tk_html}</div>
+			<div class="legend-row"><span class="legend-label">🔖 Tag</span>{tag_html}</div>
         </div>
     """, unsafe_allow_html=True)
     
