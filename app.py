@@ -730,7 +730,7 @@ if l and tk and cm:
             trascorso = datetime.now(tz) - inizio_dt
             ore, resto = divmod(trascorso.seconds, 3600)
             minuti, _ = divmod(resto, 60)
-            c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['operatore']}</strong> - {row['Task']}</p>", unsafe_allow_html=True)
+            c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['operatore']}</strong> - {row['Task']} - {row['note']}</p>", unsafe_allow_html=True)
             c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
             c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
             if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
