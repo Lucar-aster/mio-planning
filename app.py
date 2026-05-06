@@ -560,6 +560,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
+		colore_base = color_map.get(op, "#8dbad2")
+		lista_colori_sfondo = [colore_base] * len(df_op)
         y_labels = []
         for _, row in df_op.iterrows():
             e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
@@ -569,7 +571,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
         fig.add_trace(go.Bar(
             base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12,
+            marker=dict(color=lista_colori_sfondo, cornerradius=12,
             pattern=dict(shape="/", fgcolor=df_op['tag'].map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist(), fgopacity=0.9, size=7,solidity=0.2)), width=0.4,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'], df_op['tag'])),
             hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]} / %{customdata[8]}<br>%{customdata[6]}<extra></extra>"
