@@ -523,6 +523,9 @@ def modal_tag():
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
+    res_tags = supabase.table("Tag").select("nome, colore").execute()
+    mappa_colori_tag = {t['nome']: t['colore'] for t in res_tags.data}
+    
     if df_plot.empty: st.info("Nessun dato trovato."); return
     
     # Abbiamo rimosso merge_consecutive_logs come richiesto!
@@ -566,9 +569,10 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
 
         fig.add_trace(go.Bar(
             base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.4,
-            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
-            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[6]}<extra></extra>"
+            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12,
+            pattern=dict(shape="/", fgcolor=df_op['tag'].map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist(), fgopacity=0.9, size=10,solidity=0.3), width=0.4,
+            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'], df_op['tag'])),
+            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]} / %{customdata[8]}<br>%{customdata[6]}<extra></extra>"
         ))
         
     start_buffer = x_range[0] - timedelta(days=180)
