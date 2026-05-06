@@ -613,92 +613,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             if d and d[0] == "LOG_FITTIZIO": modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(d[2]).date())
             elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
 
-# --- 7. GANTT FRAGMENT ESTESA---
-@st.fragment(run_every=60)
-def render_gantt_fragment_exp(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    if df_plot.empty: st.info("Nessun dato trovato."); return
-    df_tasks_univoci = df_plot.copy().sort_values(by=['Commessa', 'Task', 'Inizio'])
-    fig = go.Figure()
-
-    mappa_emoji = {"Quotazione 🟣": "🟣", "Pianificata 🔵": "🔵", "In corso 🟡": "🟡", "Completata 🟢": "🟢", "Sospesa 🟠": "🟠", "Cancellata 🔴": "🔴"}
-    mappa_emoji_task = {"Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", "Completato 🟢": "🟢", "Sospeso 🟠": "🟠"}
-    vista_compressa = st.session_state.vista_compressa
-
-    click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    ms_per_day = 24 * 3600 * 1000
-    grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
-    y_labels_pulsanti = []
-    map_log_to_y = {}
-	
-    for i, (_, r) in enumerate(df_tasks_univoci.iterrows()):
-        e_cm = mappa_emoji.get(r['stato_commessa'], "⚫")
-        e_tk = mappa_emoji_task.get(r.get('stato_task'), "⚫")
-        c_label = "<br>".join(textwrap.wrap(f"{e_cm} {r['Commessa']}", 15))
-        note_label = f"<span style='color:rgba(0,0,0,0); font-size:1px;'>{r['note']}</span>"
-        t_label = "<br>".join(textwrap.wrap(f"{e_tk} {r['Task']}", 40))
-		
-        if vista_compressa: y_val = (c_label, t_label)
-        else:
-            y_val = (c_label, t_label, note_label)
-            map_log_to_y[r['note']] = y_val
-			
-        y_labels_pulsanti.append(y_val)
-        
-        for d in click_dates:
-            grid_bases.append(d)
-            grid_xs.append(ms_per_day)
-            grid_ys.append(y_val)
-            grid_customdata.append(["LOG_FITTIZIO", r['task_id'], d.date()])
-
-    fig.add_trace(go.Bar(base=grid_bases, x=grid_xs, y=list(zip(*grid_ys)), orientation='h', marker=dict(color="rgba(0,0,0,0)"), showlegend=False, hoverinfo='none', customdata=grid_customdata, width=0.9, offset=-0.45))
-            
-    for op in df_plot['operatore'].unique():
-        df_op = df_plot[df_plot['operatore'] == op]
-        y_labels_op = [map_log_to_y[note] for note in df_op['note']]
-        
-        fig.add_trace(go.Bar(
-            base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=list(zip(*y_labels_op)), orientation='h', name=op,
-            marker=dict(color=color_map.get(op, "#8dbad2"), cornerradius=12), width=0.6, text =df_op['note'], textposition="outside",
-            customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'])),
-            hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]}<br>%{customdata[6]}<extra></extra>"
-        ))
-        
-    start_buffer = x_range[0] - timedelta(days=180)
-    end_buffer = x_range[1] + timedelta(days=180)
-    
-    if delta_giorni > 60: tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='W-MON')
-    elif delta_giorni >20:
-       full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-       tick_range = full_range[full_range.weekday.isin([0, 2, 4])]
-    else: tick_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
-
-    tick_text = [get_it_date_label(d, delta_giorni) for d in tick_range]
-    all_shapes = []
-    curr = x_range[0] - timedelta(days=60)
-    while curr <= x_range[1] + timedelta(days=60):
-        all_shapes.append(dict(type="line", x0=curr, x1=curr, y0=0, y1=1, yref="paper", line=dict(color="#e0e0e0", width=1), layer="below"))
-        if curr.weekday() >= 5: all_shapes.append(dict(type="rect", x0=curr, x1=curr+timedelta(days=1), y0=0, y1=1, yref="paper", fillcolor="#f0f0f0", opacity=0.5, line_width=0, layer="below"))
-        curr += timedelta(days=1)
-        
-    unique_rows = df_plot['Commessa'].unique() if vista_compressa else df_plot[['Commessa', 'Task']].drop_duplicates()
-    n_r = len(unique_rows)
-
-    fig.update_layout(
-        clickmode='event+select', height=300 + (n_r * 75), showlegend=False, margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, dragmode='pan',
-        xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
-        yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"), legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
-    )
-    fig.add_vline(x=oggi_dt.timestamp() * 1000 + 43200000, line_width=2, line_color="red")
-    
-    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_exp_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
-
-    if selected and "selection" in selected and "points" in selected["selection"]:
-        pts = selected["selection"]["points"]
-        if pts:
-            d = pts[0].get("customdata", [])
-            if d and d[0] == "LOG_FITTIZIO": modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(d[2]).date())
-            elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
-
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
@@ -850,7 +764,7 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     df_p['fine'] = pd.to_datetime(df_p['fine'])
     df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)].copy()
     
-tabs = st.tabs(["📊 Timeline", "📊 Timeline Analitica", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: 
     if not df.empty:
@@ -862,15 +776,6 @@ with tabs[0]:
         render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
         
 with tabs[1]: 
-    if not df.empty:
-        oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
-        else:
-            d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
-            x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-        render_gantt_fragment_exp(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
-
-with tabs[2]: 
     if not df.empty:
         cal_events = []
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
@@ -903,7 +808,7 @@ with tabs[2]:
         except Exception as e: st.error(f"Errore nel caricamento del componente: {e}")
     else: st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
-with tabs[3]: 
+with tabs[2]: 
     if not df.empty:
         st.subheader("Agenda Verticale")
         cal_events_agenda = []
@@ -921,7 +826,7 @@ with tabs[3]:
         agenda_options = {"initialView": "listDay", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "listDay,listWeek,listMonth"}, "buttonText": {"listDay": "Giorno", "listWeek": "Settimana", "listMonth": "Mese"}, "noEventsContent": "Nessun task per questa data", "displayEventTime": True, "locale": "it", "height": 1000}
         calendar(events=cal_events_agenda, options=agenda_options, key="calendar_agenda_vertical")
         
-with tabs[4]: 
+with tabs[3]: 
     st.header("📋 Gestione Log Esistenti")
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
@@ -946,7 +851,7 @@ with tabs[4]:
                 supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note']}).eq("id", r['id']).execute()
             get_cached_data.clear(); st.rerun()
 
-with tabs[5]: 
+with tabs[4]: 
     st.header("⚙️ Setup di Sistema")
     s1, s2, s4, s3 = st.tabs(["🏗️ Commesse", "👥 Operatori", "🔖 Tag", "✅ Task"])
     
@@ -1001,7 +906,7 @@ with tabs[5]:
                 df_da_salvare = df_da_salvare.drop(columns=['commessa_nome'])
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
-with tabs[6]: 
+with tabs[5]: 
     logs = get_cached_data("Log_Tempi")
     df_l = pd.DataFrame(logs)
     comm = get_cached_data("Commesse")
