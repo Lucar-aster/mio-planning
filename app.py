@@ -920,12 +920,14 @@ with tabs[5]:
 
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
+			color_discrete_map = {}
             df_tags_ref = get_cached_data("Tags")
             if df_tags_ref is not None and hasattr(df_tags_ref, 'empty'):
                 if not df_tags_ref.empty:
-                    names = df_tags_ref['nome'].astype(str).str.strip().tolist()
-                    colors = df_tags_ref['colore'].astype(str).str.strip().tolist()
-                    color_discrete_map = dict(zip(names, colors))
+                    tnames = df_tags_ref['nome'].astype(str).str.strip().tolist()
+                    tcols = df_tags_ref['colore'].astype(str).str.strip().tolist()
+					tcols = [c if c.startswith('#') else f'#{c}' for c in tcols]
+                    color_discrete_map = dict(zip(tnames, tcols))
 
             if not df_p.empty:
                 df_stats = df_p.copy()
@@ -943,11 +945,7 @@ with tabs[5]:
                     barmode='group',
                     color_discrete_map=color_discrete_map,
                     title="Distribuzione Ore per Operatore e Tag",
-                    labels={
-                        'ore_lavorate': 'Ore Totali', 
-                        'operatore': 'Operatore', 
-                        col_tag: 'Tag'
-                    },
+                    labels={'ore_lavorate': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
                     text_auto='.1f',        # Mostra il totale ore sopra ogni barra
                     template="plotly_white" # Rende il grafico più pulito
                 )
@@ -962,7 +960,6 @@ with tabs[5]:
 
                 st.plotly_chart(fig_stats, use_container_width=True)
 
-                # --- TABELLA RIASSUNTIVA (Opzionale, utile per controllo) ---
                 with st.expander("Vedi dati tabellari"):
                     st.dataframe(df_grouped.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0))
 
