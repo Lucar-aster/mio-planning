@@ -920,7 +920,7 @@ with tabs[5]:
 
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
-			color_discrete_map = {}
+            color_discrete_map = {}
             df_tags_ref = get_cached_data("Tags")
             if df_tags_ref is not None and hasattr(df_tags_ref, 'empty'):
                 if not df_tags_ref.empty:
