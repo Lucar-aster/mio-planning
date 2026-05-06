@@ -578,7 +578,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h',
             marker=dict(color=lista_colori_sfondo, cornerradius=12), width=0.4, hoverinfo='skip'))
             
-		fig.add_trace(go.Bar(
+        fig.add_trace(go.Bar(
             base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
             marker=dict(color="rgba(0,0,0,0)", cornerradius=12,
             pattern=dict(shape="/", fgcolor=df_op['tag'].astype(str).str.strip().str.lower().map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist(), fgopacity=0.9, size=7,solidity=0.15, fillmode="overlay")), width=0.4,
