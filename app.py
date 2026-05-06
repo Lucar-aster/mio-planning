@@ -560,8 +560,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
-		colore_base = color_map.get(op, "#8dbad2")
-		lista_colori_sfondo = [colore_base] * len(df_op)
+        colore_base = color_map.get(op, "#8dbad2")
+        lista_colori_sfondo = [colore_base] * len(df_op)
         y_labels = []
         for _, row in df_op.iterrows():
             e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
