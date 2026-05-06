@@ -523,8 +523,8 @@ def modal_tag():
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
-    res_tags = supabase.table("Tag").select("nome, colore").execute()
-    mappa_colori_tag = {t['id']: t['colore'] for t in res_tags.data}
+    res_tags = supabase.table("Tag").select("id, nome, colore").execute()
+    mappa_colori_tag = {t['nome']: t['colore'] for t in res_tags.data}
     
     if df_plot.empty: st.info("Nessun dato trovato."); return
     
