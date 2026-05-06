@@ -562,8 +562,8 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         df_op = df_merged[df_merged['operatore'] == op]
         
         with st.expander(f"Debug dati per {op}"):
-        st.write("Dati estratti per questo operatore:", df_op[['tag', 'Commessa', 'Task']])
-        st.write("Mappa colori disponibile:", mappa_colori_tag)
+            st.write("Dati estratti per questo operatore:", df_op[['tag', 'Commessa', 'Task']])
+            st.write("Mappa colori disponibile:", mappa_colori_tag)
         
         colore_base = color_map.get(op, "#8dbad2")
         lista_colori_sfondo = [colore_base] * len(df_op)
