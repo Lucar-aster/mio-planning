@@ -524,7 +524,7 @@ def modal_tag():
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     res_tags = supabase.table("Tag").select("id, nome, colore").execute()
-    mappa_colori_tag = {t['id']: t['colore'] for t in res_tags.data}
+    mappa_colori_tag = {str(t['nome']).strip().lower(): t['colore'] for t in res_tags.data}
     
     if df_plot.empty: st.info("Nessun dato trovato."); return
     
@@ -560,6 +560,11 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
+        
+        with st.expander(f"Debug dati per {op}"):
+        st.write("Dati estratti per questo operatore:", df_op[['tag', 'Commessa', 'Task']])
+        st.write("Mappa colori disponibile:", mappa_colori_tag)
+        
         colore_base = color_map.get(op, "#8dbad2")
         lista_colori_sfondo = [colore_base] * len(df_op)
         y_labels = []
@@ -618,7 +623,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             d = pts[0].get("customdata", [])
             if d and d[0] == "LOG_FITTIZIO": modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(d[2]).date())
             elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
-
+    
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
 df = pd.DataFrame()
