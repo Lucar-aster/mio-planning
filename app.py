@@ -573,13 +573,14 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
             c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
             y_labels.append(c_label if vista_compressa else [c_label, "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))])
+			id_gruppo = f"group_{op}"
 
         fig.add_trace(go.Bar(
             base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h',
-            marker=dict(color=lista_colori_sfondo, cornerradius=12), width=0.4, hoverinfo='skip'))
+            marker=dict(color=lista_colori_sfondo, cornerradius=12), width=0.4, offsetgroup=id_gruppo, hoverinfo='skip'))
             
         fig.add_trace(go.Bar(
-            base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op,
+            base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h', name=op, offsetgroup=id_gruppo,
             marker=dict(color="rgba(0,0,0,0)", cornerradius=12,
             pattern=dict(shape="/", fgcolor=df_op['tag'].astype(str).str.strip().str.lower().map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist(), fgopacity=0.9, size=7,solidity=0.15, fillmode="overlay")), width=0.4,
             customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'], df_op['tag'])),
