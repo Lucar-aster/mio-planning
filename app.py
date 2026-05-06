@@ -779,7 +779,7 @@ if l and tk and cm:
         c1, c2, c4, c3 = st.columns([1, 1, 1, 2])
         f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()), label_visibility="collapsed", placeholder="Progetti")
         f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()), label_visibility="collapsed", placeholder="Operatori")
-        f_s_tag = c4.multiselect("Tag", sorted(df['Tag'].unique()), label_visibility="collapsed", placeholder="Tag")
+        f_s_tag = c4.multiselect("Tag", sorted(df['tag'].unique()), label_visibility="collapsed", placeholder="Tag")
         with c3:
             cs, cd = st.columns(2)
             scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1, label_visibility="collapsed")
@@ -835,7 +835,7 @@ if l and tk and cm:
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
-    if f_s_tag: df_p = df_p[df_p['Tag'].isin(f_s_tag)]
+    if f_s_tag: df_p = df_p[df_p['tag'].isin(f_s_tag)]
     if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(f_text) | df_p['Task'].astype(str).str.lower().str.contains(f_text)]
     
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
