@@ -573,7 +573,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             e_tk = mappa_emoji_task.get(row.get('stato_task'), "⚫")
             c_label = "<br>".join(textwrap.wrap(f"{e_cm} {row['Commessa']}", 15))
             y_labels.append(c_label if vista_compressa else [c_label, "<br>".join(textwrap.wrap(f"{e_tk} {row['Task']}", 30))])
-			id_gruppo = f"group_{op}"
+            id_gruppo = f"group_{op}"
 
         fig.add_trace(go.Bar(
             base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if vista_compressa else list(zip(*y_labels)), orientation='h',
