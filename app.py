@@ -921,17 +921,20 @@ with tabs[5]:
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
             color_discrete_map = {}
-            df_tags_ref = get_cached_data("Tags")
-            if df_tags_ref is not None and hasattr(df_tags_ref, 'empty'):
-                if not df_tags_ref.empty:
-                    tnames = df_tags_ref['nome'].astype(str).str.strip().tolist()
-                    tcols = df_tags_ref['colore'].astype(str).str.strip().tolist()
-                    tcols = [c if c.startswith('#') else f'#{c}' for c in tcols]
-                    color_discrete_map = dict(zip(tnames, tcols))
+            tags_ref = get_cached_data("Tag") # Nome tabella corretto
+            if tags_ref:
+                for t in tags_ref:
+                    nome_t = str(t.get('nome', '')).strip()
+                    col_t = str(t.get('colore', '#8dbad2')).strip()
+                    if not col_t.startswith('#'): 
+                        col_t = f'#{col_t}'
+                    color_discrete_map[nome_t] = col_t
 
             if not df_p.empty:
                 df_stats = df_p.copy()
-                df_stats['ore_lavorate'] = (df_stats['fine'] - df_stats['inizio']).dt.total_seconds() / 3600
+                
+                df_stats['ore_lavorate'] = df_stats['Visual_Durata_Frac'] * 9.0
+                
                 col_tag = 'Tag' if 'Tag' in df_stats.columns else 'tag'
                 df_stats[col_tag] = df_stats[col_tag].fillna("Nessun Tag").astype(str).str.strip()
                 df_grouped = df_stats.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
@@ -955,7 +958,7 @@ with tabs[5]:
                     xaxis_title="Operatori",
                     yaxis_title="Ore Totali",
                     legend_title="Tag / Attività",
-                    hovermode="x unified"    # Mostra tutti i tag dell'operatore quando passi il mouse
+                    hovermode="x unified"    # Mostra tutti i tag dell'operatore al passaggio del mouse
                 )
 
                 st.plotly_chart(fig_stats, use_container_width=True)
