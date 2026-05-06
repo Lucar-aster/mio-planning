@@ -776,10 +776,15 @@ if l and tk and cm:
     
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
+        res_tags = supabase.table("Tag").select("id, nome").execute()
+        mappa_id_to_nome = {t['id']: t['nome'] for t in res_tags.data}
+        if 'tag' in df.columns:
+            df['tag'] = df['tag'].map(mappa_id_to_nome).fillna("Senza Tag")
+            
         c1, c2, c4, c3 = st.columns([1, 1, 1, 2])
         f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()), label_visibility="collapsed", placeholder="Progetti")
         f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()), label_visibility="collapsed", placeholder="Operatori")
-        f_s_tag = c4.multiselect("Tag", sorted(df['tag'].unique()), label_visibility="collapsed", placeholder="Tag")
+        f_s_tag = c4.multiselect("Tag", sorted(df['tag'].unique().astype(str)), label_visibility="collapsed", placeholder="Tag")
         with c3:
             cs, cd = st.columns(2)
             scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1, label_visibility="collapsed")
@@ -793,7 +798,7 @@ if l and tk and cm:
         with s3:
             f_range = st.date_input("Intervallo Date", value=[df['inizio'].min(), df['fine'].max()], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
         with s4:
-            search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Inserisci testo...", label_visibility="collapsed").lower()
+            search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b7, b4, b5, b6 = st.columns(7)
