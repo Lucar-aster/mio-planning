@@ -920,32 +920,51 @@ with tabs[5]:
 
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
+            if 'df_tags_ref' in locals() or 'df_tags_ref' in globals():
+                color_discrete_map = dict(zip(df_tags_ref['nome'], df_tags_ref['colore']))
+            else:
+                color_discrete_map = {}
             if not df_p.empty:
                 df_stats = df_p.copy()
                 df_stats['ore_lavorate'] = (df_stats['fine'] - df_stats['inizio']).dt.total_seconds() / 3600
                 col_tag = 'Tag' if 'Tag' in df_stats.columns else 'tag'
-                df_grouped = df_stats.groupby([col_tag, 'operatore'])['ore_lavorate'].sum().reset_index()
+                df_stats[col_tag] = df_stats[col_tag].fillna("Nessun Tag")
+                df_grouped = df_stats.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
                 import plotly.express as px
+
                 fig_stats = px.bar(
                     df_grouped,
-                    x=col_tag,
+                    x='operatore',
                     y='ore_lavorate',
-                    color='operatore',
-                    barmode='group',  # 'group' per barre affiancate, 'relative' per sovrapposte
-                    title="Ore lavorate per Tag e Operatore",
-                    labels={'ore_lavorate': 'Ore Totali', col_tag: 'Tag / Categoria', 'operatore': 'Operatore'},
-                    text_auto='.1f'   # Mostra il valore sopra la barra con 1 decimale
+                    color=col_tag,
+                    barmode='group',
+                    color_discrete_map=color_discrete_map,
+                    title="Distribuzione Ore per Operatore e Tag",
+                    labels={
+                        'ore_lavorate': 'Ore Totali', 
+                        'operatore': 'Operatore', 
+                        col_tag: 'Tag'
+                    },
+                    text_auto='.1f',        # Mostra il totale ore sopra ogni barra
+                    template="plotly_white" # Rende il grafico più pulito
                 )
+
+                # Miglioriamo la leggibilità
                 fig_stats.update_layout(
-                    xaxis_title="Tag",
-                    yaxis_title="Ore",
-                    legend_title="Operatori",
-                    uniformtext_minsize=8, 
-                    uniformtext_mode='hide'
+                    xaxis_title="Operatori",
+                    yaxis_title="Ore Totali",
+                    legend_title="Tag / Attività",
+                    hovermode="x unified"    # Mostra tutti i tag dell'operatore quando passi il mouse
                 )
+
                 st.plotly_chart(fig_stats, use_container_width=True)
+
+                # --- TABELLA RIASSUNTIVA (Opzionale, utile per controllo) ---
+                with st.expander("Vedi dati tabellari"):
+                    st.dataframe(df_grouped.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0))
+
             else:
-                st.warning("Nessun dato disponibile per i filtri selezionati.")
+                st.info("Seleziona dei filtri o inserisci dei log per visualizzare le statistiche.")
                 
         with c2:
             st.subheader("🏗️ Stato delle Commesse")
