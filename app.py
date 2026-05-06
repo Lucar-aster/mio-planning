@@ -920,15 +920,20 @@ with tabs[5]:
 
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
-            if 'df_tags_ref' in locals() or 'df_tags_ref' in globals():
-                color_discrete_map = dict(zip(df_tags_ref['nome'], df_tags_ref['colore']))
+            df_tags_ref = get_cached_data("Tags")
+            if not df_tags_ref.empty:
+                color_discrete_map = dict(zip(
+                    df_tags_ref['nome'].astype(str).strip(), 
+                    df_tags_ref['colore'].astype(str).strip()
+                ))
             else:
                 color_discrete_map = {}
+
             if not df_p.empty:
                 df_stats = df_p.copy()
                 df_stats['ore_lavorate'] = (df_stats['fine'] - df_stats['inizio']).dt.total_seconds() / 3600
                 col_tag = 'Tag' if 'Tag' in df_stats.columns else 'tag'
-                df_stats[col_tag] = df_stats[col_tag].fillna("Nessun Tag")
+                df_stats[col_tag] = df_stats[col_tag].fillna("Nessun Tag").astype(str).str.strip()
                 df_grouped = df_stats.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
                 import plotly.express as px
 
