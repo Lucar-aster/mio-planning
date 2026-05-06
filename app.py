@@ -926,7 +926,7 @@ with tabs[5]:
                 if not df_tags_ref.empty:
                     tnames = df_tags_ref['nome'].astype(str).str.strip().tolist()
                     tcols = df_tags_ref['colore'].astype(str).str.strip().tolist()
-					tcols = [c if c.startswith('#') else f'#{c}' for c in tcols]
+                    tcols = [c if c.startswith('#') else f'#{c}' for c in tcols]
                     color_discrete_map = dict(zip(tnames, tcols))
 
             if not df_p.empty:
