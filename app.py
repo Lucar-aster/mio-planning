@@ -567,7 +567,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         
         colore_base = color_map.get(op, "#8dbad2")
         lista_colori_sfondo = [colore_base] * len(df_op)
-		colore_tag = df_op['tag'].astype(str).str.strip().str.lower().map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist()
+        colore_tag = df_op['tag'].astype(str).str.strip().str.lower().map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist()
         y_labels = []
         for _, row in df_op.iterrows():
             e_cm = mappa_emoji.get(row['stato_commessa'], "⚫")
