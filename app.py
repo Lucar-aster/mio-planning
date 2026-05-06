@@ -793,7 +793,7 @@ if l and tk and cm:
         with s3:
             f_range = st.date_input("Intervallo Date", value=[df['inizio'].min(), df['fine'].max()], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
         with s4:
-            search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Inserisci testo...").lower()
+            search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Inserisci testo...", label_visibility="collapsed").lower()
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b7, b4, b5, b6 = st.columns(7)
