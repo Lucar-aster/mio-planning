@@ -5,3 +5,4 @@ plotly
 pytz
 streamlit-plotly-events
 streamlit_calendar
+openpyxl
