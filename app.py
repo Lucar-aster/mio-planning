@@ -920,12 +920,33 @@ with tabs[5]:
 
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
-            workload = df_l['operatore'].value_counts().reset_index()
-            workload.columns = ['Operatore', 'Numero Attività']
-            fig_workload = go.Figure(go.Bar(x=workload['Numero Attività'], y=workload['Operatore'], orientation='h', marker_color='#3498db'))
-            fig_workload.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig_workload, use_container_width=True)
-
+            if not df_p.empty:
+                df_stats = df_p.copy()
+                df_stats['ore_lavorate'] = (df_stats['fine'] - df_stats['inizio']).dt.total_seconds() / 3600
+                col_tag = 'Tag' if 'Tag' in df_stats.columns else 'tag'
+                df_grouped = df_stats.groupby([col_tag, 'operatore'])['ore_lavorate'].sum().reset_index()
+                import plotly.express as px
+                fig_stats = px.bar(
+                    df_grouped,
+                    x=col_tag,
+                    y='ore_lavorate',
+                    color='operatore',
+                    barmode='group',  # 'group' per barre affiancate, 'relative' per sovrapposte
+                    title="Ore lavorate per Tag e Operatore",
+                    labels={'ore_lavorate': 'Ore Totali', col_tag: 'Tag / Categoria', 'operatore': 'Operatore'},
+                    text_auto='.1f'   # Mostra il valore sopra la barra con 1 decimale
+                )
+                fig_stats.update_layout(
+                    xaxis_title="Tag",
+                    yaxis_title="Ore",
+                    legend_title="Operatori",
+                    uniformtext_minsize=8, 
+                    uniformtext_mode='hide'
+                )
+                st.plotly_chart(fig_stats, use_container_width=True)
+            else:
+                st.warning("Nessun dato disponibile per i filtri selezionati.")
+                
         with c2:
             st.subheader("🏗️ Stato delle Commesse")
             if not df_c.empty:
