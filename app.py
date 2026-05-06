@@ -776,20 +776,24 @@ if l and tk and cm:
     
     # --- AREA CONTROLLI (FIXED HEADER) ---
     with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
-        c1, c2, c3 = st.columns([3, 3, 4])
+        c1, c2, c4, c3 = st.columns([1, 1, 1, 2])
         f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()), label_visibility="collapsed", placeholder="Progetti")
         f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()), label_visibility="collapsed", placeholder="Operatori")
+        f_s_tag = c4.multiselect("Tag", sorted(df['Tag'].unique()), label_visibility="collapsed", placeholder="Tag")
         with c3:
             cs, cd = st.columns(2)
             scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1, label_visibility="collapsed")
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)], label_visibility="collapsed") if scala == "Personalizzato" else None
-        
-        s1, s2, s3 = st.columns([3, 3, 4])
+
+		
+        s1, s2, s4, s3 = st.columns([1, 1, 1, 2])
         f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=[], label_visibility="collapsed", placeholder="Stato Commesse")
         f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
 
         with s3:
             f_range = st.date_input("Intervallo Date", value=[df['inizio'].min(), df['fine'].max()], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
+        with s4:
+            search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Inserisci testo...").lower()
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
         b1, b2, b3, b7, b4, b5, b6 = st.columns(7)
@@ -830,6 +834,8 @@ if l and tk and cm:
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
+	if f_s_tag: df_p = df_p[df_p['Tag'].isin(f_s_tag)]
+    if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(f_text) | df_p['Task'].astype(str).str.lower().str.contains(f_text)]
     
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     start_search = pd.to_datetime(f_range[0])
