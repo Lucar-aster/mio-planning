@@ -941,7 +941,7 @@ with tabs[5]:
                     df_grouped,
                     x='operatore',
                     y='ore_lavorate',
-                    color=color_discrete_map,
+                    color=col_tag,
                     barmode='group',
                     color_discrete_map=color_discrete_map,
                     title="Distribuzione Ore per Operatore e Tag",
