@@ -961,7 +961,7 @@ with tabs[5]:
                 st.plotly_chart(fig_stats, use_container_width=True)
 
                 with st.expander("Vedi dati tabellari"):
-                    st.dataframe(df_grouped.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0))
+                    st.dataframe(df_grouped.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0).style.format("{:.1f}"))
 
             else:
                 st.info("Seleziona dei filtri o inserisci dei log per visualizzare le statistiche.")
