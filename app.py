@@ -921,13 +921,11 @@ with tabs[5]:
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
             df_tags_ref = get_cached_data("Tags")
-            if not df_tags_ref.empty:
-                color_discrete_map = dict(zip(
-                    df_tags_ref['nome'].astype(str).strip(), 
-                    df_tags_ref['colore'].astype(str).strip()
-                ))
-            else:
-                color_discrete_map = {}
+            if df_tags_ref is not None and hasattr(df_tags_ref, 'empty'):
+                if not df_tags_ref.empty:
+                    names = df_tags_ref['nome'].astype(str).str.strip().tolist()
+                    colors = df_tags_ref['colore'].astype(str).str.strip().tolist()
+                    color_discrete_map = dict(zip(names, colors))
 
             if not df_p.empty:
                 df_stats = df_p.copy()
