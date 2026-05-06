@@ -828,13 +828,14 @@ if l and tk and cm:
                 st.success("Log chiuso!")
                 get_cached_data.clear()
                 st.rerun()
+                
     # --- FILTRAGGIO DATI ---
     df_p = df.copy()
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
     if f_s_cm: df_p = df_p[df_p['stato_commessa'].isin(f_s_cm)]
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
-	if f_s_tag: df_p = df_p[df_p['Tag'].isin(f_s_tag)]
+    if f_s_tag: df_p = df_p[df_p['Tag'].isin(f_s_tag)]
     if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(f_text) | df_p['Task'].astype(str).str.lower().str.contains(f_text)]
     
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
