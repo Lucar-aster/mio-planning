@@ -998,7 +998,9 @@ with tabs[5]:
         
         # 2. Raggruppiamo i dati per i flussi
         links = df_sankey.groupby([col_commessa, col_tag])['ore'].sum().reset_index()
-            
+        node_colors = ["#1E3A8A"] * len(list_commesse)
+        node_colors += ["#4B5563"] * len(list_tags)    
+        
         # 3. Creazione del grafico
         fig_sankey = go.Figure(data=[go.Sankey(
             node = dict(
@@ -1006,7 +1008,7 @@ with tabs[5]:
                 thickness = 20,
                 line = dict(color = "black", width = 0.5),
                 label = all_nodes,
-                color = '#3498db',
+                color = node_colors,
 				textfont = dict(color="rgba(0,0,0,0)", size=1),
             ),
             link = dict(
