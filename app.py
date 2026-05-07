@@ -191,17 +191,22 @@ def modal_gestione_clic(task_id, data_clic):
                 st.rerun()
         
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
-
-        auto_orait = st.checkbox("Usa ora attuale", value=True, key="ao_i_t")
-	
-        if auto_orait:
+        
+        ot1, ot2 = st.columns(2) 
+	    auto_oraft = ot1.checkbox("Usa ora attuale", value=True, key="ao_i_t")
+        
+        if ot1.checkbox("Usa ora attuale", value=True, key="ao_i_t"):
             ora_i_t = datetime.now(tz).time()
-            ora_f_t = None
+
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
+
+        if ot2.checkbox("Log aperto", value=True, key="ao_f_t"):
+            ora_f_t = None
+        else:
             ora_f_t = st.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
-				
+            
         nota_t = st.text_input("Nota log")  
         c1, c2 = st.columns(2)
         if c1.button("Registra Task", type="primary", width='stretch'):
@@ -226,14 +231,16 @@ def modal_gestione_clic(task_id, data_clic):
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
 
-        auto_orail = st.checkbox("Usa ora attuale", value=True, key="ao_i_l")
-		
-        if auto_orail:
+        ol1, ol2 = st.columns(2) 
+        if ol1.checkbox("Usa ora attuale", value=True, key="ao_i_l"):
             ora_i_l = datetime.now(tz).time()
-            ora_f_l = None
-            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
+            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
         else:
-            ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_l")
+            ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
+
+        if ol2.checkbox("Log aperto", value=True, key="ao_f_l"):
+            ora_f_l = None
+        else:
             ora_f_l = st.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
@@ -606,13 +613,13 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     n_r = len(unique_rows)
 
     fig.update_layout(
-        clickmode='event+select', height=300 + (n_r * 25), showlegend=False, margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.1, bargroupgap=0, dragmode='pan',
+        clickmode='event+select', height=300 + (n_r * 25), showlegend=False, margin=dict(l=10, r=10, t=40, b=0), shapes=all_shapes, barmode= 'group', bargap=0.2, bargroupgap=0, dragmode='pan',
         xaxis=dict(type="date", ticklabelmode="period", side="top", range=x_range, tickvals=tick_range + pd.Timedelta(hours=12), ticktext=tick_text),
         yaxis=dict(autorange="reversed", showgrid=True, showdividers=True, fixedrange=True,tickson="boundaries"), legend=dict(orientation="h", y=1.14, x=0.5, xanchor="center")
     )
     adesso = datetime.now(tz)
     ora_attuale_decimale = adesso.hour + adesso.minute / 60.0
-    frac_oggi = (ora_attuale_decimale - 8.0) / 9.0
+    frac_oggi = (ora_attuale_decimale - 7.0) / 12.0
     frac_oggi = max(0, min(1, frac_oggi))
     pos_linea_rossa = adesso.replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000 + (frac_oggi * 24 * 3600 * 1000)
     fig.add_vline(x=pos_linea_rossa, line_width=2, line_color="red", annotation_text=adesso.strftime("%H:%M"), annotation_position="top right")
@@ -653,7 +660,7 @@ if l and tk and cm:
             t = pd.to_datetime(t_str, format='%H:%M:%S', errors='coerce').time()
             if pd.isna(t): return 0.0
             # 8:00 corrisponde allo 0 della cella, 17:00 corrisponde a 1 (totale 9 ore)
-            return (t.hour + t.minute / 60.0 - 8.0) / 9.0
+            return (t.hour + t.minute / 60.0 - 7.0) / 12.0
         except: return None
     def calcola_logica_visuale(row):
         f_i = orario_a_frazione(row['ora_i'])
@@ -669,7 +676,7 @@ if l and tk and cm:
             f_f = orario_a_frazione(row['ora_f'])
             if f_f is None: f_f = 1.0
 
-        min_dur = 0.5 / 9.0
+        min_dur = 0.5 / 12.0
         durata_fraz = max(f_f - f_i, min_dur)
         return pd.Series([f_i, f_f, durata_fraz])
     
@@ -946,7 +953,7 @@ with tabs[5]:
             if not df_p.empty:
                 df_stats = df_p.copy()
                 
-                df_stats['ore_lavorate'] = df_stats['Visual_Durata_Frac'] * 9.0
+                df_stats['ore_lavorate'] = df_stats['Visual_Durata_Frac'] * 12.0
                 
                 col_tag = 'Tag' if 'Tag' in df_stats.columns else 'tag'
                 df_stats[col_tag] = df_stats[col_tag].fillna("Nessun Tag").astype(str).str.strip()
