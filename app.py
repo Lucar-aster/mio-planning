@@ -884,7 +884,7 @@ with tabs[3]:
         )
         if st.button("Salva Modifiche Tabella"):
             for _, r in edited_log.iterrows():
-                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], , "tag": r['tag']}).eq("id", r['id']).execute()
+                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": r['tag']}).eq("id", r['id']).execute()
             get_cached_data.clear(); st.rerun()
 
 with tabs[4]: 
