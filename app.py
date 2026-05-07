@@ -865,7 +865,7 @@ with tabs[2]:
 with tabs[3]: 
     st.header("📋 Gestione Log Esistenti")
     if not df_p.empty:
-        df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note', 'tag']].copy()
+        df_edit = df_p[['id', 'Commessa', 'operatore', 'Task', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
         
