@@ -1006,8 +1006,8 @@ with tabs[5]:
                 thickness = 20,
                 line = dict(color = "black", width = 0.5),
                 label = all_nodes,
-                color = '#3498db' # Colore base per i nodi,
-                textfont = dict(color="rgba(0,0,0,0)", size=1),
+                color = '#3498db',
+				textfont = dict(color="rgba(0,0,0,0)", size=1),
             ),
             link = dict(
                 source = links[col_commessa].map(node_map), # Indice sorgente
