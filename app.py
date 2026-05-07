@@ -864,11 +864,19 @@ with tabs[2]:
         
 with tabs[3]: 
     st.header("📋 Gestione Log Esistenti")
+
+    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'operatore', 'Task', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
-        
+	    cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
+        ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
+        tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
+        cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+        cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
+        res_tags = supabase.table("Tag").select("id, nome").execute()
+
         # Conversione sicura per il Data Editor
         df_edit['ora_i'] = pd.to_datetime(df_edit['ora_i'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(8, 0))
         df_edit['ora_f'] = pd.to_datetime(df_edit['ora_f'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(17, 0))
@@ -877,6 +885,10 @@ with tabs[3]:
             df_edit, 
             column_config={
                 "id": None,
+                "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+                "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"),
+                "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
+                "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
                 "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"),
                 "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm")
             }, 
