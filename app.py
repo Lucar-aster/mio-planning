@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import textwrap
 import hashlib
 from streamlit_calendar import calendar
+import plotly.express as px
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
