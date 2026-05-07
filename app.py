@@ -180,15 +180,7 @@ def modal_gestione_clic(task_id, data_clic):
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_t = st.multiselect("Seleziona Operatore", ops)
         tag_scelti_t = st.selectbox("Seleziona Tag", options=lista_tag, key="tag_sclt_t")
-        id_tag_scelto_t = mappa_tags.get(tag_scelti_t)
-        nuovo_tag_t = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_t")
-        if nuovo_tag_t:
-            if nuovo_tag_t not in lista_tag:
-                # Inserimento immediato nel DB Tag per renderlo disponibile
-                supabase.table("Tag").insert({"nome": nuovo_tag_t}).execute()
-                st.success(f"Tag '{nuovo_tag_t}' creato!")
-                get_cached_data.clear()
-                st.rerun()
+        id_tag_scelto_t = mappa_tags.get(tag_scelti_t) + [None]
         
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
         
@@ -243,15 +235,7 @@ def modal_gestione_clic(task_id, data_clic):
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
         tag_scelti_l = st.selectbox("Seleziona Tag", options=lista_tag, key="tag_scelti_l")
-        id_tag_scelto_l = mappa_tags.get(tag_scelti_l)
-        nuovo_tag_l = st.text_input("➕ Crea nuovo Tag (scrivi e premi invio)", key="tag_input_l")
-        if nuovo_tag_l:
-            if nuovo_tag_l not in lista_tag:
-                # Inserimento immediato nel DB Tag per renderlo disponibile
-                supabase.table("Tag").insert({"nome": nuovo_tag_l}).execute()
-                st.success(f"Tag '{nuovo_tag_l}' creato!")
-                get_cached_data.clear()
-                st.rerun()
+        id_tag_scelto_l = mappa_tags.get(tag_scelti_l) + [None]
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
         nota_l = st.text_input("Nota log", key="nota_l")
         c1, c2 = st.columns(2)
