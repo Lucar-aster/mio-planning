@@ -983,9 +983,16 @@ with tabs[5]:
     if not df_p.empty:
         df_sankey = df_p.copy()
         col_commessa = 'commessa' if 'commessa' in df_sankey.columns else 'Commessa'
-
         col_tag = 'Tag' if 'Tag' in df_sankey.columns else 'tag'
-
+        color_map_tags = {}
+            tags_db = get_cached_data("Tag")
+            if tags_db:
+                for t in tags_db:
+                    nome_t = str(t.get('nome', '')).strip()
+                    col_t = str(t.get('colore', '#4B5563')).strip() # Grigio default
+                    if not col_t.startswith('#'): col_t = f'#{col_t}'
+                    color_map_tags[nome_t] = col_t
+                    
         df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 12.0
             
         df_sankey[col_commessa] = df_sankey[col_commessa].fillna("Senza Commessa").astype(str)
@@ -998,8 +1005,13 @@ with tabs[5]:
         
         # 2. Raggruppiamo i dati per i flussi
         links = df_sankey.groupby([col_commessa, col_tag])['ore'].sum().reset_index()
-        node_colors = ["#1E3A8A"] * len(list_commesse)
-        node_colors += ["#4B5563"] * len(list_tags)    
+        
+        node_colors = []
+        for node_name in all_nodes:
+            if node_name in list_commesse:
+                node_colors.append("#1E3A8A") # Colore per le commesse
+            else:
+                node_colors.append(color_map_tags.get(node_name, "#4B5563"))
         
         # 3. Creazione del grafico
         fig_sankey = go.Figure(data=[go.Sankey(
