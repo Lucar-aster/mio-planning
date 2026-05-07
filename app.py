@@ -942,53 +942,49 @@ with tabs[4]:
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
 with tabs[5]: 
-    logs = get_cached_data("Log_Tempi")
-    df_l = pd.DataFrame(logs)
-    comm = get_cached_data("Commesse")
-    df_c = pd.DataFrame(comm)
-    
-    if df_l.empty: st.warning("Non ci sono abbastanza dati nei Log per generare statistiche.")
-    else:
-        df_l['inizio'] = pd.to_datetime(df_l['inizio'])
-        df_l['fine'] = pd.to_datetime(df_l['fine'])
-        
-    if not df_p.empty:
+if not df_p.empty:
         col_tag = 'Tag' if 'Tag' in df_p.columns else 'tag'
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
         df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
+
+        # Calcolo ore nette per operatore/giorno
         risultato_apply = df_p.groupby(['operatore', 'data_log'], group_keys=True).apply(
-            lambda x: calcola_ore_evolute_12h(x, col_tag))
-        if isinstance(risultato_apply, pd.Series):
-            df_netto_globale = risultato_apply.reset_index()
-        else:
+            lambda x: calcola_ore_evolute_12h(x, col_tag),
+            include_groups=False
+        )
+
+        # Trasformazione robusta in DataFrame
+        if isinstance(risultato_apply, pd.DataFrame):
             df_netto_globale = risultato_apply.stack().reset_index()
-        nuovi_nomi = {
+        else:
+            df_netto_globale = risultato_apply.reset_index()
+
+        # Rinominazione dinamica per evitare ValueError
+        mappa_nomi = {
             df_netto_globale.columns[-1]: 'ore_lavorate',
             df_netto_globale.columns[-2]: col_tag,
             df_netto_globale.columns[0]: 'operatore',
             df_netto_globale.columns[1]: 'data_log'
         }
-        
-    df_netto_globale = df_netto_globale.rename(columns=nuovi_nomi)    
-    df_netto_globale = [['operatore', 'data_log', col_tag, 'ore_lavorate']]
-    df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
-    df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
-        
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("👥 Carico Lavoro per Operatore")
-        color_discrete_map = {}
-        tags_ref = get_cached_data("Tag") # Nome tabella corretto
-        if tags_ref:
-            for t in tags_ref:
-                nome_t = str(t.get('nome', '')).strip()
-                col_t = str(t.get('colore', '#8dbad2')).strip()
-                if not col_t.startswith('#'): 
-                    col_t = f'#{col_t}'
-                color_discrete_map[nome_t] = col_t
+        df_netto_globale = df_netto_globale.rename(columns=mappa_nomi)
+        df_netto_globale = df_netto_globale[['operatore', 'data_log', col_tag, 'ore_lavorate']]
 
-            import plotly.express as px
-        if not df_p.empty:
+        # Totale per il periodo filtrato
+        df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
+        df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
+
+        c1, c2 = st.columns([2, 1])
+
+        with c1:
+            st.subheader("👥 Carico Lavoro per Operatore")
+            color_discrete_map = {}
+            tags_ref = get_cached_data("Tag")
+            if tags_ref:
+                for t in tags_ref:
+                    nome_t = str(t.get('nome', '')).strip()
+                    col_t = str(t.get('colore', '#8dbad2')).strip()
+                    color_discrete_map[nome_t] = col_t if col_t.startswith('#') else f'#{col_t}'
+
             fig_stats = px.bar(
                 df_totale_periodo,
                 x='operatore',
@@ -996,99 +992,75 @@ with tabs[5]:
                 color=col_tag,
                 barmode='group',
                 color_discrete_map=color_discrete_map,
-                title="Distribuzione Ore per Operatore e Tag",
+                title="Ore Effettive (Netto sovrapposizioni e pausa)",
                 labels={'ore_lavorate': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
-                text_auto='.1f',        # Mostra il totale ore sopra ogni barra
-                template="plotly_white" # Rende il grafico più pulito
+                text_auto='.1f',
+                template="plotly_white"
             )
-            fig_stats.update_layout(
-                xaxis_title="Operatori",
-                yaxis_title="Ore Totali",
-            legend_title="Tag / Attività",
-            hovermode="x unified"    # Mostra tutti i tag dell'operatore al passaggio del mouse
-    	    )
-
+            fig_stats.update_layout(hovermode="x unified")
             st.plotly_chart(fig_stats, use_container_width=True)
 
             with st.expander("Vedi dati tabellari"):
-                st.dataframe(df_totale_periodo.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0).style.format("{:.1f}"))
-        else:
-            st.info("Seleziona dei filtri o inserisci dei log per visualizzare le statistiche.")
-                
-    with c2:
-        st.subheader("🏗️ Stato delle Commesse")
-        if not df_c.empty:
-            stato_comm = df_c['stato'].value_counts().reset_index()
-            stato_comm.columns = ['Stato', 'Conteggio']
-            fig_stato = go.Figure(go.Pie(labels=stato_comm['Stato'], values=stato_comm['Conteggio'], hole=.4, marker_colors=['#2ecc71', '#f1c40f', '#e67e22', '#3498db', '#e74c3c']))
-            fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig_stato, use_container_width=True)
-    
-st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
-if not df_p.empty:
-    distribuzione_commesse = df_p.groupby(['operatore', col_tag, 'commessa'])['Visual_Durata_Frac'].sum().reset_index()
-    totale_frazioni = distribuzione_commesse.groupby(['operatore', col_tag])['Visual_Durata_Frac'].transform('sum')
-    distribuzione_commesse['peso'] = distribuzione_commesse['Visual_Durata_Frac'] / totale_frazioni
-                
-    col_tag = 'Tag' if 'Tag' in df_sankey.columns else 'tag'
-    color_map_tags = {}
-    tags_db = get_cached_data("Tag")
-    if tags_db:
-        for t in tags_db:
-            nome_t = str(t.get('nome', '')).strip()
-            col_t = str(t.get('colore', '#4B5563')).strip() # Grigio default
-            if not col_t.startswith('#'): col_t = f'#{col_t}'
-            color_map_tags[nome_t] = col_t
-    def hex_to_rgba(hex_val, alpha=0.5): # Alpha 0.5 = 50% trasparenza
-        try:
-            hex_val = hex_val.lstrip('#')
-            lv = len(hex_val)
-            rgb = tuple(int(hex_val[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
-            return f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})'
-        except:
-            return f'rgba(128, 128, 128, {alpha})' # Grigio di fallback   
-    df_sankey_final = distribuzione_commesse.merge(df_totale_periodo, on=['operatore', col_tag])
-    df_sankey_final['ore_pesate'] = df_sankey_final['ore_lavorate'] * distribuzione_commesse['peso']
-    links_sankey = df_sankey_final.groupby(['commessa', col_tag])['ore_pesate'].sum().reset_index()
+                df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0)
+                st.dataframe(df_pivot.style.format("{:.1f}"))
 
-    list_commesse = sorted(list(links_sankey['commessa'].unique()))
-    list_tags = sorted(list(links_sankey[col_tag].unique()))
-    all_nodes = list_commesse + list_tags
-    node_map = {name: i for i, name in enumerate(all_nodes)}
-        
-    # 2. Raggruppiamo i dati per i flussi
-    links = df_sankey.groupby([col_commessa, col_tag])['ore'].sum().reset_index()
-    link_colors = [hex_to_rgba(color_map_tags.get(t, "#808080"), 0.5) for t in links[col_tag]]
-        
-    node_colors = []
-    for node_name in all_nodes:
-        if node_name in list_commesse:
-            node_colors.append("#1E3A8A") # Colore per le commesse
-        else:
-            node_colors.append(color_map_tags.get(node_name, "#4B5563"))
-        
-    # 3. Creazione del grafico
-    fig_sankey = go.Figure(data=[go.Sankey(
-        node = dict(pad = 20, thickness = 20, label = all_nodes, color = node_colors),
-        link = dict(source = links_sankey['commessa'].map(node_map), # Indice sorgente
-            target = links_sankey[col_tag].map(node_map),      # Indice destinazione
-            value = links_sankey['ore_pesate'],
-            color = link_colors, # Colore per i flussi
-            customdata = list(zip(links_sankey['commessa'], links_sankey[col_tag], links_sankey['ore_pesate'])),
-            hovertemplate = 'Dalla Commessa: %{customdata[0]}<br />Al Tag: %{customdata[1]}<br />Totale Ore: %{customdata[2]:.1f}<extra></extra>'
-        )
-    )])
-    fig_sankey.add_annotation(dict(x=0, y=1.05, xref="paper", yref="paper", text="🏗️ COMMESSE (Origine)", showarrow=False, font=dict(size=12, color="#1E3A8A"), xanchor="left"))
-    fig_sankey.add_annotation(dict(x=1, y=1.05, xref="paper", yref="paper", text="🔖 TAG (Destinazione)", showarrow=False, font=dict(size=12, color="#4B5563"), xanchor="right"))
+        with c2:
+            st.subheader("🏗️ Stato delle Commesse")
+            if not df_c.empty:
+                stato_comm = df_c['stato'].value_counts().reset_index()
+                stato_comm.columns = ['Stato', 'Conteggio']
+                fig_stato = go.Figure(go.Pie(
+                    labels=stato_comm['Stato'], 
+                    values=stato_comm['Conteggio'], 
+                    hole=.4, 
+                    marker_colors=['#2ecc71', '#f1c40f', '#e67e22', '#3498db', '#e74c3c']
+                ))
+                fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
+                st.plotly_chart(fig_stato, use_container_width=True)
 
-    fig_sankey.update_layout(
-        height=600, # Aumentiamo l'altezza per ospitare liste lunghe
-        margin=dict(l=150, r=150, t=60, b=10), # Ampi margini laterali per i nomi
-        hoverlabel=dict(bgcolor="white", font_size=12),
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-    )
-    st.plotly_chart(fig_sankey, use_container_width=True)
+        # --- SEZIONE SANKEY ---
+        st.markdown("---")
+        st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
+        
+        # Recupero pesi per distribuire le ore nette sulle commesse
+        distribuzione_commesse = df_p.groupby(['operatore', col_tag, 'commessa'])['Visual_Durata_Frac'].sum().reset_index()
+        tot_frac = distribuzione_commesse.groupby(['operatore', col_tag])['Visual_Durata_Frac'].transform('sum')
+        distribuzione_commesse['peso'] = distribuzione_commesse['Visual_Durata_Frac'] / tot_frac
+        
+        df_sankey_final = distribuzione_commesse.merge(df_netto_globale, on=['operatore', col_tag])
+        df_sankey_final['ore_pesate'] = df_sankey_final['ore_lavorate'] * df_sankey_final['peso']
+        
+        links_sankey = df_sankey_final.groupby(['commessa', col_tag])['ore_pesate'].sum().reset_index()
+
+        if not links_sankey.empty:
+            list_commesse = sorted(list(links_sankey['commessa'].unique()))
+            list_tags = sorted(list(links_sankey[col_tag].unique()))
+            all_nodes = list_commesse + list_tags
+            node_map = {name: i for i, name in enumerate(all_nodes)}
+            
+            node_colors = ["#1E3A8A"] * len(list_commesse) + [color_discrete_map.get(t, "#4B5563") for t in list_tags]
+            
+            def hex_to_rgba(hex_val, alpha=0.5):
+                try:
+                    hex_val = hex_val.lstrip('#')
+                    rgb = tuple(int(hex_val[i:i+2], 16) for i in (0, 2, 4))
+                    return f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})'
+                except: return f'rgba(128, 128, 128, {alpha})'
+
+            link_colors = [hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]]
+
+            fig_sankey = go.Figure(data=[go.Sankey(
+                node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
+                link = dict(
+                    source=links_sankey['commessa'].map(node_map),
+                    target=links_sankey[col_tag].map(node_map),
+                    value=links_sankey['ore_pesate'],
+                    color=link_colors,
+                    hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Ore Nette: %{value:.1f}<extra></extra>'
+                )
+            )])
+            fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
+            st.plotly_chart(fig_sankey, use_container_width=True)
+            
     else:
-        st.info("Dati insufficienti per generare il grafico di flusso.")
-    st.divider()
+        st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
