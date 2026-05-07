@@ -898,8 +898,12 @@ with tabs[3]:
             for _, r in edited_log.iterrows():
                 nome_tag_selezionato = row["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
-				tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
-                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
+                tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
+                try:
+                    supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
+                except Exception as e:
+                    st.error(f"Errore durante l'aggiornamento del log {r['id']}: {e}")
+            st.success("Modifiche salvate con successo!")
             get_cached_data.clear(); st.rerun()
 
 with tabs[4]: 
