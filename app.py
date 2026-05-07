@@ -985,13 +985,13 @@ with tabs[5]:
         col_commessa = 'commessa' if 'commessa' in df_sankey.columns else 'Commessa'
         col_tag = 'Tag' if 'Tag' in df_sankey.columns else 'tag'
         color_map_tags = {}
-            tags_db = get_cached_data("Tag")
-            if tags_db:
-                for t in tags_db:
-                    nome_t = str(t.get('nome', '')).strip()
-                    col_t = str(t.get('colore', '#4B5563')).strip() # Grigio default
-                    if not col_t.startswith('#'): col_t = f'#{col_t}'
-                    color_map_tags[nome_t] = col_t
+        tags_db = get_cached_data("Tag")
+        if tags_db:
+            for t in tags_db:
+                nome_t = str(t.get('nome', '')).strip()
+                col_t = str(t.get('colore', '#4B5563')).strip() # Grigio default
+                if not col_t.startswith('#'): col_t = f'#{col_t}'
+                color_map_tags[nome_t] = col_t
                     
         df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 12.0
             
