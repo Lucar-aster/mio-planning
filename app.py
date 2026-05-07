@@ -982,16 +982,22 @@ with tabs[5]:
     st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
     if not df_p.empty:
         df_sankey = df_p.copy()
-        # Usiamo lo stesso calcolo delle ore (9h/giorno lavorativo)
-        df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 9.0
+        col_commessa = 'commessa' if 'commessa' in df_sankey.columns else 'Commessa'
+
+        col_tag = 'Tag' if 'Tag' in df_sankey.columns else 'tag'
+
+        df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 12.0
             
-        # 1. Prepariamo i nodi (Sorgenti: Commesse, Destinazioni: Tag)
-        all_nodes = list(df_sankey['Commesse'].unique()) + list(df_sankey['Tag'].unique())
-        # Creiamo un dizionario per mappare i nomi agli indici numerici richiesti da Plotly
+        df_sankey[col_commessa] = df_sankey[col_commessa].fillna("Senza Commessa").astype(str)
+        df_sankey[col_tag] = df_sankey[col_tag].fillna("Senza Tag").astype(str)
+
+        list_commesse = list(df_sankey[col_commessa].unique())
+        list_tags = list(df_sankey[col_tag].unique())
+        all_nodes = list_commesse + list_tags
         node_map = {name: i for i, name in enumerate(all_nodes)}
-            
+        
         # 2. Raggruppiamo i dati per i flussi
-        links = df_sankey.groupby(['Commesse', 'Tag'])['ore'].sum().reset_index()
+        links = df_sankey.groupby([col_commessa, col_tag])['ore'].sum().reset_index()
             
         # 3. Creazione del grafico
         fig_sankey = go.Figure(data=[go.Sankey(
@@ -1003,8 +1009,8 @@ with tabs[5]:
                 color = "#3498db" # Colore base per i nodi
             ),
             link = dict(
-                source = links['Commesse'].map(node_map), # Indice sorgente
-                target = links['Tag'].map(node_map),      # Indice destinazione
+                source = links[col_commessa].map(node_map), # Indice sorgente
+                target = links[col_tag].map(node_map),      # Indice destinazione
                 value = links['ore'],
                 color = 'rgba(52, 152, 219, 0.4)', # Colore azzurro trasparente per i flussi
                 customdata = links['ore'],
