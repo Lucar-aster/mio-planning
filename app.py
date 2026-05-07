@@ -957,7 +957,7 @@ with tabs[5]:
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
         df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
         risultato_apply = df_p.groupby(['operatore', 'data_log'], group_keys=False).apply(
-            lambda x: calcola_ore_evolute_12h(x, col_tag)
+            lambda x: calcola_ore_evolute_12h(x, col_tag))
         if isinstance(risultato_apply, pd.DataFrame):
             df_netto_globale = risultato_apply.stack().reset_index()
         else:
