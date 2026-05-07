@@ -943,6 +943,13 @@ with tabs[4]:
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
 with tabs[5]: 
+    try:
+        if 'df_c' not in locals():
+            data_c = get_cached_data("Commessa")
+            df_c = pd.DataFrame(data_c) if data_c else pd.DataFrame()
+    except Exception as e:
+        df_c = pd.DataFrame()
+        
     if not df_p.empty:
         col_tag = 'Tag' if 'Tag' in df_p.columns else 'tag'
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
