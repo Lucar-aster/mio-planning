@@ -1002,11 +1002,12 @@ with tabs[5]:
         # 3. Creazione del grafico
         fig_sankey = go.Figure(data=[go.Sankey(
             node = dict(
-                pad = 15,
+                pad = 20,
                 thickness = 20,
                 line = dict(color = "black", width = 0.5),
                 label = all_nodes,
-                color = "#3498db" # Colore base per i nodi
+                color = "#3498db" # Colore base per i nodi,
+                textfont = dict(color="rgba(0,0,0,0)", size=1),
             ),
             link = dict(
                 source = links[col_commessa].map(node_map), # Indice sorgente
@@ -1017,8 +1018,17 @@ with tabs[5]:
                 hovertemplate = 'Dalla Commessa: %{source.label}<br />Al Tag: %{target.label}<br />Totale: %{value:.1f} ore<extra></extra>'
             )
         )])
+        fig_sankey.add_annotation(dict(x=0, y=1.05, xref="paper", yref="paper", text="🏗️ COMMESSE (Origine)", showarrow=False, font=dict(size=12, color="#1E3A8A"), xanchor="left"))
+        fig_sankey.add_annotation(dict(x=1, y=1.05, xref="paper", yref="paper", text="🔖 TAG (Destinazione)", showarrow=False, font=dict(size=12, color="#4B5563"), xanchor="right"))
 
-        fig_sankey.update_layout(height=500, margin=dict(l=10, r=10, t=30, b=10))
+        # Aumentiamo il margine sinistro e destro per far stare le scritte esterne
+        fig_sankey.update_layout(
+            height=600, # Aumentiamo l'altezza per ospitare liste lunghe
+            margin=dict(l=150, r=150, t=60, b=10), # Ampi margini laterali per i nomi
+            hoverlabel=dict(bgcolor="white", font_size=12),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+        )
         st.plotly_chart(fig_sankey, use_container_width=True)
     else:
         st.info("Dati insufficienti per generare il grafico di flusso.")
