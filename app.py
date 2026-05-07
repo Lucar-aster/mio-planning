@@ -942,7 +942,7 @@ with tabs[4]:
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
 with tabs[5]: 
-if not df_p.empty:
+	if not df_p.empty:
         col_tag = 'Tag' if 'Tag' in df_p.columns else 'tag'
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
         df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
