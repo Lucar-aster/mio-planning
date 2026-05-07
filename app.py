@@ -896,7 +896,7 @@ with tabs[3]:
         )
         if st.button("Salva Modifiche Tabella"):
             for _, r in edited_log.iterrows():
-                nome_tag_selezionato = row["tag"]
+                nome_tag_selezionato = r["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
                 tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
                 try:
