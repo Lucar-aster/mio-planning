@@ -462,6 +462,39 @@ def modal_clona_avanzata():
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
+def calcola_ore_evolute_12h(group, col_tag):
+    intervalli = []
+    ORE_TOTALI_GIORNO = 12.0 # Nuova scala temporale 07-19 
+    for _, r in group.iterrows():
+        durata_lorda = (r['frac_f'] - r['frac_i']) * ORE_TOTALI_GIORNO      
+        f_i, f_f = r['frac_i'], r['frac_f'] 
+        # LOGICA PAUSA PRANZO: 
+        if durata_lorda >= 8.0:
+            riduzione = 1.0 / ORE_TOTALI_GIORNO
+            f_f = f_f - riduzione
+            if f_f < f_i: f_f = f_i 
+        intervalli.append({'inizio': f_i, 'fine': f_f, 'tag': r[col_tag]})
+    intervalli.sort(key=lambda x: x['inizio'])
+    ore_per_tag = {}
+    if not intervalli: return pd.Series(ore_per_tag)
+
+    # Campionamento: usiamo 144 passi (ogni passo = 5 minuti su 12 ore)
+    num_passi = 144
+    passo = 1.0 / num_passi
+    for i in range(num_passi):
+        p_inizio = i * passo
+        p_fine = (i + 1) * passo
+        # Identifica task attivi nel micro-segmento
+        task_attivi = [t for t in intervalli if t['inizio'] <= p_inizio and t['fine'] >= p_fine]
+        if task_attivi:
+            num_task = len(task_attivi)
+            # Quota ore del segmento: (ampiezza segmento * 12 ore) / numero task
+            quota_ore = ((p_fine - p_inizio) * ORE_TOTALI_GIORNO) / num_task   
+            for t in task_attivi:
+                tag = t['tag']
+                ore_per_tag[tag] = ore_per_tag.get(tag, 0) + quota_ore            
+    return pd.Series(ore_per_tag)
+
 # --- 6. FUNZIONI HELPER GRAFICHE ---
 def get_it_date_label(dt, delta):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
@@ -918,8 +951,20 @@ with tabs[5]:
     else:
         df_l['inizio'] = pd.to_datetime(df_l['inizio'])
         df_l['fine'] = pd.to_datetime(df_l['fine'])
+        
+    if not df_p.empty:
+        col_tag = 'Tag' if 'Tag' in df_p.columns else 'tag'
+        df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
+        df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
+        df_netto_globale = df_p.groupby(['operatore', 'data_log']).apply(
+            lambda x: calcola_ore_evolute_12h(x, col_tag), include_groups=False
+        ).fillna(0).stack().reset_index()
+    
+        df_netto_globale.columns = ['operatore', 'data_log', col_tag, 'ore_lavorate']
+        df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
+        df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
+        
         c1, c2 = st.columns(2)
-
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
             color_discrete_map = {}
@@ -932,18 +977,10 @@ with tabs[5]:
                         col_t = f'#{col_t}'
                     color_discrete_map[nome_t] = col_t
 
-            if not df_p.empty:
-                df_stats = df_p.copy()
-                
-                df_stats['ore_lavorate'] = df_stats['Visual_Durata_Frac'] * 12.0
-                
-                col_tag = 'Tag' if 'Tag' in df_stats.columns else 'tag'
-                df_stats[col_tag] = df_stats[col_tag].fillna("Nessun Tag").astype(str).str.strip()
-                df_grouped = df_stats.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
                 import plotly.express as px
-
+            if not df_p.empty:
                 fig_stats = px.bar(
-                    df_grouped,
+                    df_totale_periodo,
                     x='operatore',
                     y='ore_lavorate',
                     color=col_tag,
@@ -954,8 +991,6 @@ with tabs[5]:
                     text_auto='.1f',        # Mostra il totale ore sopra ogni barra
                     template="plotly_white" # Rende il grafico più pulito
                 )
-
-                # Miglioriamo la leggibilità
                 fig_stats.update_layout(
                     xaxis_title="Operatori",
                     yaxis_title="Ore Totali",
@@ -966,7 +1001,7 @@ with tabs[5]:
                 st.plotly_chart(fig_stats, use_container_width=True)
 
                 with st.expander("Vedi dati tabellari"):
-                    st.dataframe(df_grouped.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0).style.format("{:.1f}"))
+                    st.dataframe(df_totale_periodo.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0).style.format("{:.1f}"))
 
             else:
                 st.info("Seleziona dei filtri o inserisci dei log per visualizzare le statistiche.")
@@ -982,8 +1017,10 @@ with tabs[5]:
     
     st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
     if not df_p.empty:
-        df_sankey = df_p.copy()
-        col_commessa = 'commessa' if 'commessa' in df_sankey.columns else 'Commessa'
+        distribuzione_commesse = df_p.groupby(['operatore', col_tag, 'commessa'])['Visual_Durata_Frac'].sum().reset_index()
+        totale_frazioni = distribuzione_commesse.groupby(['operatore', col_tag])['Visual_Durata_Frac'].transform('sum')
+        distribuzione_commesse['peso'] = distribuzione_commesse['Visual_Durata_Frac'] / totale_frazioni
+                
         col_tag = 'Tag' if 'Tag' in df_sankey.columns else 'tag'
         color_map_tags = {}
         tags_db = get_cached_data("Tag")
@@ -1001,14 +1038,12 @@ with tabs[5]:
                 return f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})'
             except:
                 return f'rgba(128, 128, 128, {alpha})' # Grigio di fallback   
-                
-        df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 12.0
-            
-        df_sankey[col_commessa] = df_sankey[col_commessa].fillna("Senza Commessa").astype(str)
-        df_sankey[col_tag] = df_sankey[col_tag].fillna("Senza Tag").astype(str)
+        df_sankey_final = distribuzione_commesse.merge(df_totale_periodo, on=['operatore', col_tag])
+        df_sankey_final['ore_pesate'] = df_sankey_final['ore_lavorate'] * distribuzione_commesse['peso']
+        links_sankey = df_sankey_final.groupby(['commessa', col_tag])['ore_pesate'].sum().reset_index()
 
-        list_commesse = list(df_sankey[col_commessa].unique())
-        list_tags = list(df_sankey[col_tag].unique())
+        list_commesse = sorted(list(links_sankey['commessa'].unique()))
+        list_tags = sorted(list(links_sankey[col_tag].unique()))
         all_nodes = list_commesse + list_tags
         node_map = {name: i for i, name in enumerate(all_nodes)}
         
@@ -1025,26 +1060,18 @@ with tabs[5]:
         
         # 3. Creazione del grafico
         fig_sankey = go.Figure(data=[go.Sankey(
-            node = dict(
-                pad = 20,
-                thickness = 20,
-                line = dict(color = "black", width = 0.5),
-                label = all_nodes,
-                color = node_colors,
-            ),
-            link = dict(
-                source = links[col_commessa].map(node_map), # Indice sorgente
-                target = links[col_tag].map(node_map),      # Indice destinazione
-                value = links['ore'],
+            node = dict(pad = 20, thickness = 20, label = all_nodes, color = node_colors),
+            link = dict(source = links_sankey['commessa'].map(node_map), # Indice sorgente
+                target = links_sankey[col_tag].map(node_map),      # Indice destinazione
+                value = links_sankey['ore_pesate'],
                 color = link_colors, # Colore per i flussi
-                customdata = list(zip(links[col_commessa], links[col_tag], links['ore'])),
+                customdata = list(zip(links_sankey['commessa'], links_sankey[col_tag], links_sankey['ore_pesate'])),
                 hovertemplate = 'Dalla Commessa: %{customdata[0]}<br />Al Tag: %{customdata[1]}<br />Totale Ore: %{customdata[2]:.1f}<extra></extra>'
             )
         )])
         fig_sankey.add_annotation(dict(x=0, y=1.05, xref="paper", yref="paper", text="🏗️ COMMESSE (Origine)", showarrow=False, font=dict(size=12, color="#1E3A8A"), xanchor="left"))
         fig_sankey.add_annotation(dict(x=1, y=1.05, xref="paper", yref="paper", text="🔖 TAG (Destinazione)", showarrow=False, font=dict(size=12, color="#4B5563"), xanchor="right"))
 
-        # Aumentiamo il margine sinistro e destro per far stare le scritte esterne
         fig_sankey.update_layout(
             height=600, # Aumentiamo l'altezza per ospitare liste lunghe
             margin=dict(l=150, r=150, t=60, b=10), # Ampi margini laterali per i nomi
