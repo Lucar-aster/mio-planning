@@ -605,7 +605,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     pos_linea_rossa = adesso.replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000 + (frac_oggi * 24 * 3600 * 1000)
     fig.add_vline(x=pos_linea_rossa, line_width=2, line_color="red", annotation_text=adesso.strftime("%H:%M"), annotation_position="top right")
     
-    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': False})
+    selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displayModeBar': True, 'displaylogo': False, 'modeBarButtonsToAdd': ['fullscreen', 'toImage'], 'toImageButtonOptions': {'format': 'png','filename': 'gantt_aster','height': 1080,'width': 1920, 'scale': 2}})
 
     if selected and "selection" in selected and "points" in selected["selection"]:
         pts = selected["selection"]["points"]
