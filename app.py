@@ -974,7 +974,7 @@ with tabs[5]:
     df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
     df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
         
-        c1, c2 = st.columns(2)
+    c1, c2 = st.columns(2)
         with c1:
             st.subheader("👥 Carico Lavoro per Operatore")
             color_discrete_map = {}
