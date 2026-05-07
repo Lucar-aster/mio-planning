@@ -992,7 +992,15 @@ with tabs[5]:
                 col_t = str(t.get('colore', '#4B5563')).strip() # Grigio default
                 if not col_t.startswith('#'): col_t = f'#{col_t}'
                 color_map_tags[nome_t] = col_t
-                    
+        def hex_to_rgba(hex_val, alpha=0.5): # Alpha 0.5 = 50% trasparenza
+            try:
+                hex_val = hex_val.lstrip('#')
+                lv = len(hex_val)
+                rgb = tuple(int(hex_val[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+                return f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})'
+            except:
+                return f'rgba(128, 128, 128, {alpha})' # Grigio di fallback   
+                
         df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 12.0
             
         df_sankey[col_commessa] = df_sankey[col_commessa].fillna("Senza Commessa").astype(str)
@@ -1026,9 +1034,9 @@ with tabs[5]:
                 source = links[col_commessa].map(node_map), # Indice sorgente
                 target = links[col_tag].map(node_map),      # Indice destinazione
                 value = links['ore'],
-                color = node_colors, # Colore per i flussi
-                customdata = links['ore'],
-                hovertemplate = 'Dalla Commessa: %{source.label}<br />Al Tag: %{target.label}<br />Totale: %{value:.1f} ore<extra></extra>'
+                color = link_colors, # Colore per i flussi
+                customdata = list(zip(links[col_commessa], links[col_tag], links['ore'])),
+                hovertemplate = 'Dalla Commessa: %{customdata[0]}<br />Al Tag: %{customdata[1]}<br />Totale Ore: %{customdata[2]:.1f}<extra></extra>'
             )
         )])
         fig_sankey.add_annotation(dict(x=0, y=1.05, xref="paper", yref="paper", text="🏗️ COMMESSE (Origine)", showarrow=False, font=dict(size=12, color="#1E3A8A"), xanchor="left"))
