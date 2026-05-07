@@ -1026,7 +1026,7 @@ with tabs[5]:
                 source = links[col_commessa].map(node_map), # Indice sorgente
                 target = links[col_tag].map(node_map),      # Indice destinazione
                 value = links['ore'],
-                color = 'rgba(52, 152, 219, 0.4)', # Colore azzurro trasparente per i flussi
+                color = node_colors, # Colore per i flussi
                 customdata = links['ore'],
                 hovertemplate = 'Dalla Commessa: %{source.label}<br />Al Tag: %{target.label}<br />Totale: %{value:.1f} ore<extra></extra>'
             )
