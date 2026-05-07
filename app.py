@@ -800,7 +800,7 @@ if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
     df_p['fine'] = pd.to_datetime(df_p['fine'])
     df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)].copy()
     
-tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Logs", "⚙️ Gestione", "📈 Statistiche"])    
+tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestione Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: 
     if not df.empty:
@@ -863,7 +863,7 @@ with tabs[2]:
         calendar(events=cal_events_agenda, options=agenda_options, key="calendar_agenda_vertical")
         
 with tabs[3]: 
-    st.header("📋 Gestione Log Esistenti")
+    st.header("📋 Gestione Logs")
 
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
@@ -898,7 +898,8 @@ with tabs[3]:
             for _, r in edited_log.iterrows():
                 nome_tag_selezionato = row["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
-                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": id_tag_da_salvare}).eq("id", r['id']).execute()
+				tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
+                supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
             get_cached_data.clear(); st.rerun()
 
 with tabs[4]: 
