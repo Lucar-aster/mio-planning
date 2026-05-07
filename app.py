@@ -952,6 +952,7 @@ with tabs[5]:
         
     if not df_p.empty:
         col_tag = 'Tag' if 'Tag' in df_p.columns else 'tag'
+        col_comm = 'commessa' if 'commessa' in df_p.columns else ('Commessa' if 'Commessa' in df_p.columns else 'commessa_id')
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
         df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
 
@@ -1031,17 +1032,17 @@ with tabs[5]:
         st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
         
         # Recupero pesi per distribuire le ore nette sulle commesse
-        distribuzione_commesse = df_p.groupby(['operatore', col_tag, 'commessa'])['Visual_Durata_Frac'].sum().reset_index()
+        distribuzione_commesse = df_p.groupby(['operatore', col_tag, col_comm])['Visual_Durata_Frac'].sum().reset_index()
         tot_frac = distribuzione_commesse.groupby(['operatore', col_tag])['Visual_Durata_Frac'].transform('sum')
         distribuzione_commesse['peso'] = distribuzione_commesse['Visual_Durata_Frac'] / tot_frac
         
         df_sankey_final = distribuzione_commesse.merge(df_netto_globale, on=['operatore', col_tag])
         df_sankey_final['ore_pesate'] = df_sankey_final['ore_lavorate'] * df_sankey_final['peso']
         
-        links_sankey = df_sankey_final.groupby(['commessa', col_tag])['ore_pesate'].sum().reset_index()
+        links_sankey = df_sankey_final.groupby([col_comm, col_tag])['ore_pesate'].sum().reset_index()
 
         if not links_sankey.empty:
-            list_commesse = sorted(list(links_sankey['commessa'].unique()))
+            list_commesse = sorted(list(links_sankey[col_comm].unique()))
             list_tags = sorted(list(links_sankey[col_tag].unique()))
             all_nodes = list_commesse + list_tags
             node_map = {name: i for i, name in enumerate(all_nodes)}
@@ -1060,7 +1061,7 @@ with tabs[5]:
             fig_sankey = go.Figure(data=[go.Sankey(
                 node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
                 link = dict(
-                    source=links_sankey['commessa'].map(node_map),
+                    source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
                     value=links_sankey['ore_pesate'],
                     color=link_colors,
