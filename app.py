@@ -1009,7 +1009,6 @@ with tabs[5]:
                 line = dict(color = "black", width = 0.5),
                 label = all_nodes,
                 color = node_colors,
-				textfont = dict(color="rgba(0,0,0,0)", size=1),
             ),
             link = dict(
                 source = links[col_commessa].map(node_map), # Indice sorgente
