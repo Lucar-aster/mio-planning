@@ -193,11 +193,8 @@ def modal_gestione_clic(task_id, data_clic):
         date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
         
         ot1, ot2 = st.columns(2) 
-	    auto_oraft = ot1.checkbox("Usa ora attuale", value=True, key="ao_i_t")
-        
         if ot1.checkbox("Usa ora attuale", value=True, key="ao_i_t"):
             ora_i_t = datetime.now(tz).time()
-
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
             ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
