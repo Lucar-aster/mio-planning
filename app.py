@@ -1013,6 +1013,7 @@ with tabs[5]:
         
         # 2. Raggruppiamo i dati per i flussi
         links = df_sankey.groupby([col_commessa, col_tag])['ore'].sum().reset_index()
+        link_colors = [hex_to_rgba(color_map_tags.get(t, "#808080"), 0.5) for t in links[col_tag]]
         
         node_colors = []
         for node_name in all_nodes:
