@@ -978,5 +978,42 @@ with tabs[5]:
                 fig_stato = go.Figure(go.Pie(labels=stato_comm['Stato'], values=stato_comm['Conteggio'], hole=.4, marker_colors=['#2ecc71', '#f1c40f', '#e67e22', '#3498db', '#e74c3c']))
                 fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
                 st.plotly_chart(fig_stato, use_container_width=True)
+    
+    st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
+        if not df_p.empty:
+            df_sankey = df_p.copy()
+            # Usiamo lo stesso calcolo delle ore (9h/giorno lavorativo)
+            df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 9.0
+            
+            # 1. Prepariamo i nodi (Sorgenti: Commesse, Destinazioni: Tag)
+            all_nodes = list(df_sankey['commessa'].unique()) + list(df_sankey['Tag'].unique())
+            # Creiamo un dizionario per mappare i nomi agli indici numerici richiesti da Plotly
+            node_map = {name: i for i, name in enumerate(all_nodes)}
+            
+            # 2. Raggruppiamo i dati per i flussi
+            links = df_sankey.groupby(['commessa', 'Tag'])['ore'].sum().reset_index()
+            
+            # 3. Creazione del grafico
+            fig_sankey = go.Figure(data=[go.Sankey(
+                node = dict(
+                  pad = 15,
+                  thickness = 20,
+                  line = dict(color = "black", width = 0.5),
+                  label = all_nodes,
+                  color = "#3498db" # Colore base per i nodi
+                ),
+                link = dict(
+                  source = links['commessa'].map(node_map), # Indice sorgente
+                  target = links['Tag'].map(node_map),      # Indice destinazione
+                  value = links['ore'],
+                  color = 'rgba(52, 152, 219, 0.4)', # Colore azzurro trasparente per i flussi
+                  customdata = links['ore'],
+                  hovertemplate = 'Dalla Commessa: %{source.label}<br />Al Tag: %{target.label}<br />Totale: %{value:.1f} ore<extra></extra>'
+                )
+            )])
 
+            fig_sankey.update_layout(height=500, margin=dict(l=10, r=10, t=30, b=10))
+            st.plotly_chart(fig_sankey, use_container_width=True)
+        else:
+            st.info("Dati insufficienti per generare il grafico di flusso.")
         st.divider()
