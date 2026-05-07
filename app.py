@@ -970,9 +970,9 @@ with tabs[5]:
         }
         
     df_netto_globale = df_netto_globale.rename(columns=nuovi_nomi)    
-        df_netto_globale.columns = [['operatore', 'data_log', col_tag, 'ore_lavorate']]
-        df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
-        df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
+    df_netto_globale = [['operatore', 'data_log', col_tag, 'ore_lavorate']]
+    df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
+    df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
         
         c1, c2 = st.columns(2)
         with c1:
