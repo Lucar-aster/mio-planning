@@ -986,12 +986,12 @@ with tabs[5]:
         df_sankey['ore'] = df_sankey['Visual_Durata_Frac'] * 9.0
             
         # 1. Prepariamo i nodi (Sorgenti: Commesse, Destinazioni: Tag)
-        all_nodes = list(df_sankey['commessa'].unique()) + list(df_sankey['Tag'].unique())
+        all_nodes = list(df_sankey['Commesse'].unique()) + list(df_sankey['Tag'].unique())
         # Creiamo un dizionario per mappare i nomi agli indici numerici richiesti da Plotly
         node_map = {name: i for i, name in enumerate(all_nodes)}
             
         # 2. Raggruppiamo i dati per i flussi
-        links = df_sankey.groupby(['commessa', 'Tag'])['ore'].sum().reset_index()
+        links = df_sankey.groupby(['Commesse', 'Tag'])['ore'].sum().reset_index()
             
         # 3. Creazione del grafico
         fig_sankey = go.Figure(data=[go.Sankey(
@@ -1003,7 +1003,7 @@ with tabs[5]:
                 color = "#3498db" # Colore base per i nodi
             ),
             link = dict(
-                source = links['commessa'].map(node_map), # Indice sorgente
+                source = links['Commesse'].map(node_map), # Indice sorgente
                 target = links['Tag'].map(node_map),      # Indice destinazione
                 value = links['ore'],
                 color = 'rgba(52, 152, 219, 0.4)', # Colore azzurro trasparente per i flussi
