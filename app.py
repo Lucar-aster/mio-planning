@@ -956,14 +956,21 @@ with tabs[5]:
         col_tag = 'Tag' if 'Tag' in df_p.columns else 'tag'
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
         df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
-        risultato_apply = df_p.groupby(['operatore', 'data_log'], group_keys=False).apply(
+        risultato_apply = df_p.groupby(['operatore', 'data_log'], group_keys=True).apply(
             lambda x: calcola_ore_evolute_12h(x, col_tag))
-        if isinstance(risultato_apply, pd.DataFrame):
-            df_netto_globale = risultato_apply.stack().reset_index()
-        else:
+        if isinstance(risultato_apply, pd.Series):
             df_netto_globale = risultato_apply.reset_index()
-            
-        df_netto_globale.columns = ['operatore', 'data_log', col_tag, 'ore_lavorate']
+        else:
+            df_netto_globale = risultato_apply.stack().reset_index()
+        nuovi_nomi = {
+            df_netto_globale.columns[-1]: 'ore_lavorate',
+            df_netto_globale.columns[-2]: col_tag,
+            df_netto_globale.columns[0]: 'operatore',
+            df_netto_globale.columns[1]: 'data_log'
+        }
+        
+    df_netto_globale = df_netto_globale.rename(columns=nuovi_nomi)    
+        df_netto_globale.columns = [['operatore', 'data_log', col_tag, 'ore_lavorate']]
         df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
         df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
         
