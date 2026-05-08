@@ -876,6 +876,7 @@ with tabs[3]:
         tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
         cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
         cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
+		map_task = {s['nome_task']: s['id'] for s in tk_data}
         res_tags = supabase.table("Tag").select("id, nome").execute()
 
         # Conversione sicura per il Data Editor
@@ -902,8 +903,9 @@ with tabs[3]:
                 nome_tag_selezionato = r["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
                 tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
+				task_val= map_task.get(r["Task"])
                 try:
-                    supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
+                    supabase.table("Log_Tempi").update({"operatore": r['operatore'], "task_id": task_val, "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
                 except Exception as e:
                     st.error(f"Errore durante l'aggiornamento del log {r['id']}: {e}")
             st.success("Modifiche salvate con successo!")
