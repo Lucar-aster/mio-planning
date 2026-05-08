@@ -1088,7 +1088,6 @@ with tabs[5]:
         
     with st.expander("🔍 Ispezione Dati Post-Filtro (Debug)", expanded=False):
     	st.write(f"Righe totali dopo i filtri: {len(df_p)}")
-    	
         if not df_p.empty:
             # Calcoliamo al volo le durate per il debug
             df_debug = df_p.copy()
