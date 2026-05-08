@@ -903,7 +903,7 @@ with tabs[3]:
                 nome_tag_selezionato = r["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
                 tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
-				task_val= map_task.get(r["Task"])
+                task_val= map_task.get(r["Task"])
                 try:
                     supabase.table("Log_Tempi").update({"operatore": r['operatore'], "task_id": task_val, "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
                 except Exception as e:
