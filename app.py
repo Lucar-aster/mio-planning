@@ -741,7 +741,7 @@ if l and tk and cm:
             search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b3, b7, b4, b5 = st.columns(7)
+        b1, b3, b7, b4, b5 = st.columns(5)
         if b1.button("➕ Commessa", width='stretch'): modal_commessa()
         if b3.button("⏱️ Log", width='stretch'): modal_log()
         if b7.button("🔖 Tag", width='stretch'): modal_tag()
