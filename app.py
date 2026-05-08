@@ -469,14 +469,20 @@ def calcola_ore_evolute_12h(group, col_tag):
     ore_per_tag = {}
     if not intervalli: return pd.Series(ore_per_tag)
 
-    # Campionamento: usiamo 144 passi (ogni passo = 5 minuti su 12 ore)
-    num_passi = 144
-    passo = 1.0 / num_passi
-    for i in range(num_passi):
-        p_inizio = i * passo
-        p_fine = (i + 1) * passo
-        # Identifica task attivi nel micro-segmento
-        task_attivi = [t for t in intervalli if t['inizio'] <= p_inizio and t['fine'] >= p_fine]
+    punti = set()
+    for t in intervalli:
+        punti.add(t['inizio'])
+        punti.add(t['fine'])
+    punti = sorted(list(punti))   
+    
+    for i in range(len(punti) - 1):
+        p_inizio = punti[i]
+        p_fine = punti[i+1]
+        
+        if p_fine == p_inizio:
+            continue
+        midpoint = (p_inizio + p_fine) / 2.0    
+        task_attivi = [t for t in intervalli if t['inizio'] <= midpoint and t['fine'] >= midpoint]
         if task_attivi:
             num_task = len(task_attivi)
             # Quota ore del segmento: (ampiezza segmento * 12 ore) / numero task
@@ -782,10 +788,10 @@ if l and tk and cm:
     if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(search_text) | df_p['Task'].astype(str).str.lower().str.contains(search_text)]
     
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-    start_search = pd.to_datetime(f_range[0]).replace(hour=0, minute=0, second=0)
-    end_search = pd.to_datetime(f_range[1]).replace(hour=23, minute=59, second=59)
-    df_p['inizio'] = pd.to_datetime(df_p['inizio']).dt.tz_localize(None)
-    df_p['fine'] = pd.to_datetime(df_p['fine']).dt.tz_localize(None)
+    start_search = pd.to_datetime(f_range[0]).date()
+    end_search = pd.to_datetime(f_range[1]).date()
+    df_p['inizio'] = pd.to_datetime(df_p['inizio']).dt.date.tz_localize(None)
+    df_p['fine'] = pd.to_datetime(df_p['fine']).dt.date.tz_localize(None)
     df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)].copy()
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestione Logs", "⚙️ Gestione", "📈 Statistiche"])    
