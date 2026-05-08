@@ -1070,7 +1070,8 @@ with tabs[5]:
             link_colors = [hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]]
 
             fig_sankey = go.Figure(data=[go.Sankey(
-                node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors, valueformat=".3f"),
+                valueformat=".3f",
+                node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
