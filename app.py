@@ -1086,7 +1086,7 @@ with tabs[5]:
     else:
         st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
         
-	with st.expander("🔍 Ispezione Dati Post-Filtro (Debug)", expanded=False):
+    with st.expander("🔍 Ispezione Dati Post-Filtro (Debug)", expanded=False):
     st.write(f"Righe totali dopo i filtri: {len(df_p)}")
     
     if not df_p.empty:
