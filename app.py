@@ -885,7 +885,7 @@ with tabs[3]:
             df_edit, 
             column_config={
                 "id": None,
-                "Commessa", disabled=True,
+                "Commessa": disabled=True,
                 "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
                 "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
