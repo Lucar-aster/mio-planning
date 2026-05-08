@@ -871,6 +871,7 @@ with tabs[3]:
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
         cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
+        task_list = sorted([s['nome'] for s in get_cached_data("Task")])
         ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
         tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
         cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
@@ -886,6 +887,7 @@ with tabs[3]:
             column_config={
                 "id": None,
                 "Commessa": st.column_config.Column(disabled=True),
+				"Task": st.column_config.SelectboxColumn("Task", options=task_list, width="medium"),
                 "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
                 "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
