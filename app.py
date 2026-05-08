@@ -1046,7 +1046,7 @@ with tabs[5]:
             if not df_c.empty:
                 stato_comm = df_c['stato'].value_counts().reset_index()
                 stato_comm.columns = ['Stato', 'Conteggio']
-				import plotly.express as px
+                import plotly.express as px
                 fig_stato = px.Pie(
                     labels=stato_comm['Stato'], 
                     values=stato_comm['Conteggio'], 
