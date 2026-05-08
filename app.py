@@ -1104,4 +1104,5 @@ with tabs[5]:
             if not micro_task.empty:
                 st.warning(f"Trovati {len(micro_task)} task sotto i 2 minuti!")
                 st.table(micro_task[['inizio', 'Tag', 'minuti']])
-        else: st.error("ATTENZIONE: Il DataFrame è VUOTO. I filtri stanno escludendo tutto.")
+        else:
+            st.error("ATTENZIONE: Il DataFrame è VUOTO. I filtri stanno escludendo tutto.")
