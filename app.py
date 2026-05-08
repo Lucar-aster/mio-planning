@@ -1099,9 +1099,9 @@ with tabs[5]:
             df_debug['ore'] = df_debug['minuti'] / 60
             st.write("Ultimi task processati (anche quelli brevissimi):")
             # Ordina per inizio decrescente per vedere gli ultimi inseriti
-            st.dataframe(df_debug[['inizio', 'fine', 'operatore', 'tag', 'minuti', 'ore']].sort_values('inizio', ascending=False))
+            st.dataframe(df_netto_globale[['operatore', 'data_log', col_tag, 'ore_lavorate']].sort_values('inizio', ascending=False))
             # Focus sui valori microscopici
-            micro_task = df_debug[df_debug['minuti'] < 2]
+            micro_task = df_netto_globale[df_netto_globale['ore_lavorate'] < 0.0005]
             if not micro_task.empty:
                 st.warning(f"Trovati {len(micro_task)} task sotto i 2 minuti!")
                 st.table(micro_task[['inizio', 'Tag', 'minuti']])
