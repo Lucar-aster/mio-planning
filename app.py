@@ -1099,7 +1099,7 @@ with tabs[5]:
             df_debug['ore'] = df_debug['minuti'] / 60
             st.write("Ultimi task processati (anche quelli brevissimi):")
             # Ordina per inizio decrescente per vedere gli ultimi inseriti
-            st.dataframe(df_debug[['inizio', 'fine', 'operatore', 'Tag', 'minuti', 'ore']].sort_values('inizio', ascending=False))
+            st.dataframe(df_debug[['inizio', 'fine', 'operatore', 'tag', 'minuti', 'ore']].sort_values('inizio', ascending=False))
             # Focus sui valori microscopici
             micro_task = df_debug[df_debug['minuti'] < 2]
             if not micro_task.empty:
