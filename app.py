@@ -1029,7 +1029,7 @@ with tabs[5]:
                 color=col_tag,
                 barmode='group',
                 color_discrete_map=color_discrete_map,
-                text='testo_ore'
+                text='testo_ore',
                 title="Ore Effettive (Netto sovrapposizioni e pausa)",
                 labels={'ore_lavorate': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
                 template="plotly_white"
