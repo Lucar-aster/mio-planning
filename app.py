@@ -1014,7 +1014,7 @@ with tabs[5]:
                 color_discrete_map=color_discrete_map,
                 title="Ore Effettive (Netto sovrapposizioni e pausa)",
                 labels={'ore_lavorate': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
-                text_auto='.3f',
+                text_auto='.5f',
                 template="plotly_white"
             )
             fig_stats.update_layout(hovermode="x unified")
@@ -1070,7 +1070,7 @@ with tabs[5]:
             link_colors = [hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]]
 
             fig_sankey = go.Figure(data=[go.Sankey(
-                valueformat=".3f",
+                valueformat=".5f",
                 node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
