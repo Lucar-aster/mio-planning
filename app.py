@@ -369,16 +369,6 @@ def modal_commessa():
         supabase.table("Commesse").insert({"nome_commessa": n, "stato": s}).execute()
         get_cached_data.clear(); st.rerun()
 
-@st.dialog("📑 Nuovo Task")
-def modal_task():
-    cms = {c['nome_commessa']: c['id'] for c in get_cached_data("Commesse")}
-    n = st.text_input("Nome Task")
-    c = st.selectbox("Commessa", options=list(cms.keys()))
-    s = st.selectbox("Stato", options=STATI_TASK, index=1)
-    if st.button("Crea", width='stretch'):
-        supabase.table("Task").insert({"nome_task": n, "commessa_id": cms[c], "stato": s}).execute()
-        get_cached_data.clear(); st.rerun()
-
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     cm_data, tk_data, ops_list = get_cached_data("Commesse"), get_cached_data("Task"), [o['nome'] for o in get_cached_data("Operatori")]
@@ -751,15 +741,13 @@ if l and tk and cm:
             search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b2, b3, b7, b4, b5, b6 = st.columns(7)
+        b1, b3, b7, b4, b5 = st.columns(7)
         if b1.button("➕ Commessa", width='stretch'): modal_commessa()
-        if b2.button("📑 Task", width='stretch'): modal_task()
         if b3.button("⏱️ Log", width='stretch'): modal_log()
         if b7.button("🔖 Tag", width='stretch'): modal_tag()
         if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
         label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
         if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
-        if b6.button("🖨️ Stampa PDF", width='stretch'):st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 		
     # --- SEZIONE LOG APERTI ---
