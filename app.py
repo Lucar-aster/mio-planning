@@ -1025,7 +1025,7 @@ with tabs[5]:
             fig_stats = px.bar(
                 df_totale_periodo,
                 x='operatore',
-                y='testo_ore',
+                y='ore_lavorate',
                 color=col_tag,
                 barmode='group',
                 color_discrete_map=color_discrete_map,
@@ -1068,8 +1068,9 @@ with tabs[5]:
         df_sankey_final['ore_pesate'] = df_sankey_final['ore_lavorate'] * df_sankey_final['peso']
         
         links_sankey = df_sankey_final.groupby([col_comm, col_tag])['ore_pesate'].sum().reset_index()
-
+        
         if not links_sankey.empty:
+            links_sankey['ore_formattate'] = links_sankey['ore_pesate'].apply(format_hours_to_hhmm)
             list_commesse = sorted(list(links_sankey[col_comm].unique()))
             list_tags = sorted(list(links_sankey[col_tag].unique()))
             all_nodes = list_commesse + list_tags
@@ -1091,9 +1092,10 @@ with tabs[5]:
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
-                    value=links_sankey['testo_ore'],
+                    value=links_sankey['ore_pesate'],
                     color=link_colors,
-                    hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Ore Nette: %{value:.1f}<extra></extra>'
+                    customdata=links_sankey['ore_formattate'],
+                    hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Durata: %{customdata}<extra></extra>'
                 )
             )])
             fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
