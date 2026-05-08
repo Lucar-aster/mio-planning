@@ -960,7 +960,16 @@ with tabs[4]:
                 df_da_salvare = df_da_salvare.drop(columns=['commessa_nome'])
                 aggiorna_database_setup("Task", df_da_salvare, raw_tk)
 
-with tabs[5]: 
+with tabs[5]:
+    def format_hours_to_hhmm(decimal_hours):
+        hours = int(decimal_hours)
+        minutes = int(round((decimal_hours - hours) * 60))
+        # Gestisce il caso in cui l'arrotondamento porti a 60 minuti
+        if minutes == 60:
+            hours += 1
+            minutes = 0
+        return f"{hours:02d}:{minutes:02d}"
+        
     try:
         if 'df_c' not in locals():
             data_c = get_cached_data("Commessa")
@@ -998,6 +1007,8 @@ with tabs[5]:
 
         # Totale per il periodo filtrato
         df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
+        if not df_totale_periodo.empty:
+            df_totale_periodo['testo_ore'] = df_totale_periodo['ore_lavorate'].apply(format_hours_to_hhmm)
 
         c1, c2 = st.columns([2, 1])
 
@@ -1018,9 +1029,9 @@ with tabs[5]:
                 color=col_tag,
                 barmode='group',
                 color_discrete_map=color_discrete_map,
+                text='testo_ore'
                 title="Ore Effettive (Netto sovrapposizioni e pausa)",
                 labels={'ore_lavorate': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
-                text_auto='.5f',
                 template="plotly_white"
             )
             fig_stats.update_layout(hovermode="x unified")
@@ -1076,12 +1087,11 @@ with tabs[5]:
             link_colors = [hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]]
 
             fig_sankey = go.Figure(data=[go.Sankey(
-                valueformat=".5f",
                 node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
-                    value=links_sankey['ore_pesate'],
+                    value=links_sankey['testo_ore'],
                     color=link_colors,
                     hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Ore Nette: %{value:.1f}<extra></extra>'
                 )
