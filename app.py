@@ -1046,14 +1046,18 @@ with tabs[5]:
             if not df_c.empty:
                 stato_comm = df_c['stato'].value_counts().reset_index()
                 stato_comm.columns = ['Stato', 'Conteggio']
-                fig_stato = go.Figure(go.Pie(
+				import plotly.express as px
+                fig_stato = px.Pie(
                     labels=stato_comm['Stato'], 
                     values=stato_comm['Conteggio'], 
-                    hole=.4, 
-                    marker_colors=['#2ecc71', '#f1c40f', '#e67e22', '#3498db', '#e74c3c']
-                ))
+                    hole=.4                    
+                )
                 fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
                 st.plotly_chart(fig_stato, use_container_width=True)
+            else:
+                st.error("Colonna 'stato' non trovata in df_c")
+        else:
+        st.info("Nessuna commessa trovata per generare il grafico.")
 
         # --- SEZIONE SANKEY ---
         st.markdown("---")
