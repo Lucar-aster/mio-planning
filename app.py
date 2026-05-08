@@ -1044,20 +1044,21 @@ with tabs[5]:
         with c2:
             st.subheader("🏗️ Stato delle Commesse")
             if not df_c.empty:
-                stato_comm = df_c['stato'].value_counts().reset_index()
-                stato_comm.columns = ['Stato', 'Conteggio']
-                import plotly.express as px
-                fig_stato = px.Pie(
-                    labels=stato_comm['Stato'], 
-                    values=stato_comm['Conteggio'], 
-                    hole=.4                    
-                )
-                fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig_stato, use_container_width=True)
+                if 'stato' in df_c.columns:
+                    stato_comm = df_c['stato'].value_counts().reset_index()
+                    stato_comm.columns = ['Stato', 'Conteggio']
+                    import plotly.express as px
+                    fig_stato = px.Pie(
+                        labels=stato_comm['Stato'], 
+                        values=stato_comm['Conteggio'], 
+                        hole=.4                    
+                    )
+                    fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_stato, use_container_width=True)
+                else:
+                    st.error("Colonna 'stato' non trovata in df_c")
             else:
-                st.error("Colonna 'stato' non trovata in df_c")
-        else:
-        st.info("Nessuna commessa trovata per generare il grafico.")
+            st.info("Nessuna commessa trovata per generare il grafico.")
 
         # --- SEZIONE SANKEY ---
         st.markdown("---")
