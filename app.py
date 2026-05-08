@@ -876,7 +876,7 @@ with tabs[3]:
         tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
         cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
         cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
-		map_task = {s['nome_task']: s['id'] for s in tk_data}
+        map_task = {s['nome_task']: s['id'] for s in tk_data}
         res_tags = supabase.table("Tag").select("id, nome").execute()
 
         # Conversione sicura per il Data Editor
