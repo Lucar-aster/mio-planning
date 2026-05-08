@@ -1025,20 +1025,20 @@ with tabs[5]:
             fig_stats = px.bar(
                 df_totale_periodo,
                 x='operatore',
-                y='ore_lavorate',
+                y='testo_ore',
                 color=col_tag,
                 barmode='group',
                 color_discrete_map=color_discrete_map,
                 text='testo_ore',
                 title="Ore Effettive (Netto sovrapposizioni e pausa)",
-                labels={'ore_lavorate': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
+                labels={'testo_ore': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
                 template="plotly_white"
             )
             fig_stats.update_layout(hovermode="x unified")
             st.plotly_chart(fig_stats, use_container_width=True)
 
             with st.expander("Vedi dati tabellari"):
-                df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='ore_lavorate').fillna(0)
+                df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='testo_ore').fillna(0)
                 st.dataframe(df_pivot.style.format("{:.1f}"))
 
         with c2:
