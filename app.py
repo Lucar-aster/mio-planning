@@ -788,10 +788,10 @@ if l and tk and cm:
     if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(search_text) | df_p['Task'].astype(str).str.lower().str.contains(search_text)]
     
 if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-    start_search = pd.to_datetime(f_range[0]).date()
-    end_search = pd.to_datetime(f_range[1]).date()
-    df_p['inizio'] = pd.to_datetime(df_p['inizio']).dt.tz_localize(None)
-    df_p['fine'] = pd.to_datetime(df_p['fine']).dt.tz_localize(None)
+    start_search = pd.to_datetime(f_range[0])
+    end_search = pd.to_datetime(f_range[1])
+    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
+    df_p['fine'] = pd.to_datetime(df_p['fine'])
     df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)].copy()
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestione Logs", "⚙️ Gestione", "📈 Statistiche"])    
