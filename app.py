@@ -992,7 +992,6 @@ with tabs[5]:
 
         # Totale per il periodo filtrato
         df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
-        df_totale_periodo = df_totale_periodo[df_totale_periodo['ore_lavorate'] > 0.01]
 
         c1, c2 = st.columns([2, 1])
 
