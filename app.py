@@ -1070,7 +1070,7 @@ with tabs[5]:
             link_colors = [hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]]
 
             fig_sankey = go.Figure(data=[go.Sankey(
-                node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
+                node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors, valueformat=".3f"),
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
@@ -1078,7 +1078,7 @@ with tabs[5]:
                     color=link_colors,
                     hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Ore Nette: %{value:.1f}<extra></extra>'
                 )
-            )], text_auto='.3f')
+            )])
             fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
             st.plotly_chart(fig_sankey, use_container_width=True)
             
