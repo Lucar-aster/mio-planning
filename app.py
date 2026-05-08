@@ -972,7 +972,7 @@ with tabs[5]:
         
     try:
         if 'df_c' not in locals():
-            data_c = get_cached_data("Commessa")
+            data_c = get_cached_data("Commesse")
             df_c = pd.DataFrame(data_c) if data_c else pd.DataFrame()
     except Exception as e:
         df_c = pd.DataFrame()
