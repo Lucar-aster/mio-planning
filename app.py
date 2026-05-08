@@ -1078,7 +1078,7 @@ with tabs[5]:
                     color=link_colors,
                     hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Ore Nette: %{value:.1f}<extra></extra>'
                 )
-            )], text_auto='.3f',)
+            )], text_auto='.3f')
             fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
             st.plotly_chart(fig_sankey, use_container_width=True)
             
