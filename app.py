@@ -111,7 +111,7 @@ with header_col2:
     st.markdown(f"""
         <div class="legend-container">
             <div class="legend-row"><span class="legend-label">👤 Operatori</span>{op_html}</div>
-            <div class="legend-row"><span class="legend-label">🏗️ Progetti</span>{cm_html}</div>
+            <div class="legend-row"><span class="legend-label">🏗️ Commesse</span>{cm_html}</div>
             <div class="legend-row"><span class="legend-label">📋 Task</span>{tk_html}</div>
             <div class="legend-row"><span class="legend-label">🔖 Tag</span>{tag_html}</div>
         </div>
