@@ -867,7 +867,7 @@ with tabs[3]:
 
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
-        df_edit = df_p[['id', 'Commessa', 'operatore', 'Task', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
+        df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
         cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
@@ -888,7 +888,7 @@ with tabs[3]:
             column_config={
                 "id": None,
                 "Commessa": st.column_config.Column(disabled=True),
-				"Task": st.column_config.SelectboxColumn("Task", options=task_list, width="medium"),
+				"Task": st.column_config.Column(disabled=True),
                 "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
                 "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
@@ -905,7 +905,7 @@ with tabs[3]:
                 tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
                 task_val= map_task.get(r["Task"])
                 try:
-                    supabase.table("Log_Tempi").update({"operatore": r['operatore'], "task_id": task_val, "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
+                    supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
                 except Exception as e:
                     st.error(f"Errore durante l'aggiornamento del log {r['id']}: {e}")
             st.success("Modifiche salvate con successo!")
