@@ -1085,3 +1085,24 @@ with tabs[5]:
             
     else:
         st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
+        
+	with st.expander("🔍 Ispezione Dati Post-Filtro (Debug)", expanded=False):
+    st.write(f"Righe totali dopo i filtri: {len(df_p)}")
+    
+    if not df_p.empty:
+        # Calcoliamo al volo le durate per il debug
+        df_debug = df_p.copy()
+        df_debug['minuti'] = (df_debug['fine'] - df_debug['inizio']).dt.total_seconds() / 60
+        df_debug['ore'] = df_debug['minuti'] / 60
+        
+        st.write("Ultimi task processati (anche quelli brevissimi):")
+        # Ordina per inizio decrescente per vedere gli ultimi inseriti
+        st.dataframe(df_debug[['inizio', 'fine', 'operatore', 'Tag', 'minuti', 'ore']].sort_values('inizio', ascending=False))
+        
+        # Focus sui valori microscopici
+        micro_task = df_debug[df_debug['minuti'] < 2]
+        if not micro_task.empty:
+            st.warning(f"Trovati {len(micro_task)} task sotto i 2 minuti!")
+            st.table(micro_task[['inizio', 'Tag', 'minuti']])
+    else:
+        st.error("ATTENZIONE: Il DataFrame è VUOTO. I filtri stanno escludendo tutto.")
