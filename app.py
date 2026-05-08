@@ -1053,7 +1053,7 @@ with tabs[5]:
                         values=stato_comm['Conteggio'], 
                         hole=.4                    
                     )
-                    fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0), showlegend=True)
+                    fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0), showlegend=True, legend=dict(orientation="v"))
                     st.plotly_chart(fig_stato, use_container_width=True)
                 else: st.error("Colonna 'stato' non trovata in df_c")
             else: st.info("Nessuna commessa trovata per generare il grafico.")
