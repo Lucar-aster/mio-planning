@@ -1055,10 +1055,8 @@ with tabs[5]:
                     )
                     fig_stato.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
                     st.plotly_chart(fig_stato, use_container_width=True)
-                else:
-                    st.error("Colonna 'stato' non trovata in df_c")
-            else:
-            st.info("Nessuna commessa trovata per generare il grafico.")
+                else: st.error("Colonna 'stato' non trovata in df_c")
+            else: st.info("Nessuna commessa trovata per generare il grafico.")
 
         # --- SEZIONE SANKEY ---
         st.markdown("---")
