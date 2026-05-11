@@ -453,16 +453,17 @@ def modal_clona_avanzata():
                 nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "ora_i": l.get('ora_i', '08:00:00'), "ora_f": l.get('ora_f', '17:00:00'), "note": l.get('note', "")} for l in logs_vecchi]
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+            
 @st.dialog("📥 Importa Log da Excel")
 def import_excel_modal():
     st.write("Scarica il modello, compilalo e caricalo qui sotto.")
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df_template = pd.DataFrame(columns=[
-            'operatore', 'inizio', 'fine', 'tag', 'commessa', 'task', 'note'
+            'operatore', 'data', 'commessa', 'task', 'tag', 'ora_inizio', 'ora_fine', 'note'
         ])
         # Aggiungiamo una riga di esempio per aiutare l'utente
-        df_template.loc[0] = ['Mario Rossi', '2024-05-10 08:30:00', '2024-05-10 12:30:00', 'Cantiere', 'Commessa Alpha', 'Montaggio', 'Note opzionali']
+        df_template.loc[0] = ['Mario Rossi', '2024-05-10', 'Commessa Alpha', 'Cantiere', 'Montaggio', '08:30:00', '12:30:00', 'Note opzionali']
         df_template.to_excel(writer, index=False, sheet_name='Modello')
     
     # Pulsante per scaricare il modello
@@ -472,7 +473,7 @@ def import_excel_modal():
         file_name="Modello_Import_Log.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    st.write("Il file deve contenere: *operatore, inizio, fine, tag, commessa, task, note*.")
+    st.write("Il file deve contenere: *operatore, data, commessa, task, tag, ora inizio, ora fine, note*.")
     uploaded_file = st.file_uploader("Carica file .xlsx", type="xlsx")
     
     if uploaded_file:
@@ -522,11 +523,26 @@ def import_excel_modal():
                         else:
                             task_id = check_t.data[0]['id']
 
+                        inizio_dt = pd.to_datetime(row['data'])
+                        fine_dt = pd.to_datetime(row['data'])
+                        orai_dt = pd.to_datetime(row['ora_inizio'])
+                        oraf_dt = pd.to_datetime(row['ora_fine'])
+        
+                        # Formattazione per Supabase
+                        inizio_str = inizio_dt.strftime('%Y-%m-%d')
+                        fine_str = fine_dt.strftime('%Y-%m-%d')
+        
+                        # Estrazione solo orario per le colonne ora_i e ora_f
+                        ora_i_str = orai_dt.strftime('%H:%M:%S')
+                        ora_f_str = oraf_dt.strftime('%H:%M:%S')
+
                         # E. Preparazione Log
                         logs_to_insert.append({
                             "operatore": op_name,
-                            "inizio": str(row['inizio']),
-                            "fine": str(row['fine']),
+                            "inizio": inizio_str,
+                            "fine": fine_str,
+                            "ora_i": ora_i_str,
+                            "ora_f": ora_f_str,
                             "tag": tag_id,
                             "commessa_id": c_id,
                             "task_id": task_id,
@@ -540,8 +556,7 @@ def import_excel_modal():
                             with st.expander("Righe saltate"):
                                 for e in error_log: st.warning(e)
                         
-                        get_cached_data.clear()
-                        st.rerun() # Chiude il modale e ricarica la pagina
+                        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
                     else:
                         st.error("Nessun dato valido trovato.")
 
