@@ -523,12 +523,12 @@ def import_excel_modal():
                         try:
                             data_val = pd.to_datetime(row['data']).strftime('%Y-%m-%d')
                             if isinstance(row['ora_inizio'], datetime.time):
-                                ora_i_val = row['ora_inizio'].strftime('%H:%M:%S')
+                                ora_i_val = hasattr(row['ora_inizio'], 'strftime')
                             else:
                                 ora_i_val = str(row['ora_inizio']).strip()
 
                             if isinstance(row['ora_fine'], datetime.time):
-                                ora_f_val = row['ora_fine'].strftime('%H:%M:%S')
+                                ora_f_val = hasattr(row['ora_fine'], 'strftime')
                             else:
                                 ora_f_val = str(row['ora_fine']).strip()
                         except Exception as e:
