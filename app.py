@@ -545,7 +545,6 @@ def import_excel_modal():
                             "ora_i": ora_i_val,
                             "ora_f": ora_f_val,
                             "tag": tag_id,
-                            "commessa_id": c_id,
                             "task_id": task_id,
                             "note": str(row['note']) if pd.notna(row['note']) else ""
                         })
