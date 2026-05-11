@@ -536,9 +536,9 @@ def import_excel_modal():
 
                             ora_i_val = format_excel_time(row['ora_inizio'])
                             ora_f_val = format_excel_time(row['ora_fine'])
-                            except Exception as e:
-                                st.warning(f"Errore formato data/ora alla riga {idx+2}: {e}")
-                                continue
+                        except Exception as e:
+                            st.warning(f"Errore formato data/ora alla riga {idx+2}: {e}")
+                            continue
 
                         # E. Preparazione Log
                         logs_to_insert.append({
