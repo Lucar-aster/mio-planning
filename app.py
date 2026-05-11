@@ -506,7 +506,7 @@ def import_excel_modal():
                         tag_id = tags_ref[t_name]
 
                         # C. Commessa (Cerca o Crea)
-                        c_name = str(row.get('commessa', '')).strip()
+                        c_name = str(row.get('nome_commessa', '')).strip()
                         c_key = c_name.lower()
                         if c_key not in comms_ref:
                             new_c = supabase.table("Commesse").insert({"nome_commessa": c_name, "stato": "In corso 🟡"}).execute()
@@ -517,7 +517,7 @@ def import_excel_modal():
                             c_id = comms_ref[c_key]
 
                         # D. Task (Cerca o Crea)
-                        task_name = str(row.get('task', '')).strip()
+                        task_name = str(row.get('nome_task', '')).strip()
                         check_t = supabase.table("Task").select("id").eq("commessa_id", c_id).eq("nome_task", task_name).execute()
                         if not check_t.data:
                             new_t = supabase.table("Task").insert({"commessa_id": c_id, "nome_task": task_name, "stato": "In corso 🟡"}).execute()
