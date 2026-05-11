@@ -493,13 +493,13 @@ def import_excel_modal():
                         # A. Validazione Operatore
                         op_name = str(row.get('operatore', '')).strip()
                         if op_name not in ops_ref:
-                            error_log.append(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
+                            st.warning(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
                             continue
 
                         # B. Validazione Tag
                         t_name = str(row.get('tag', '')).strip().lower()
                         if t_name not in tags_ref:
-                            error_log.append(f"Riga {idx+2}: Tag '{t_name}' non trovato.")
+                            st.warning(f"Riga {idx+2}: Tag '{t_name}' non trovato.")
                             continue
                         tag_id = tags_ref[t_name]
 
@@ -535,7 +535,7 @@ def import_excel_modal():
                             else:
                                 ora_f_val = str(row['ora_fine']).strip()
                         except Exception as e:
-                            error_log.append(f"Errore formato data/ora alla riga {idx+2}: {e}")
+                            st.warning(f"Errore formato data/ora alla riga {idx+2}: {e}")
                             continue
 
                         # E. Preparazione Log
