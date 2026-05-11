@@ -479,7 +479,7 @@ def import_excel_modal():
             with st.spinner("Elaborazione in corso..."):
                 try:
                     ops_ref = {str(o['nome']).strip().lower(): str(o['nome']).strip() for o in get_cached_data("Operatori")}
-                    tags_ref = {str(t['nome_task']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
+                    tags_ref = {str(t['nome']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
                     comms_ref = {str(c['nome_commessa']).strip().lower(): c['id'] for c in get_cached_data("Commesse")}
                     
                     df_excel = pd.read_excel(uploaded_file)
@@ -502,7 +502,6 @@ def import_excel_modal():
                             continue
                         tag_id = tags_ref[t_name]
 
-                        # C. Commessa (Cerca o Crea)
                         c_name = str(row.get('commessa', '')).strip()
                         c_key = c_name.lower()
                         if c_key not in comms_ref:
@@ -513,7 +512,6 @@ def import_excel_modal():
                         else:
                             c_id = comms_ref[c_key]
 
-                        # D. Task (Cerca o Crea)
                         task_name = str(row.get('task', '')).strip()
                         check_t = supabase.table("Task").select("id").eq("commessa_id", c_id).eq("nome_task", task_name).execute()
                         if not check_t.data:
