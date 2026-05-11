@@ -9,6 +9,7 @@ import textwrap
 import hashlib
 from streamlit_calendar import calendar
 import plotly.express as px
+import io
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
@@ -454,6 +455,23 @@ def modal_clona_avanzata():
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 @st.dialog("📥 Importa Log da Excel")
 def import_excel_modal():
+    st.write("Scarica il modello, compilalo e caricalo qui sotto.")
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df_template = pd.DataFrame(columns=[
+            'operatore', 'inizio', 'fine', 'tag', 'commessa', 'task', 'note'
+        ])
+        # Aggiungiamo una riga di esempio per aiutare l'utente
+        df_template.loc[0] = ['Mario Rossi', '2024-05-10 08:30:00', '2024-05-10 12:30:00', 'Cantiere', 'Commessa Alpha', 'Montaggio', 'Note opzionali']
+        df_template.to_excel(writer, index=False, sheet_name='Modello')
+    
+    # Pulsante per scaricare il modello
+    st.download_button(
+        label="📥 Scarica Modello Excel",
+        data=buffer.getvalue(),
+        file_name="Modello_Import_Log.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
     st.write("Il file deve contenere: *operatore, inizio, fine, tag, commessa, task, note*.")
     uploaded_file = st.file_uploader("Carica file .xlsx", type="xlsx")
     
