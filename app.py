@@ -481,7 +481,7 @@ def import_excel_modal():
             with st.spinner("Elaborazione in corso..."):
                 try:
                     # Caricamento mappe di validazione
-                    ops_ref = {str(o['nome']).strip().lower(): str(o['nome']).strip() for o in get_cached_data("Operatore")}
+                    ops_ref = {str(o['nome']).strip().lower(): str(o['nome']).strip() for o in get_cached_data("Operatori")}
                     tags_ref = {str(t['nome']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
                     comms_ref = {str(c['nome']).strip().lower(): c['id'] for c in get_cached_data("Commessa")}
                     
