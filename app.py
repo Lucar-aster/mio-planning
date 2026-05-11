@@ -917,12 +917,24 @@ tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestion
 
 with tabs[0]: 
     if not df.empty:
-        oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
+        oggi_linea = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
+            start_filter = pd.to_datetime(f_range[0])
+            end_filter = pd.to_datetime(f_range[1])
+        else:
+            # Se f_range è vuoto, partiamo da oggi meno un offset
+            start_filter = oggi_linea - timedelta(days=30)
+            end_filter = oggi_linea + timedelta(days=30)
+            
+        if scala == "Personalizzato" and f_custom and len(f_custom) == 2:
+            delta_custom = (pd.to_datetime(f_custom[1]) - pd.to_datetime(f_custom[0])).days
+            ampiezza_giorni = max(delta_custom, 1)
         else:
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
-            x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
+            ampiezza_giorni = [oggi_linea - timedelta(days=d), oggi_linea + timedelta(days=d)]
+
+        x_range = [start_filter, end_filter]
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_linea, x_range, ampiezza_giorni, [])
         
 with tabs[1]: 
     if not df.empty:
