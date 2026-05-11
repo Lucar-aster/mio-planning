@@ -523,18 +523,20 @@ def import_excel_modal():
                         else:
                             task_id = check_t.data[0]['id']
 
-                        inizio_dt = pd.to_datetime(row['data'])
-                        fine_dt = pd.to_datetime(row['data'])
-                        orai_dt = pd.to_datetime(row['ora_inizio'])
-                        oraf_dt = pd.to_datetime(row['ora_fine'])
-        
-                        # Formattazione per Supabase
-                        inizio_str = inizio_dt.strftime('%Y-%m-%d')
-                        fine_str = fine_dt.strftime('%Y-%m-%d')
-        
-                        # Estrazione solo orario per le colonne ora_i e ora_f
-                        ora_i_str = orai_dt.strftime('%H:%M:%S')
-                        ora_f_str = oraf_dt.strftime('%H:%M:%S')
+                        try:
+                            data_val = pd.to_datetime(row['data']).strftime('%Y-%m-%d')
+                            if isinstance(row['ora_inizio'], datetime.time):
+                                ora_i_val = row['ora_inizio'].strftime('%H:%M:%S')
+                            else:
+                                ora_i_val = str(row['ora_inizio']).strip()
+
+                            if isinstance(row['ora_fine'], datetime.time):
+                                ora_f_val = row['ora_fine'].strftime('%H:%M:%S')
+                            else:
+                                ora_f_val = str(row['ora_fine']).strip()
+                        except Exception as e:
+                            error_log.append(f"Errore formato data/ora alla riga {idx+2}: {e}")
+                            continue
 
                         # E. Preparazione Log
                         logs_to_insert.append({
