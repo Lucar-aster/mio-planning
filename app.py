@@ -462,11 +462,9 @@ def import_excel_modal():
         df_template = pd.DataFrame(columns=[
             'operatore', 'data', 'commessa', 'task', 'tag', 'ora_inizio', 'ora_fine', 'note'
         ])
-        # Aggiungiamo una riga di esempio per aiutare l'utente
         df_template.loc[0] = ['Mario Rossi', '2024-05-10', 'Commessa Alpha', 'Cantiere', 'Montaggio', '08:30:00', '12:30:00', 'Note opzionali']
         df_template.to_excel(writer, index=False, sheet_name='Modello')
-    
-    # Pulsante per scaricare il modello
+        
     st.download_button(
         label="📥 Scarica Modello Excel",
         data=buffer.getvalue(),
@@ -480,7 +478,6 @@ def import_excel_modal():
         if st.button("Avvia Importazione"):
             with st.spinner("Elaborazione in corso..."):
                 try:
-                    # Caricamento mappe di validazione
                     ops_ref = {str(o['nome']).strip().lower(): str(o['nome']).strip() for o in get_cached_data("Operatori")}
                     tags_ref = {str(t['nome_task']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
                     comms_ref = {str(c['nome_commessa']).strip().lower(): c['id'] for c in get_cached_data("Commesse")}
