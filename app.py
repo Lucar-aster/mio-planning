@@ -525,14 +525,11 @@ def import_excel_modal():
                             def format_excel_time(val):
                                 if pd.isna(val):
                                     return "00:00:00"
-                                # Se Excel lo passa già come oggetto time (Python datetime.time)
-                                if isinstance(val, datetime.time):
+                                if isinstance(val, time):
                                     return val.strftime('%H:%M:%S')
-                                # Se è un oggetto Timestamp di Pandas
                                 if hasattr(val, 'strftime'):
                                     return val.strftime('%H:%M:%S')
-                                # Se è una stringa, la puliamo e basta
-                                    return str(val).strip()
+                                return str(val).strip()
 
                             ora_i_val = format_excel_time(row['ora_inizio'])
                             ora_f_val = format_excel_time(row['ora_fine'])
