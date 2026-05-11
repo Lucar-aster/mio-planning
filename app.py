@@ -522,18 +522,20 @@ def import_excel_modal():
 
                         try:
                             data_val = pd.to_datetime(row['data']).strftime('%Y-%m-%d')
-                            if isinstance(row['ora_inizio'], datetime.time):
-                                ora_i_val = hasattr(row['ora_inizio'], 'strftime')
-                            else:
-                                ora_i_val = str(row['ora_inizio']).strip()
+                            def format_excel_time(val):
+                                if pd.isna(val):
+                                    return "00:00:00"
+                                # Se Excel lo passa già come oggetto time (Python datetime.time)
+                                if isinstance(val, datetime.time):
+                                    return val.strftime('%H:%M:%S')
+                                # Se è un oggetto Timestamp di Pandas
+                                if hasattr(val, 'strftime'):
+                                    return val.strftime('%H:%M:%S')
+                                # Se è una stringa, la puliamo e basta
+                                    return str(val).strip()
 
-                            if isinstance(row['ora_fine'], datetime.time):
-                                ora_f_val = hasattr(row['ora_fine'], 'strftime')
-                            else:
-                                ora_f_val = str(row['ora_fine']).strip()
-                        except Exception as e:
-                            st.warning(f"Errore formato data/ora alla riga {idx+2}: {e}")
-                            continue
+                            ora_i_val = format_excel_time(row['ora_inizio'])
+                            ora_f_val = format_excel_time(row['ora_fine'])
 
                         # E. Preparazione Log
                         logs_to_insert.append({
