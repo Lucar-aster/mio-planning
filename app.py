@@ -935,7 +935,7 @@ with tabs[0]:
             delta_giorni = [oggi_linea - timedelta(days=d), oggi_linea + timedelta(days=d)]
 
         x_range = [start_filter, start_filter + diffilter]
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_linea, x_range, int(delta_giorni), [])
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_linea, x_range, delta_giorni, [])
         
 with tabs[1]: 
     if not df.empty:
