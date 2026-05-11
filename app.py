@@ -492,7 +492,7 @@ def import_excel_modal():
                     for idx, row in df_excel.iterrows():
                         # A. Validazione Operatore
                         op_name = str(row.get('operatore', '')).strip().lower()
-                        if op_name not in ops_ref:
+                        if op_name in ops_ref:
                             op_name_db = ops_ref[op_name]
                         else:
                             st.warning(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
@@ -543,10 +543,10 @@ def import_excel_modal():
                         # E. Preparazione Log
                         logs_to_insert.append({
                             "operatore": op_name_db,
-                            "inizio": inizio_str,
-                            "fine": fine_str,
-                            "ora_i": ora_i_str,
-                            "ora_f": ora_f_str,
+                            "inizio": data_val,
+                            "fine": data_val,
+                            "ora_i": ora_i_val,
+                            "ora_f": ora_f_val,
                             "tag": tag_id,
                             "commessa_id": c_id,
                             "task_id": task_id,
