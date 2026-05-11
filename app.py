@@ -493,8 +493,8 @@ def import_excel_modal():
                         # A. Validazione Operatore
                         op_name = str(row.get('operatore', '')).strip().lower()
                         if op_name not in ops_ref:
-							op_name_db = ops_ref[op_name]
-						else:
+                            op_name_db = ops_ref[op_name]
+                        else:
                             st.warning(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
                             continue
 
