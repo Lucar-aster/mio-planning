@@ -452,6 +452,83 @@ def modal_clona_avanzata():
                 nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "ora_i": l.get('ora_i', '08:00:00'), "ora_f": l.get('ora_f', '17:00:00'), "note": l.get('note', "")} for l in logs_vecchi]
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+@st.dialog("📥 Importa Log da Excel")
+def import_excel_modal():
+    st.write("Il file deve contenere: *operatore, inizio, fine, tag, commessa, task, note*.")
+    uploaded_file = st.file_uploader("Carica file .xlsx", type="xlsx")
+    
+    if uploaded_file:
+        if st.button("Avvia Importazione"):
+            with st.spinner("Elaborazione in corso..."):
+                try:
+                    # Caricamento mappe di validazione
+                    ops_ref = {str(o['nome']): o['nome'] for o in get_cached_data("Operatore")}
+                    tags_ref = {str(t['nome']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
+                    comms_ref = {str(c['nome']).strip().lower(): c['id'] for c in get_cached_data("Commessa")}
+                    
+                    df_excel = pd.read_excel(uploaded_file)
+                    logs_to_insert = []
+                    error_log = []
+
+                    for idx, row in df_excel.iterrows():
+                        # A. Validazione Operatore
+                        op_name = str(row.get('operatore', '')).strip()
+                        if op_name not in ops_ref:
+                            error_log.append(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
+                            continue
+
+                        # B. Validazione Tag
+                        t_name = str(row.get('tag', '')).strip().lower()
+                        if t_name not in tags_ref:
+                            error_log.append(f"Riga {idx+2}: Tag '{t_name}' non trovato.")
+                            continue
+                        tag_id = tags_ref[t_name]
+
+                        # C. Commessa (Cerca o Crea)
+                        c_name = str(row.get('commessa', '')).strip()
+                        c_key = c_name.lower()
+                        if c_key not in comms_ref:
+                            new_c = supabase.table("Commessa").insert({"nome": c_name, "stato": "In corso 🟡"}).execute()
+                            if new_c.data:
+                                c_id = new_c.data[0]['id']
+                                comms_ref[c_key] = c_id
+                        else:
+                            c_id = comms_ref[c_key]
+
+                        # D. Task (Cerca o Crea)
+                        task_name = str(row.get('task', '')).strip()
+                        check_t = supabase.table("Task").select("id").eq("commessa_id", c_id).eq("nome", task_name).execute()
+                        if not check_t.data:
+                            new_t = supabase.table("Task").insert({"commessa_id": c_id, "nome": task_name, "stato": "In corso 🟡"}).execute()
+                            task_id = new_t.data[0]['id']
+                        else:
+                            task_id = check_t.data[0]['id']
+
+                        # E. Preparazione Log
+                        logs_to_insert.append({
+                            "operatore": op_name,
+                            "inizio": str(row['inizio']),
+                            "fine": str(row['fine']),
+                            "tag": tag_id,
+                            "commessa_id": c_id,
+                            "task_id": task_id,
+                            "note": str(row['note']) if pd.notna(row['note']) else ""
+                        })
+
+                    if logs_to_insert:
+                        supabase.table("Log_Tempi").insert(logs_to_insert).execute()
+                        st.success(f"Inseriti {len(logs_to_insert)} log!")
+                        if error_log:
+                            with st.expander("Righe saltate"):
+                                for e in error_log: st.warning(e)
+                        
+                        get_cached_data.clear()
+                        st.rerun() # Chiude il modale e ricarica la pagina
+                    else:
+                        st.error("Nessun dato valido trovato.")
+
+                except Exception as ex:
+                    st.error(f"Errore tecnico: {ex}")
 
 def calcola_ore_evolute_12h(group, col_tag):
     intervalli = []
@@ -747,13 +824,14 @@ if l and tk and cm:
             search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
             
         st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b3, b7, b4, b5 = st.columns(5)
+        b1, b3, b7, b4, b5, b6 = st.columns(6)
         if b1.button("➕ Commessa", width='stretch'): modal_commessa()
         if b3.button("⏱️ Log", width='stretch'): modal_log()
         if b7.button("🔖 Tag", width='stretch'): modal_tag()
         if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
         label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
         if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
+        if b6.button("Importa 📥", width='stretch'): import_excel_modal()
         st.markdown('</div>', unsafe_allow_html=True)
 		
     # --- SEZIONE LOG APERTI ---
