@@ -481,7 +481,7 @@ def import_excel_modal():
             with st.spinner("Elaborazione in corso..."):
                 try:
                     # Caricamento mappe di validazione
-                    ops_ref = {str(o['nome']).strip(): o['nome'] for o in get_cached_data("Operatore")}
+                    ops_ref = {str(o['nome']).strip().lower(): str(o['nome'].strip() for o in get_cached_data("Operatore")}
                     tags_ref = {str(t['nome']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
                     comms_ref = {str(c['nome']).strip().lower(): c['id'] for c in get_cached_data("Commessa")}
                     
@@ -491,8 +491,10 @@ def import_excel_modal():
 
                     for idx, row in df_excel.iterrows():
                         # A. Validazione Operatore
-                        op_name = str(row.get('operatore', '')).strip()
+                        op_name = str(row.get('operatore', '')).strip().lower()
                         if op_name not in ops_ref:
+							op_name_db = ops_ref[op_name]
+						else:
                             st.warning(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
                             continue
 
@@ -540,7 +542,7 @@ def import_excel_modal():
 
                         # E. Preparazione Log
                         logs_to_insert.append({
-                            "operatore": op_name,
+                            "operatore": op_name_db,
                             "inizio": inizio_str,
                             "fine": fine_str,
                             "ora_i": ora_i_str,
