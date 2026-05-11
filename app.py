@@ -483,7 +483,7 @@ def import_excel_modal():
                     # Caricamento mappe di validazione
                     ops_ref = {str(o['nome']).strip().lower(): str(o['nome']).strip() for o in get_cached_data("Operatori")}
                     tags_ref = {str(t['nome']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
-                    comms_ref = {str(c['nome']).strip().lower(): c['id'] for c in get_cached_data("Commessa")}
+                    comms_ref = {str(c['nome']).strip().lower(): c['id'] for c in get_cached_data("Commesse")}
                     
                     df_excel = pd.read_excel(uploaded_file)
                     logs_to_insert = []
@@ -509,7 +509,7 @@ def import_excel_modal():
                         c_name = str(row.get('commessa', '')).strip()
                         c_key = c_name.lower()
                         if c_key not in comms_ref:
-                            new_c = supabase.table("Commessa").insert({"nome": c_name, "stato": "In corso 🟡"}).execute()
+                            new_c = supabase.table("Commesse").insert({"nome": c_name, "stato": "In corso 🟡"}).execute()
                             if new_c.data:
                                 c_id = new_c.data[0]['id']
                                 comms_ref[c_key] = c_id
@@ -518,9 +518,9 @@ def import_excel_modal():
 
                         # D. Task (Cerca o Crea)
                         task_name = str(row.get('task', '')).strip()
-                        check_t = supabase.table("Task").select("id").eq("commessa_id", c_id).eq("nome", task_name).execute()
+                        check_t = supabase.table("Task").select("id").eq("commessa_id", c_id).eq("nome_task", task_name).execute()
                         if not check_t.data:
-                            new_t = supabase.table("Task").insert({"commessa_id": c_id, "nome": task_name, "stato": "In corso 🟡"}).execute()
+                            new_t = supabase.table("Task").insert({"commessa_id": c_id, "nome_task": task_name, "stato": "In corso 🟡"}).execute()
                             task_id = new_t.data[0]['id']
                         else:
                             task_id = check_t.data[0]['id']
