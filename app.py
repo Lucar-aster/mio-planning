@@ -482,8 +482,8 @@ def import_excel_modal():
                 try:
                     # Caricamento mappe di validazione
                     ops_ref = {str(o['nome']).strip().lower(): str(o['nome']).strip() for o in get_cached_data("Operatori")}
-                    tags_ref = {str(t['nome']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
-                    comms_ref = {str(c['nome']).strip().lower(): c['id'] for c in get_cached_data("Commesse")}
+                    tags_ref = {str(t['nome_task']).strip().lower(): t['id'] for t in get_cached_data("Tag")}
+                    comms_ref = {str(c['nome_commessa']).strip().lower(): c['id'] for c in get_cached_data("Commesse")}
                     
                     df_excel = pd.read_excel(uploaded_file)
                     logs_to_insert = []
@@ -509,7 +509,7 @@ def import_excel_modal():
                         c_name = str(row.get('commessa', '')).strip()
                         c_key = c_name.lower()
                         if c_key not in comms_ref:
-                            new_c = supabase.table("Commesse").insert({"nome": c_name, "stato": "In corso 🟡"}).execute()
+                            new_c = supabase.table("Commesse").insert({"nome_commessa": c_name, "stato": "In corso 🟡"}).execute()
                             if new_c.data:
                                 c_id = new_c.data[0]['id']
                                 comms_ref[c_key] = c_id
