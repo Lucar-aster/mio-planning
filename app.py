@@ -761,7 +761,7 @@ if l and tk and cm:
     st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
-            c1, c2, c3, c4 = st.columns([4, 2, 2, 0.7], gap="small")
+            c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
             data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
             ora_inizio = pd.to_datetime(row['ora_i']).time()
             inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
@@ -778,6 +778,14 @@ if l and tk and cm:
                 get_cached_data.clear()
                 st.rerun()
                 
+            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
+                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                    # 1. Chiudo il log attuale
+                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                    get_cached_data.clear()
+                    # 2. Apro la modale per lo stesso task
+                    modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
+
     # --- FILTRAGGIO DATI ---
     df_p = df.copy()
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
