@@ -101,7 +101,7 @@ with header_col1:
         </div>
     """, unsafe_allow_html=True)
     opsn = [o['nome'] for o in get_cached_data("Operatori")]
-    op_def = st.selectbox("Operatore Attivo", opsn)
+    op_def = st.selectbox("Operatore Attivo", opsn, label_visibility="collapsed")
 with header_col2:
     ops = get_cached_data("Operatori")
     tags = get_cached_data("Tag")
