@@ -100,7 +100,8 @@ with header_col1:
             <h1 style="font-size: 18px !important; margin-left: 5px;">Progetti Aster</h1>
         </div>
     """, unsafe_allow_html=True)
-
+	ops = get_cached_data("Operatori")
+	op_def = st.selectbox("Seleziona Operatore", ops)
 with header_col2:
     ops = get_cached_data("Operatori")
     tags = get_cached_data("Tag")
@@ -180,7 +181,7 @@ def modal_gestione_clic(task_id, data_clic):
         nome_nuovo_tk = st.text_input("Nome del Nuovo Task")
         new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat")
         ops = [o['nome'] for o in get_cached_data("Operatori")]
-        op_sel_t = st.multiselect("Seleziona Operatore", ops)
+        op_sel_t = st.multiselect("Seleziona Operatore", ops, default=op_def)
         tag_scelti_t = st.selectbox("Seleziona Tag", options=lista_tag, index=None, key="tag_sclt_t")
         id_tag_scelto_t = mappa_tags.get(tag_scelti_t)
         
@@ -235,7 +236,7 @@ def modal_gestione_clic(task_id, data_clic):
             ora_f_l = st.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
-        op_sel_l = st.multiselect("Seleziona Operatore", ops, key="op_sel_l")
+        op_sel_l = st.multiselect("Seleziona Operatore", ops, default=op_def, key="op_sel_l")
         tag_scelti_l = st.selectbox("Seleziona Tag", options=lista_tag, index=None, key="tag_scelti_l")
         id_tag_scelto_l = mappa_tags.get(tag_scelti_l)
         new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
