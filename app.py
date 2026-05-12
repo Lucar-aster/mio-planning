@@ -918,7 +918,11 @@ tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestion
 
 with tabs[0]: 
     if not df.empty:
-        oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+		if start_search <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) <= end_search
+        	oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+		else:
+			metaint = (end_search-start_search)/2
+			oggi_dt = start_search + metaint
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         else:
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
