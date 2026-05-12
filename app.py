@@ -100,8 +100,8 @@ with header_col1:
             <h1 style="font-size: 18px !important; margin-left: 5px;">Progetti Aster</h1>
         </div>
     """, unsafe_allow_html=True)
-    ops = get_cached_data("Operatori")
-    op_def = st.selectbox("Seleziona Operatore", ops)
+    opsn = [o['nome'] for o in get_cached_data("Operatori")]
+    op_def = st.selectbox("Seleziona Operatore", opsn)
 with header_col2:
     ops = get_cached_data("Operatori")
     tags = get_cached_data("Tag")
