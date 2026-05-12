@@ -918,7 +918,7 @@ tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestion
 
 with tabs[0]: 
     if not df.empty:
-        if: start_search <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) <= end_search
+        if start_search <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) <= end_search:
             oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         else:
             metaint = (end_search-start_search)/2
