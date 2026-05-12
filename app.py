@@ -922,8 +922,9 @@ with tabs[0]:
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         else:
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
-            x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
+            delta_giorni = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
+        x_range = [start_search, end_search]
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (delta_giorni[1]-delta_giorni[0]).days, [])
         
 with tabs[1]: 
     if not df.empty:
