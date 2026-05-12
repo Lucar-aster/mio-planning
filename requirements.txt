@@ -7,4 +7,5 @@ streamlit-plotly-events
 streamlit_calendar
 openpyxl
 xlsxwriter
+locales
 locales-all
