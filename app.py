@@ -10,6 +10,9 @@ import hashlib
 from streamlit_calendar import calendar
 import plotly.express as px
 import io
+import locale
+
+locale.setlocale(locale.LC_ALL, "it_IT")
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
