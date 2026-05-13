@@ -853,7 +853,7 @@ if l and tk and cm:
         f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
 
         with s3:
-            f_range = st.date_input("Intervallo Date", value=[df['inizio'].min(), df['fine'].max()], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
+            f_range = st.date_input("Intervallo Date", value=[df['inizio'].min(), df['fine'].max()+ timedelta(days=7)], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
         with s4:
             search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
             
