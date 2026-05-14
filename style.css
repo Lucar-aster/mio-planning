@@ -1,44 +1,44 @@
-header[data-testid="stHeader"] {{ visibility: hidden; height: 0px; }}
-    .block-container {{ padding-top: 0rem !important; padding-bottom: 0rem !important; margin-top: -30px; }}
+header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
+    .block-container { padding-top: 0rem !important; padding-bottom: 0rem !important; margin-top: -30px; }
     
-    [data-testid="stVerticalBlock"] > div {{ gap: 0rem !important; }}
+    [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
     
-    .compact-title {{ display: flex; align-items: center; gap: 0px; padding-top: 0px; }}
-    .compact-title h1 {{ font-size: 22px !important; color: #1E3A8A; margin: 0; }}
+    .compact-title { display: flex; align-items: center; gap: 0px; padding-top: 0px; }
+    .compact-title h1 { font-size: 22px !important; color: #1E3A8A; margin: 0; }
     
-    div[data-testid="stVerticalBlock"] > div:has(.fixed-header) {{
+    div[data-testid="stVerticalBlock"] > div:has(.fixed-header) {
         position: sticky; top: 0; background-color: white; z-index: 999; padding-bottom: 0px; border-bottom: 1px solid #f0f2f6;
-    }}
+    }
 
-    [data-testid="stTabs"] {{ margin-top: -10px !important; }}
-    .stButton, .stMultiSelect, .stSelectbox, .stDateInput {{ margin-bottom: -10px !important; }}
-    [data-testid="column"] {{ padding: 0px 5px !important; margin-bottom: -10px !important; }}
+    [data-testid="stTabs"] { margin-top: -10px !important; }
+    .stButton, .stMultiSelect, .stSelectbox, .stDateInput { margin-bottom: -10px !important; }
+    [data-testid="column"] { padding: 0px 5px !important; margin-bottom: -10px !important; }
     
-    .legend-container {{ display: flex; flex-direction: column; gap: 2px; padding: 10px 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }}
-    .legend-row {{ display: flex; flex-direction: row; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }}
-    .legend-label {{ font-weight: bold; color: #888; min-width: 90px; font-size: 10px; text-transform: uppercase; }}
-    .legend-pill {{ display: flex; align-items: center; gap: 3px; padding: 2px 10px; border-radius: 20px; border: 1px solid #ddd; font-size: 11px; white-space: nowrap; }}
+    .legend-container { display: flex; flex-direction: column; gap: 2px; padding: 10px 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+    .legend-row { display: flex; flex-direction: row; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+    .legend-label { font-weight: bold; color: #888; min-width: 90px; font-size: 10px; text-transform: uppercase; }
+    .legend-pill { display: flex; align-items: center; gap: 3px; padding: 2px 10px; border-radius: 20px; border: 1px solid #ddd; font-size: 11px; white-space: nowrap; }
     
-    @media print {{
-        @page {{ size: A4 landscape; margin: 0.5cm; }}
-        [data-testid="stSidebar"], [data-testid="stHeader"], .stButton, [data-testid="stSelectbox"], [data-testid="stMultiSelect"], [data-testid="stTabs"] [role="tablist"], footer {{ display: none !important; }}
-        .block-container {{ padding: 0 !important; margin: 0 !important; top: 0 !important; }}
-        .js-plotly-plot {{ width: 100% !important; }}
-        .legend-container {{ break-inside: avoid; border: 1px solid #ccc !important; margin-bottom: 7px !important; padding: 5px !important; }}
-        [data-testid="stVerticalBlock"] {{ gap: 0 !important; }}
-        [data-testid="stTabs"], [data-testid="stTab"], div[data-baseweb="tab-list"], [data-testid="stVerticalBlock"] > div {{ border: none !important; box-shadow: none !important; }}
-        hr {{ display: none !important; margin: 0 !important; padding: 0 !important; }}
-    }}
-	[data-testid="stVerticalBlock"] > div {{
+    @media print {
+        @page { size: A4 landscape; margin: 0.5cm; }
+        [data-testid="stSidebar"], [data-testid="stHeader"], .stButton, [data-testid="stSelectbox"], [data-testid="stMultiSelect"], [data-testid="stTabs"] [role="tablist"], footer { display: none !important; }
+        .block-container { padding: 0 !important; margin: 0 !important; top: 0 !important; }
+        .js-plotly-plot { width: 100% !important; }
+        .legend-container { break-inside: avoid; border: 1px solid #ccc !important; margin-bottom: 7px !important; padding: 5px !important; }
+        [data-testid="stVerticalBlock"] { gap: 0 !important; }
+        [data-testid="stTabs"], [data-testid="stTab"], div[data-baseweb="tab-list"], [data-testid="stVerticalBlock"] > div { border: none !important; box-shadow: none !important; }
+        hr { display: none !important; margin: 0 !important; padding: 0 !important; }
+    }
+	[data-testid="stVerticalBlock"] > div {
     gap: 0.1rem !important;
 	margin-top: -1px !important;
     margin-bottom: -1px !important;
-    }}
-	.stButton > button {{
+    }
+	.stButton > button {
     height: 24px !important;
     line-height: 24px !important;
     padding-top: 0px !important;
     padding-bottom: 0px !important;
     font-size: 12px !important;
     min-height: 24px !important;
-    }}
+    }
