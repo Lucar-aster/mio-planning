@@ -366,16 +366,16 @@ def modal_log():
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
 
     olg1, olg2 = st.columns(2) 
-        if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg"):
-            ora_i = datetime.now(tz).time()
-            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
-        else:
-            ora_i = olg1.time_input("Ora Inizio", value=time(8, 0), key="o_i_tg")
+    if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg"):
+        ora_i = datetime.now(tz).time()
+        st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
+    else:
+        ora_i = olg1.time_input("Ora Inizio", value=time(8, 0), key="o_i_tg")
 
-        if olg2.checkbox("Log aperto", value=True, key="ao_f_lg"):
-            ora_f = None
-        else:
-            ora_f = olg2.time_input("Ora Fine", value=time(17, 0), key="o_f_lg")
+    if olg2.checkbox("Log aperto", value=True, key="ao_f_lg"):
+        ora_f = None
+    else:
+        ora_f = olg2.time_input("Ora Fine", value=time(17, 0), key="o_f_lg")
     
     nota = st.text_area("Note")
     
