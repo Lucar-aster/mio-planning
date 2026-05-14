@@ -153,12 +153,12 @@ def modal_gestione_clic(task_id, data_clic):
             ora_i_t = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
         else:
-            ora_i_t = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
+            ora_i_t = ot1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
 
         if ot2.checkbox("Log aperto", value=True, key="ao_f_t"):
             ora_f_t = None
         else:
-            ora_f_t = st.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
+            ora_f_t = ot2.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
             
         nota_t = st.text_input("Nota log")  
         c1, c2 = st.columns(2)
@@ -189,12 +189,12 @@ def modal_gestione_clic(task_id, data_clic):
             ora_i_l = datetime.now(tz).time()
             st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
         else:
-            ora_i_l = st.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
+            ora_i_l = ol1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
 
         if ol2.checkbox("Log aperto", value=True, key="ao_f_l"):
             ora_f_l = None
         else:
-            ora_f_l = st.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
+            ora_f_l = ol2.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
         
         ops = [o['nome'] for o in get_cached_data("Operatori")]
         op_sel_l = st.multiselect("Seleziona Operatore", ops, default=op_def, key="op_sel_l")
@@ -368,7 +368,7 @@ def modal_log():
     olg1, olg2 = st.columns(2) 
     if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg"):
         ora_i = datetime.now(tz).time()
-        st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
+        st.info(f"Verrà registrato l'orario d'inizio: {ora_i.strftime('%H:%M')}")
     else:
         ora_i = olg1.time_input("Ora Inizio", value=time(8, 0), key="o_i_tg")
 
