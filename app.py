@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from supabase import create_client
 import pandas as pd
 import plotly.graph_objects as go
