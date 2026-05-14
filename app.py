@@ -335,7 +335,11 @@ def modal_commessa():
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
     cm_data, tk_data, ops_list = get_cached_data("Commesse"), get_cached_data("Task"), [o['nome'] for o in get_cached_data("Operatori")]
-    op_ms = st.multiselect("Operatore", options=ops_list, key="new_log_ops_ms")
+    tags_data = get_cached_data("Tag")
+    lista_tag = sorted([t['nome'] for t in tags_data])
+    res_tags = supabase.table("Tag").select("id, nome").execute()
+    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
+    op_ms = st.multiselect("Operatore", options=ops_list, default=op_def, key="new_log_ops_ms")
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
     sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="new_log_cm_sb")
     sel_cm_id = cms_dict[sel_cm_nome]
@@ -353,14 +357,25 @@ def modal_log():
         if current_status in STATI_TASK: default_status_index = STATI_TASK.index(current_status)
 
     new_task_status = st.selectbox("Stato Task", options=STATI_TASK, index=default_status_index)
+
+    tag_scelti_lg = st.selectbox("Seleziona Tag", options=lista_tag, index=None, key="tag_scelti_lg")
+    id_tag_scelto_lg = mappa_tags.get(tag_scelti_lg)
     
     c1, c2 = st.columns(2)
     oggi = datetime.now().date()
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
-    
-    c_time_n1, c_time_n2 = st.columns(2)
-    ora_i = c_time_n1.time_input("Ora Inizio", value=time(8, 0))
-    ora_f = c_time_n2.time_input("Ora Fine", value=time(17, 0))
+
+    olg1, olg2 = st.columns(2) 
+        if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg"):
+            ora_i = datetime.now(tz).time()
+            st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
+        else:
+            ora_i = olg1.time_input("Ora Inizio", value=time(8, 0), key="o_i_tg")
+
+        if olg2.checkbox("Log aperto", value=True, key="ao_f_lg"):
+            ora_f = None
+        else:
+            ora_f = olg2.time_input("Ora Fine", value=time(17, 0), key="o_f_lg")
     
     nota = st.text_area("Note")
     
@@ -381,7 +396,7 @@ def modal_log():
                 supabase.table("Log_Tempi").insert({
                     "operatore": op_name, "task_id": target_id, 
                     "inizio": str(data_i), "fine": str(data_f),
-                    "ora_i": str(ora_i), "ora_f": str(ora_f), "note": nota
+                    "ora_i": str(ora_i), "ora_f": str(ora_f) if ora_f else None, "note": nota, "tag": id_tag_scelto_lg
                 }).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
             
