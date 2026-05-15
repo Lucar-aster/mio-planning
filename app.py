@@ -821,7 +821,7 @@ if l and tk and cm:
         f_s_tag = c4.multiselect("Tag", sorted(df['tag'].unique().astype(str)), label_visibility="collapsed", placeholder="Tag")
         with c3:
             cs, cd = st.columns(2)
-            scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=1, label_visibility="collapsed")
+            scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=0, label_visibility="collapsed")
             f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)], label_visibility="collapsed") if scala == "Personalizzato" else None
 
 		
