@@ -22,11 +22,13 @@ STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 
 tz = ZoneInfo("Europe/Rome")
 
 # --- 3. CONNESSIONE E CACHING ---
-URL = "https://vjeqrhseqbfsomketjoj.supabase.co"
-KEY = "sb_secret_slE3QQh9j3AZp_gK3qWbAg_w9hznKs8"
-supabase = create_client(URL, KEY)
+@st.cache_resource
+def init_connection():
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-@st.cache_data(ttl=60)
+supabase = init_connection()
+
+@st.cache_data
 def get_cached_data(table):
     try: return supabase.table(table).select("*").execute().data
     except: return []
