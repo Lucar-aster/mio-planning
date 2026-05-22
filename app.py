@@ -33,6 +33,9 @@ def get_cached_data(table):
     try: return supabase.table(table).select("*").execute().data
     except: return []
 
+if "planning_data" not in st.session_state:
+    raw_planning = get_cached_data("planning_aster")
+    st.session_state["planning_data"] = pd.DataFrame(raw_planning)
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 if 'vista_compressa' not in st.session_state:
@@ -110,6 +113,39 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
         st.rerun()
     except Exception as e:
         st.error(f"Errore: {e}")
+
+def save_event_optimistic(event_data):
+    try:
+        temp_id = f"temp_{int(datetime.now().timestamp())}"
+        local_record = event_data.copy()
+        local_record["id"] = temp_id
+        local_record["created_at"] = datetime.now().isoformat()
+        
+        df_nuovo = pd.DataFrame([local_record])
+        st.session_state["planning_data"] = pd.concat([st.session_state["planning_data"], df_nuovo], ignore_index=True)
+        st.toast("⚡ Interfaccia aggiornata istantaneamente!", icon="🚀")
+        
+        db_record = event_data.copy()
+        supabase.table("planning_aster").insert(db_record).execute()
+        st.toast("✅ Sincronizzato con il server in background.", icon="💾")
+        return True
+    except Exception as e:
+        st.error(f"Errore durante l'inserimento: {e}")
+        return False
+
+def delete_event_optimistic(event_id):
+    try:
+        df_attuale = st.session_state["planning_data"]
+        st.session_state["planning_data"] = df_attuale[df_attuale["id"] != event_id]
+        st.toast("🗑️ Rimosso istantaneamente dallo schermo!", icon="⚡")
+        
+        if not str(event_id).startswith("temp_"):
+            supabase.table("planning_aster").delete().eq("id", event_id).execute()
+            st.toast("✅ Eliminato dal database.", icon="🗑️")
+        return True
+    except Exception as e:
+        st.error(f"Errore durante l'eliminazione: {e}")
+        return False
 
 # --- 5. MODALI ---
 @st.dialog("Gestione Task & Log")
@@ -276,14 +312,12 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     df_sub = df_sub[ordine_colonne]
     
     if not df_sub.empty and 'tag' in df_sub.columns:
-    # Trasformiamo la colonna tag usando la mappa inversa
         df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
     
     if not df_sub.empty:
         df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
         df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
         
-        # Gestione Parsing Orari DB 
         df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i'), format='%H:%M:%S', errors='coerce').dt.time
         df_sub['ora_f'] = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time
         
@@ -396,11 +430,12 @@ def modal_log():
         
         if target_id:
             for op_name in op_ms:
-                supabase.table("Log_Tempi").insert({
+                event_data = {
                     "operatore": op_name, "task_id": target_id, 
                     "inizio": str(data_i), "fine": str(data_f),
                     "ora_i": str(ora_i), "ora_f": str(ora_f) if ora_f else None, "note": nota, "tag": id_tag_scelto_lg
-                }).execute()
+                }
+                save_event_optimistic(event_data)
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
             
 @st.dialog("📂 Clona Commessa con Date")
