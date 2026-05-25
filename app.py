@@ -1213,7 +1213,7 @@ with tabs[5]:
                     hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Durata: %{customdata}<extra></extra>'
                 )
             )])
-            fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
+            fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10), font=dict(size = 12, color = 'black'))
             st.plotly_chart(fig_sankey, use_container_width=True)
             
     else:
