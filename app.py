@@ -1204,6 +1204,7 @@ with tabs[5]:
 
             fig_sankey = go.Figure(data=[go.Sankey(
                 node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors),
+                textfont = dict(size = 14, color = "black"),
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
@@ -1213,7 +1214,7 @@ with tabs[5]:
                     hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Durata: %{customdata}<extra></extra>'
                 )
             )])
-            fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10), font=dict(size = 12, color = 'black', shadow = None, background = None))
+            fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
             st.plotly_chart(fig_sankey, use_container_width=True)
             
     else:
