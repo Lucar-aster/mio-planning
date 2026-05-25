@@ -399,7 +399,7 @@ def modal_log():
                 supabase.table("Log_Tempi").insert({
                     "operatore": op_name, "task_id": target_id, 
                     "inizio": str(data_i), "fine": str(data_f),
-                    "ora_i": str(ora_i), "ora_f": str(ora_f) if ora_f else None, "note": nota, "tag": id_tag_scelto_lg
+                    "ora_i": ora_i.strftime('%H:%M:%S'), "ora_f": str(ora_f) if ora_f else None, "note": nota, "tag": id_tag_scelto_lg
                 }).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
             
