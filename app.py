@@ -317,11 +317,18 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
             else:
                 nome_tag_selezionato = row["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
+
+                inizio_val = str(row["inizio"]) if pd.notna(row["inizio"]) else None
+                fine_val = str(row["fine"]) if pd.notna(row["fine"]) else None
+                ora_i_val = str(row["ora_i"]) if pd.notna(row["ora_i"]) else None
+                ora_f_val = str(row["ora_f"]) if pd.notna(row["ora_f"]) else None
+                note_val = str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
+                
                 supabase.table("Log_Tempi").update({
                     "task_id": id_task_target, "operatore": row["operatore"], "tag": id_tag_da_salvare,
-                    "inizio": str(row["inizio"]), "fine": str(row["fine"]),
-                    "ora_i": str(row["ora_i"]), "ora_f": str(row["ora_f"]),
-                    "note": str(row["note"]) if row["note"] else ""
+                    "inizio": inizio_val, "fine": fine_val,
+                    "ora_i": ora_i_val, "ora_f": ora_f_val,
+                    "note": note_val
                 }).eq("id", row["id"]).execute()
         get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
 
