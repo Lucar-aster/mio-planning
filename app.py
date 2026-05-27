@@ -187,7 +187,7 @@ def modal_gestione_clic(task_id, data_clic):
     with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
         nome_commessa = task_info.get('nome_commessa', 'Non specificata') # Adatta 'nome_commessa' alla tua chiave reale
         nome_task = task_info.get('nome', 'Senza nome')                  # Adatta 'nome' alla chiave del task reale
-                st.info(f"📋 **Commessa:** {nome_commessa}  \n **Task:** {nome_task}")
+        st.info(f"📋 **Commessa:** {nome_commessa}  \n **Task:** {nome_task}")
         
         date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
 
