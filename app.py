@@ -125,7 +125,7 @@ def modal_gestione_clic(task_id, data_clic):
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        with st.expander("🏗️ Modifica Anagrafica", expanded=False):
+        with st.expander("🏗️ Modifica Anagrafica", expanded=True):
             new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
             new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
             if commessa_info:
@@ -136,7 +136,7 @@ def modal_gestione_clic(task_id, data_clic):
                 if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
                 get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
     with col2:
-        with st.expander("📑 Nuovo Task con Log", expanded=False):
+        with st.expander("📑 Nuovo Task con Log", expanded=True):
             cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
             lista_nomi_cm = list(cms_dict.keys())
             idx_default = lista_nomi_cm.index(commessa_info['nome_commessa']) if commessa_info and commessa_info['nome_commessa'] in lista_nomi_cm else 0
