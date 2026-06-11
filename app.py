@@ -112,7 +112,7 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
         st.error(f"Errore: {e}")
 
 # --- 5. MODALI ---
-@st.dialog("Gestione Task & Log")
+@st.dialog("Gestione Task & Log", width="large")
 def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
