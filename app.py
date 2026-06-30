@@ -1195,12 +1195,11 @@ with tabs[5]:
                     hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
                     customdata=df_tag_pie['testo_ore_tag'],
 					insidetextorientation='horizontal',
-					domain=dict(x=[0.1, 0.9], y=[0.1, 0.9])
                 )
                 
                 fig_tag_pie.update_layout(
-                    height=400, 
-                    margin=dict(l=60, r=60, t=30, b=30), 
+                    height=350, 
+                    margin=dict(l=0, r=0, t=30, b=0), 
                     showlegend=True,
 					legend=dict(
                         orientation="v",       # Legenda verticale
