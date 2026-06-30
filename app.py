@@ -1201,7 +1201,8 @@ with tabs[5]:
                 fig_tag_pie.update_layout(
                     height=400, 
                     margin=dict(l=60, r=60, t=30, b=30), 
-                    showlegend=False # Disabilitata per dare più spazio ai dati interni
+                    showlegend=False,
+					uniformtext=dict(mode='hide', minsize=9)
                 )
                 
                 st.plotly_chart(fig_tag_pie, use_container_width=True)
