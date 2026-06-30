@@ -1194,12 +1194,13 @@ with tabs[5]:
                     text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'],
                     hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
                     customdata=df_tag_pie['testo_ore_tag'],
-					insidetextorientation='horizontal'
+					insidetextorientation='horizontal',
+					domain=dict(x=[0.1, 0.9], y=[0.1, 0.9])
                 )
                 
                 fig_tag_pie.update_layout(
-                    height=380, 
-                    margin=dict(l=20, r=20, t=30, b=20), 
+                    height=400, 
+                    margin=dict(l=60, r=60, t=30, b=30), 
                     showlegend=False # Disabilitata per dare più spazio ai dati interni
                 )
                 
