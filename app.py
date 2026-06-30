@@ -1167,6 +1167,8 @@ with tabs[5]:
                 
                 # Applichiamo la formattazione HH:MM anche per le etichette del grafico
                 df_tag_pie['testo_ore_tag'] = df_tag_pie['ore_lavorate'].apply(format_hours_to_hhmm)
+				
+				df_tag_pie['legenda_tag'] = df_tag_pie[col_tag] + ": " + df_tag_pie['testo_ore_tag'] + " ore"
                 
                 # Generiamo la mappa colori personalizzata per mantenere la coerenza con i tag del DB
                 color_discrete_map = {}
@@ -1180,7 +1182,7 @@ with tabs[5]:
                 # Creazione del grafico a torta
                 fig_tag_pie = px.pie(
                     df_tag_pie,
-                    names=col_tag,
+                    names='legenda_tag',
                     values='ore_lavorate',
                     color=col_tag,
                     color_discrete_map=color_discrete_map,
