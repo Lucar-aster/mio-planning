@@ -1189,7 +1189,7 @@ with tabs[5]:
                 
                 # Configurazione per mostrare testo personalizzato (Nome Tag + Ore) DENTRO il grafico
                 fig_tag_pie.update_traces(
-                    textposition='auto',
+                    textposition='inside',
                     textinfo='text',
                     text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'],
                     hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
@@ -1201,8 +1201,14 @@ with tabs[5]:
                 fig_tag_pie.update_layout(
                     height=400, 
                     margin=dict(l=60, r=60, t=30, b=30), 
-                    showlegend=False,
-					uniformtext=dict(mode='hide', minsize=9)
+                    showlegend=True,
+					legend=dict(
+                        orientation="v",       # Legenda verticale
+                        yanchor="middle",      # Centrata verticalmente rispetto alla torta
+                        y=0.5,
+                        xanchor="left",        # Posizionata a destra della torta
+                        x=1.02
+                    )
                 )
                 
                 st.plotly_chart(fig_tag_pie, use_container_width=True)
