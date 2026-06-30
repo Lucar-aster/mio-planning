@@ -1189,16 +1189,17 @@ with tabs[5]:
                 
                 # Configurazione per mostrare testo personalizzato (Nome Tag + Ore) DENTRO il grafico
                 fig_tag_pie.update_traces(
-                    textposition='inside',
+                    textposition='auto',
                     textinfo='text',
                     text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'],
                     hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
-                    customdata=df_tag_pie['testo_ore_tag']
+                    customdata=df_tag_pie['testo_ore_tag'],
+					insidetextorientation='horizontal'
                 )
                 
                 fig_tag_pie.update_layout(
-                    height=350, 
-                    margin=dict(l=0, r=0, t=30, b=0), 
+                    height=380, 
+                    margin=dict(l=20, r=20, t=30, b=20), 
                     showlegend=False # Disabilitata per dare più spazio ai dati interni
                 )
                 
