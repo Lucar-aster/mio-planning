@@ -291,7 +291,9 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         
         # Gestione Parsing Orari DB 
         df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i'), format='%H:%M:%S', errors='coerce').dt.time
-        df_sub['ora_f'] = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time
+        df_sub['era_aperto'] = df_sub['ora_f'].isna() | (df_sub['ora_f'] == "")
+        ora_f_parsed = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time
+        df_sub['ora_f'] = ora_f_parsed.fillna(time(0, 0))
         
         mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].copy()
@@ -302,7 +304,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     edited_df = st.data_editor(
         df_sub,
         column_config={
-            "id": None, "task_id": None,
+            "id": None, "task_id": None,"era_aperto": None,
             "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
             "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"), 
             "note": st.column_config.TextColumn("Note", width="large"),
@@ -327,7 +329,13 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
                 inizio_val = str(row["inizio"]) if pd.notna(row["inizio"]) else None
                 fine_val = str(row["fine"]) if pd.notna(row["fine"]) else None
                 ora_i_val = str(row["ora_i"]) if pd.notna(row["ora_i"]) else None
-                ora_f_val = str(row["ora_f"]) if pd.notna(row["ora_f"]) else None
+                ora_f_val = None
+                if pd.notna(row["ora_f"]):
+                    corrente_ora_f = row["ora_f"]
+                    if row["era_aperto"] and corrente_ora_f == time(0, 0):
+                        ora_f_val = None
+                    else:
+                        ora_f_val = corrente_ora_f.strftime("%H:%M:%S") if hasattr(corrente_ora_f, "strftime") else str(corrente_ora_f)
                 note_val = str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
                 
                 supabase.table("Log_Tempi").update({
