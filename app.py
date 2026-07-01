@@ -297,6 +297,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         
         mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].copy()
+        df_sub["Sposta"] = False
         df_sub["Elimina"] = False
 
     if df_sub.empty: st.warning("Nessun log trovato."); return
@@ -312,6 +313,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
             "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
             "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"),
             "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm"),
+            "Sposta": st.column_config.CheckboxColumn("Sposta ➡️", default=False, help="Spunta per spostare questo specifico log nella nuova destinazione selezionata sopra"),
             "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
         },
         disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
@@ -337,9 +339,11 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
                     else:
                         ora_f_val = corrente_ora_f.strftime("%H:%M:%S") if hasattr(corrente_ora_f, "strftime") else str(corrente_ora_f)
                 note_val = str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
+
+                task_destinazione_id = id_task_target if row["Sposta"] else row["task_id"]
                 
                 supabase.table("Log_Tempi").update({
-                    "task_id": id_task_target, "operatore": row["operatore"], "tag": id_tag_da_salvare,
+                    "task_id": task_destinazione_id, "operatore": row["operatore"], "tag": id_tag_da_salvare,
                     "inizio": inizio_val, "fine": fine_val,
                     "ora_i": ora_i_val, "ora_f": ora_f_val,
                     "note": note_val
