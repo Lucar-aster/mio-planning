@@ -113,6 +113,7 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 
 # --- 5. MODALI ---
 @st.dialog("Gestione Task & Log", width="large")
+@st.fragment
 def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
@@ -224,6 +225,7 @@ def modal_gestione_clic(task_id, data_clic):
             if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.chart_key += 1; st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log")
+@st.fragment
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
     st.markdown("""<style>div[data-testid="stDialog"] div[role="dialog"] { width: 90vw !important; max-width: 1300px !important; }</style>""", unsafe_allow_html=True)
     
@@ -361,6 +363,7 @@ def modal_commessa():
         get_cached_data.clear(); st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
+@st.fragment
 def modal_log():
     cm_data, tk_data, ops_list = get_cached_data("Commesse"), get_cached_data("Task"), [o['nome'] for o in get_cached_data("Operatori")]
     tags_data = get_cached_data("Tag")
