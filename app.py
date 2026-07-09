@@ -120,7 +120,8 @@ def modal_gestione_clic(task_id, data_clic):
     commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
     tags_data = get_cached_data("Tag")
     lista_tag = sorted([t['nome'] for t in tags_data])
-    mappa_tags = {t['nome']: t['id'] for t in tags_data}
+    res_tags = supabase.table("Tag").select("id, nome").execute()
+    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     
     col1, col2, col3 = st.columns(3)
     with col1:
