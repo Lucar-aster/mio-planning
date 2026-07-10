@@ -224,7 +224,7 @@ def modal_gestione_clic(task_id, data_clic):
         
             if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.chart_key += 1; st.rerun()
         
-@st.dialog("📝 Gestione Dettaglio Log")
+@st.dialog("📝 Gestione Dettaglio Log", width="large")
 @st.fragment
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
     st.markdown("""<style>div[data-testid="stDialog"] div[role="dialog"] { width: 90vw !important; max-width: 1300px !important; }</style>""", unsafe_allow_html=True)
