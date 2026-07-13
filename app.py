@@ -13,11 +13,6 @@ from streamlit_calendar import calendar
 import plotly.express as px
 import io
 
-print("=== DEBUG DATAFRAME ===", flush=True)
-print(f"Formato del DataFrame: {df.shape}", flush=True)
-print("Colonne e Tipi rilevati da Pandas:", flush=True)
-print(df.dtypes, flush=True)
-
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
@@ -118,7 +113,6 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 
 # --- 5. MODALI ---
 @st.dialog("Gestione Task & Log", width="large")
-@st.fragment
 def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
@@ -126,8 +120,7 @@ def modal_gestione_clic(task_id, data_clic):
     commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
     tags_data = get_cached_data("Tag")
     lista_tag = sorted([t['nome'] for t in tags_data])
-    res_tags = supabase.table("Tag").select("id, nome").execute()
-    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
+    mappa_tags = {t['nome']: t['id'] for t in tags_data}
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -229,8 +222,7 @@ def modal_gestione_clic(task_id, data_clic):
         
             if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.chart_key += 1; st.rerun()
         
-@st.dialog("📝 Gestione Dettaglio Log", width="large")
-@st.fragment
+@st.dialog("📝 Gestione Dettaglio Log")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
     st.markdown("""<style>div[data-testid="stDialog"] div[role="dialog"] { width: 90vw !important; max-width: 1300px !important; }</style>""", unsafe_allow_html=True)
     
@@ -368,7 +360,6 @@ def modal_commessa():
         get_cached_data.clear(); st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
-@st.fragment
 def modal_log():
     cm_data, tk_data, ops_list = get_cached_data("Commesse"), get_cached_data("Task"), [o['nome'] for o in get_cached_data("Operatori")]
     tags_data = get_cached_data("Tag")
@@ -904,7 +895,7 @@ if l and tk and cm:
                 get_cached_data.clear()
                 st.rerun()
                 
-            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", width="stretch"):
+            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
                     ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
                     # 1. Chiudo il log attuale
                     supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
@@ -1173,12 +1164,68 @@ with tabs[5]:
                 template="plotly_white"
             )
             fig_stats.update_layout(hovermode="x unified")
-            st.plotly_chart(fig_stats, width="stretch")
+            st.plotly_chart(fig_stats, use_container_width=True)
 
             with st.expander("Vedi dati tabellari"):
                 df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='testo_ore').fillna(0)
                 st.dataframe(df_pivot)
-            
+
+        with c2:
+            st.subheader("🔖 Ore Totali per Tag")
+            if not df_totale_periodo.empty:
+                # Raggruppiamo per tag sommando le ore calcolate nel periodo filtrato
+                df_tag_pie = df_totale_periodo.groupby(col_tag)['ore_lavorate'].sum().reset_index()
+                
+                # Applichiamo la formattazione HH:MM anche per le etichette del grafico
+                df_tag_pie['testo_ore_tag'] = df_tag_pie['ore_lavorate'].apply(format_hours_to_hhmm)
+                
+                df_tag_pie['legenda_tag'] = df_tag_pie[col_tag] + ": " + df_tag_pie['testo_ore_tag'] + " ore"
+                
+                # Generiamo la mappa colori personalizzata per mantenere la coerenza con i tag del DB
+                color_discrete_map = {}
+                tags_ref = get_cached_data("Tag")
+                if tags_ref:
+                    for t in tags_ref:
+                        nome_t = str(t.get('nome', '')).strip()
+                        col_t = str(t.get('colore', '#8dbad2')).strip()
+                        color_discrete_map[nome_t] = col_t if col_t.startswith('#') else f'#{col_t}'
+
+                # Creazione del grafico a torta
+                fig_tag_pie = px.pie(
+                    df_tag_pie,
+                    names='legenda_tag',
+                    values='ore_lavorate',
+                    color=col_tag,
+                    color_discrete_map=color_discrete_map,
+                    hole=.3
+                )
+                
+                # Configurazione per mostrare testo personalizzato (Nome Tag + Ore) DENTRO il grafico
+                fig_tag_pie.update_traces(
+                    textposition='inside',
+                    textinfo='text',
+                    text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'],
+                    hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
+                    customdata=df_tag_pie['testo_ore_tag'],
+					insidetextorientation='horizontal',
+                )
+                
+                fig_tag_pie.update_layout(
+                    height=350, 
+                    margin=dict(l=0, r=0, t=30, b=0), 
+                    showlegend=True,
+					legend=dict(
+                        orientation="v",       # Legenda verticale
+                        yanchor="middle",      # Centrata verticalmente rispetto alla torta
+                        y=0.5,
+                        xanchor="left",        # Posizionata a destra della torta
+                        x=1.02
+                    )
+                )
+                
+                st.plotly_chart(fig_tag_pie, use_container_width=True)
+            else:
+                st.info("Nessun dato sui tag trovato per generare il grafico.")
 				
         # --- SEZIONE SANKEY ---
         st.markdown("---")
@@ -1225,7 +1272,7 @@ with tabs[5]:
                 )
             )])
             fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
-            st.plotly_chart(fig_sankey, width="stretch")
+            st.plotly_chart(fig_sankey, use_container_width=True)
             
     else:
         st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
