@@ -1166,10 +1166,6 @@ with tabs[5]:
             fig_stats.update_layout(hovermode="x unified")
             st.plotly_chart(fig_stats, use_container_width=True)
 
-            with st.expander("Vedi dati tabellari"):
-                df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='testo_ore').fillna(0)
-                st.dataframe(df_pivot)
-
         with c2:
             st.subheader("🔖 Ore Totali per Tag")
             if not df_totale_periodo.empty:
