@@ -1,5 +1,3 @@
 [browser]
 gatherUsageStats = true
 
-[calendar]
-firstDayOfWeek = 1  # 0 è Domenica, 1 è Lunedì
