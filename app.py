@@ -899,7 +899,7 @@ if l and tk and cm:
                 get_cached_data.clear()
                 st.rerun()
                 
-            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
+            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", width="stretch"):
                     ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
                     # 1. Chiudo il log attuale
                     supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
@@ -1168,7 +1168,7 @@ with tabs[5]:
                 template="plotly_white"
             )
             fig_stats.update_layout(hovermode="x unified")
-            st.plotly_chart(fig_stats, use_container_width=True)
+            st.plotly_chart(fig_stats, width="stretch")
 
             with st.expander("Vedi dati tabellari"):
                 df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='testo_ore').fillna(0)
@@ -1227,7 +1227,7 @@ with tabs[5]:
                     )
                 )
                 
-                st.plotly_chart(fig_tag_pie, use_container_width=True)
+                st.plotly_chart(fig_tag_pie, width="stretch")
             else:
                 st.info("Nessun dato sui tag trovato per generare il grafico.")
 				
@@ -1276,7 +1276,7 @@ with tabs[5]:
                 )
             )])
             fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
-            st.plotly_chart(fig_sankey, use_container_width=True)
+            st.plotly_chart(fig_sankey, width="stretch")
             
     else:
         st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
