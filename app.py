@@ -13,6 +13,11 @@ from streamlit_calendar import calendar
 import plotly.express as px
 import io
 
+print("=== DEBUG DATAFRAME ===", flush=True)
+print(f"Formato del DataFrame: {df.shape}", flush=True)
+print("Colonne e Tipi rilevati da Pandas:", flush=True)
+print(df.dtypes, flush=True)
+
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
 st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide")
