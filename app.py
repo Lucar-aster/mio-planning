@@ -1175,61 +1175,7 @@ with tabs[5]:
                 st.dataframe(df_pivot)
 
         with c2:
-            st.subheader("🔖 Ore Totali per Tag")
-            if not df_totale_periodo.empty:
-                # Raggruppiamo per tag sommando le ore calcolate nel periodo filtrato
-                df_tag_pie = df_totale_periodo.groupby(col_tag)['ore_lavorate'].sum().reset_index()
-                
-                # Applichiamo la formattazione HH:MM anche per le etichette del grafico
-                df_tag_pie['testo_ore_tag'] = df_tag_pie['ore_lavorate'].apply(format_hours_to_hhmm)
-                
-                df_tag_pie['legenda_tag'] = df_tag_pie[col_tag] + ": " + df_tag_pie['testo_ore_tag'] + " ore"
-                
-                # Generiamo la mappa colori personalizzata per mantenere la coerenza con i tag del DB
-                color_discrete_map = {}
-                tags_ref = get_cached_data("Tag")
-                if tags_ref:
-                    for t in tags_ref:
-                        nome_t = str(t.get('nome', '')).strip()
-                        col_t = str(t.get('colore', '#8dbad2')).strip()
-                        color_discrete_map[nome_t] = col_t if col_t.startswith('#') else f'#{col_t}'
-
-                # Creazione del grafico a torta
-                fig_tag_pie = px.pie(
-                    df_tag_pie,
-                    names='legenda_tag',
-                    values='ore_lavorate',
-                    color=col_tag,
-                    color_discrete_map=color_discrete_map,
-                    hole=.3
-                )
-                
-                # Configurazione per mostrare testo personalizzato (Nome Tag + Ore) DENTRO il grafico
-                fig_tag_pie.update_traces(
-                    textposition='inside',
-                    textinfo='text',
-                    text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'],
-                    hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
-                    customdata=df_tag_pie['testo_ore_tag'],
-					insidetextorientation='horizontal',
-                )
-                
-                fig_tag_pie.update_layout(
-                    height=350, 
-                    margin=dict(l=0, r=0, t=30, b=0), 
-                    showlegend=True,
-					legend=dict(
-                        orientation="v",       # Legenda verticale
-                        yanchor="middle",      # Centrata verticalmente rispetto alla torta
-                        y=0.5,
-                        xanchor="left",        # Posizionata a destra della torta
-                        x=1.02
-                    )
-                )
-                
-                st.plotly_chart(fig_tag_pie, width="stretch")
-            else:
-                st.info("Nessun dato sui tag trovato per generare il grafico.")
+            
 				
         # --- SEZIONE SANKEY ---
         st.markdown("---")
