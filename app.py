@@ -1173,8 +1173,6 @@ with tabs[5]:
             with st.expander("Vedi dati tabellari"):
                 df_pivot = df_totale_periodo.pivot(index='operatore', columns=col_tag, values='testo_ore').fillna(0)
                 st.dataframe(df_pivot)
-
-        with c2:
             
 				
         # --- SEZIONE SANKEY ---
