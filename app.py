@@ -1137,12 +1137,20 @@ with tabs[5]:
         # Totale per il periodo filtrato
         df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
         if not df_totale_periodo.empty:
-            if 'testo_ore' in df_totale_periodo.columns:
-                df_totale_periodo['testo_ore'] = df_totale_periodo['testo_ore'].fillna("00:00").astype(str)
-                df_totale_periodo['testo_ore'] = df_totale_periodo['testo_ore'].replace("0", "00:00")
             if col_tag in df_totale_periodo.columns:
                 df_totale_periodo[col_tag] = df_totale_periodo[col_tag].fillna("Altro").astype(str)
-
+            def formatta_ore(ore_decimali):
+                if pd.isna(ore_decimali) or ore_decimali <= 0:
+                    return "00:00"
+                ore = int(ore_decimali)
+                minuti = int(round((ore_decimali - ore) * 60))
+                if minuti == 60:
+                    ore += 1
+                    minuti = 0
+                return f"{ore:02d}:{minuti:02d}"
+                
+            df_totale_periodo['testo_ore'] = df_totale_periodo['ore_lavorate'].apply(formatta_ore)
+            
         c1, c2 = st.columns([2, 1])
 
         with c1:
