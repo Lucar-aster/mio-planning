@@ -37,10 +37,6 @@ if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
 if 'vista_compressa' not in st.session_state:
     st.session_state.vista_compressa = False
-if 'log_da_modificare' not in st.session_state:
-    st.session_state.log_da_modificare = None
-if 'clic_da_gestire' not in st.session_state:
-    st.session_state.clic_da_gestire = None
 
 # --- 2. CSS ---
 st.markdown(f"""
@@ -761,7 +757,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         if pts:
             d = pts[0].get("customdata", [])
             if d and d[0] == "LOG_FITTIZIO": modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(d[2]).date())
-            elif d: st.session_state.log_da_modificare = {"log_id": d[0], "current_op": d[1], "current_start": d[2], "current_end": d[3], "current_task_id": d[7], "current_note": d[6] if len(d) > 6 else ""}
+            elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
     
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
@@ -876,165 +872,9 @@ if l and tk and cm:
         if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
         if b6.button("Importa 📥", width='stretch'): import_excel_modal()
         st.markdown('</div>', unsafe_allow_html=True)
-        
-	# --- NUOVO PANNELLO DI GESTIONE LOG IN LINEA ---
-if st.session_state.log_da_modificare is not None:
-    # Recuperiamo i parametri salvati nello stato al momento del click
-    params = st.session_state.log_da_modificare
-    log_id = params.get("log_id")
-    current_op = params.get("current_op")
-    current_start = params.get("current_start")
-    current_end = params.get("current_end")
-    current_task_id = params.get("current_task_id")
-    
-    # Creiamo un contenitore con bordo per dare l'effetto di un modulo dedicato
-    with st.container(border=True):
-        st.subheader("📝 Gestione Dettaglio Log")
-        
-        # Caricamento dati ottimizzato con cache
-        cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
-        tag_data = get_cached_data("Tag")
-        ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
-        tag_list = sorted([t['nome'] for t in tag_data])
-        
-        cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-        cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
-        mappa_tags = {t['nome']: t['id'] for t in tag_data}
-        id_to_tag_nome = {t['id']: t['nome'] for t in tag_data}
-        
-        current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
-        
-        if not current_task_info:
-            st.error("Dati task non trovati.")
-            if st.button("Chiudi"):
-                st.session_state.log_da_modificare = None
-                st.rerun()
-        else:
-            curr_cm_id = current_task_info['commessa_id']
-            curr_cm_nome = cms_id_to_nome.get(curr_cm_id, list(cms_dict.keys())[0])
-
-            st.info("💡 Seleziona i log che desideri spostare spuntando la casella 'Sposta' nella tabella, poi scegli la destinazione sopra.")
-            col_c, col_t, col_s = st.columns(3)
-            
-            with col_c:
-                list_cm = list(cms_dict.keys())
-                sel_cm_nome = st.selectbox("Destinazione Commessa:", options=list_cm, index=list_cm.index(curr_cm_nome), key="ed_cm")
-                sel_cm_id = cms_dict[sel_cm_nome]
-            
-            with col_t:
-                tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
-                task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
-                list_tk = list(task_opts.keys())
-                idx_tk = list_tk.index(current_task_info['nome_task']) if current_task_info['nome_task'] in list_tk else 0
-                sel_task_nome = st.selectbox("Destinazione Task:", options=list_tk, index=idx_tk, key="ed_tk")
-                id_task_target = task_opts[sel_task_nome]
-
-            with col_s:
-                current_status = next((t['stato'] for t in tasks_filtrati if t['nome_task'] == sel_task_nome), STATI_TASK[0])
-                nuovo_stato_task = st.selectbox("Aggiorna Stato Task Destinazione:", options=STATI_TASK, index=STATI_TASK.index(current_status))
-
-            st.divider()
-            
-            # Recupero log da Supabase per l'operatore/task corrente
-            all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
-            df_sub = pd.DataFrame(all_logs)
-            
-            if not df_sub.empty:
-                ordine_colonne = ["operatore", "tag", "note", "inizio", "fine", "ora_i", "ora_f", "id", "task_id"]
-                df_sub = df_sub[ordine_colonne]
-                
-                if 'tag' in df_sub.columns:
-                    df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
-                
-                df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
-                df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
-                
-                # Sblocco nativo colonna ora_f per log aperti
-                df_sub['era_aperto'] = df_sub['ora_f'].isna() | (df_sub['ora_f'] == "")
-                df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i'), format='%H:%M:%S', errors='coerce').dt.time
-                ora_f_parsed = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time
-                df_sub['ora_f'] = ora_f_parsed.fillna(time(0, 0))
-                
-                mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
-                df_sub = df_sub[mask].copy()
-                
-                df_sub["Sposta"] = False
-                df_sub["Elimina"] = False
-
-            if df_sub.empty:
-                st.warning("Nessun log trovato in questo intervallo.")
-                if st.button("Annulla"):
-                    st.session_state.log_da_modificare = None
-                    st.rerun()
-            else:
-                # Il data_editor qui risulterà sbloccato e reattivo al 100%
-                edited_df = st.data_editor(
-                    df_sub,
-                    column_config={
-                        "id": None, "task_id": None, "era_aperto": None,
-                        "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
-                        "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"), 
-                        "note": st.column_config.TextColumn("Note", width="large"),
-                        "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
-                        "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
-                        "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"),
-                        "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm"),
-                        "Sposta": st.column_config.CheckboxColumn("Sposta ➡️", default=False),
-                        "Elimina": st.column_config.CheckboxColumn("Elimina 🗑️", default=False)
-                    },
-                    disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v12"
-                )
-                
-                c1, c2 = st.columns(2)
-                if c1.button("Salva Tutto", type="primary", width='stretch'):
-                    supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
-                    
-                    for _, row in edited_df.iterrows():
-                        if row["Elimina"]: 
-                            supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
-                        else:
-                            nome_tag_selezionato = row["tag"]
-                            id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
-
-                            inizio_val = str(row["inizio"]) if pd.notna(row["inizio"]) else None
-                            fine_val = str(row["fine"]) if pd.notna(row["fine"]) else None
-                            
-                            ora_i_val = None
-                            if pd.notna(row["ora_i"]):
-                                ora_i_val = row["ora_i"].strftime("%H:%M:%S") if hasattr(row["ora_i"], "strftime") else str(row["ora_i"])
-                            
-                            ora_f_val = None
-                            if pd.notna(row["ora_f"]):
-                                corrente_ora_f = row["ora_f"]
-                                if row["era_aperto"] and corrente_ora_f == time(0, 0):
-                                    ora_f_val = None
-                                else:
-                                    ora_f_val = corrente_ora_f.strftime("%H:%M:%S") if hasattr(corrente_ora_f, "strftime") else str(corrente_ora_f)
-                            
-                            note_val = str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
-                            task_destinazione_id = id_task_target if row["Sposta"] else row["task_id"]
-                            
-                            supabase.table("Log_Tempi").update({
-                                "task_id": task_destinazione_id, "operatore": row["operatore"], "tag": id_tag_da_salvare,
-                                "inizio": inizio_val, "fine": fine_val, "ora_i": ora_i_val, "ora_f": ora_f_val, "note": note_val
-                            }).eq("id", row["id"]).execute()
-                            
-                    # Pulizia stato e cache prima del reset grafico
-                    st.session_state.log_da_modificare = None
-                    get_cached_data.clear()
-                    st.cache_data.clear()
-                    st.session_state.chart_key += 1
-                    st.toast("🚀 Modifiche applicate con successo!")
-                    st.rerun()
-
-                if c2.button("Annulla / Chiudi", width='stretch'):
-                    st.session_state.log_da_modificare = None
-                    st.rerun()
-    st.divider() # Linea di separazione estetica
-    
+		
     # --- SEZIONE LOG APERTI ---
-log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None') | (df['ora_f'] == '')] # Filtra log senza fine
-if not log_aperti.empty:
+    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
     st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
     for _, row in log_aperti.iterrows():
         with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
@@ -1056,14 +896,14 @@ if not log_aperti.empty:
                 st.rerun()
                 
             if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
-                ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
-                # 1. Chiudo il log attuale
-                supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-                get_cached_data.clear()
-                # 2. Apro la modale per lo stesso task
-                modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
+                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                    # 1. Chiudo il log attuale
+                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                    get_cached_data.clear()
+                    # 2. Apro la modale per lo stesso task
+                    modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
 
-	# --- FILTRAGGIO DATI ---
+    # --- FILTRAGGIO DATI ---
     df_p = df.copy()
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
@@ -1092,8 +932,7 @@ with tabs[0]:
         else:
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-            colori_ops = {nome: '#8dbad2' for nome in ops_list}
-        render_gantt_fragment(df_p, colori_ops, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
         
 with tabs[1]: 
     if not df.empty:
