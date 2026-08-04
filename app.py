@@ -112,245 +112,6 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
         st.error(f"Errore: {e}")
 
 # --- 5. MODALI ---
-@st.dialog("Gestione Task & Log", width="large")
-def modal_gestione_clic(task_id, data_clic):
-    cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
-    task_info = next((t for t in tk_data if t['id'] == task_id), None)
-    if not task_info: st.error("Task non trovato."); return
-    commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
-    tags_data = get_cached_data("Tag")
-    lista_tag = sorted([t['nome'] for t in tags_data])
-    mappa_tags = {t['nome']: t['id'] for t in tags_data}
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        with st.expander("🏗️ Modifica Anagrafica", expanded=True):
-            new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''))
-            new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])))
-            if commessa_info:
-                new_cm_name = st.text_input("Nome Commessa", value=commessa_info.get('nome_commessa', ''))
-                new_cm_status = st.selectbox("Stato Commessa", options=STATI_COMMESSA, index=STATI_COMMESSA.index(commessa_info.get('stato', STATI_COMMESSA[0])))
-            if st.button("Salva Modifiche", width='stretch'):
-                supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
-                if commessa_info: supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_info['id']).execute()
-                get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-    with col2:
-        with st.expander("📑 Nuovo Task con Log", expanded=True):
-            cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-            lista_nomi_cm = list(cms_dict.keys())
-            idx_default = lista_nomi_cm.index(commessa_info['nome_commessa']) if commessa_info and commessa_info['nome_commessa'] in lista_nomi_cm else 0
-            lista_scelte_cm = lista_nomi_cm + ["➕ Nuova Commessa..."]
-            sel_cm = st.selectbox("Commessa di destinazione", options=lista_scelte_cm, index=idx_default)
-        
-            nome_nuova_cm = st.text_input("Nome della Nuova Commessa") if sel_cm == "➕ Nuova Commessa..." else ""
-            nome_nuovo_tk = st.text_input("Nome del Nuovo Task")
-            new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat")
-            ops = [o['nome'] for o in get_cached_data("Operatori")]
-            op_sel_t = st.multiselect("Seleziona Operatore", ops, default=op_def)
-            tag_scelti_t = st.selectbox("Seleziona Tag", options=lista_tag, index=None, key="tag_sclt_t")
-            id_tag_scelto_t = mappa_tags.get(tag_scelti_t)
-        
-            date_range_t = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY")
-        
-            ot1, ot2 = st.columns(2) 
-            if ot1.checkbox("Usa ora attuale", value=True, key="ao_i_t"):
-                ora_i_t = datetime.now(tz).time()
-                st.info(f"Verrà registrato l'orario d'inizio: {ora_i_t.strftime('%H:%M')}")
-            else:
-                ora_i_t = ot1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
-
-            if ot2.checkbox("Log aperto", value=True, key="ao_f_t"):
-                ora_f_t = None
-            else:
-                ora_f_t = ot2.time_input("Ora Fine", value=time(17, 0), key="o_f_t")
-                
-            nota_t = st.text_input("Nota log")  
-            c1, c2 = st.columns(2)
-            if c1.button("Registra Task", type="primary", width='stretch'):
-                if not op_sel_t or len(date_range_t) < 2: st.warning("Seleziona operatore e range date valido.")
-                else:
-                    data_inizio_t, data_fine_t = date_range_t
-                    curr_cm_id = cms_dict.get(sel_cm)
-                    if sel_cm == "➕ Nuova Commessa...":
-                        if not nome_nuova_cm: st.error("Inserisci nome commessa"); return
-                        res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
-                        curr_cm_id = res_cm.data[0]['id']
-                    if not nome_nuovo_tk: st.error("Inserisci nome task"); return
-                    res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
-                    final_task_id = res_tk.data[0]['id']
-
-                    nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None, "note": nota_t, "tag": id_tag_scelto_t} for op in op_sel_t]
-                    supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
-                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-        
-            if c2.button("Annulla", width='stretch', key="annulla_t"): st.session_state.chart_key += 1; st.rerun()
-    with col3:    
-        with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
-            nome_commessa = commessa_info.get('nome_commessa', 'Non specificata')
-            nome_task = task_info.get('nome_task', 'Senza nome')
-            st.info(f"📋 **Commessa:** {nome_commessa}  \n **Task:** {nome_task}")
-        
-            date_range_l = st.date_input("Periodo Log", value=(data_clic, data_clic), format="DD/MM/YYYY", key="date_range_l")
-
-            ol1, ol2 = st.columns(2) 
-            if ol1.checkbox("Usa ora attuale", value=True, key="ao_i_l"):
-                ora_i_l = datetime.now(tz).time()
-                st.info(f"Verrà registrato l'orario d'inizio: {ora_i_l.strftime('%H:%M')}")
-            else:
-                ora_i_l = ol1.time_input("Ora Inizio", value=time(8, 0), key="o_i_t")
-
-            if ol2.checkbox("Log aperto", value=True, key="ao_f_l"):
-                ora_f_l = None
-            else:
-                ora_f_l = ol2.time_input("Ora Fine", value=time(17, 0), key="o_f_l")
-        
-            ops = [o['nome'] for o in get_cached_data("Operatori")]
-            op_sel_l = st.multiselect("Seleziona Operatore", ops, default=op_def, key="op_sel_l")
-            tag_scelti_l = st.selectbox("Seleziona Tag", options=lista_tag, index=None, key="tag_scelti_l")
-            id_tag_scelto_l = mappa_tags.get(tag_scelti_l)
-            new_tk_status_2 = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="newtkstat2")
-            nota_l = st.text_input("Nota log", key="nota_l")
-            c1, c2 = st.columns(2)
-            if c1.button("Registra Log", type="primary", width='stretch', key="regista_l"):
-                supabase.table("Task").update({"stato": new_tk_status_2}).eq("id", task_id).execute()
-                if not op_sel_l or len(date_range_l) < 2: st.warning("Seleziona operatore e range date.")
-                else:
-                    data_inizio_l, data_fine_l = date_range_l
-                    nuovi_log_l = [{"task_id": task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l), "ora_i": ora_i_l.strftime('%H:%M:%S'), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None, "note": nota_l, "tag": id_tag_scelto_l} for op in op_sel_l]
-                    supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
-                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-        
-            if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.chart_key += 1; st.rerun()
-        
-@st.dialog("📝 Gestione Dettaglio Log")
-def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
-    st.markdown("""<style>div[data-testid="stDialog"] div[role="dialog"] { width: 90vw !important; max-width: 1300px !important; }</style>""", unsafe_allow_html=True)
-    
-    cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
-    ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
-    tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
-    cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-    cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
-    res_tags = supabase.table("Tag").select("id, nome").execute()
-    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
-    
-    current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
-    if not current_task_info: st.error("Dati task non trovati."); return
-    
-    curr_cm_id = current_task_info['commessa_id']
-    curr_cm_nome = cms_id_to_nome.get(curr_cm_id, list(cms_dict.keys())[0])
-
-    st.info("💡 Modifica i dettagli qui sotto. Se cambi 'Commessa/Task' sopra, sposterai TUTTI i log visualizzati.")
-    col_c, col_t, col_s = st.columns(3)
-    
-    with col_c:
-        list_cm = list(cms_dict.keys())
-        sel_cm_nome = st.selectbox("Sposta in Commessa:", options=list_cm, index=list_cm.index(curr_cm_nome), key="ed_cm")
-        sel_cm_id = cms_dict[sel_cm_nome]
-    
-    with col_t:
-        tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
-        task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
-        list_tk = list(task_opts.keys())
-        idx_tk = list_tk.index(current_task_info['nome_task']) if current_task_info['nome_task'] in list_tk else 0
-        sel_task_nome = st.selectbox("Sposta in Task:", options=list_tk, index=idx_tk, key="ed_tk")
-        id_task_target = task_opts[sel_task_nome]
-
-    with col_s:
-        current_status = next((t['stato'] for t in tasks_filtrati if t['nome_task'] == sel_task_nome), STATI_TASK[0])
-        nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_status))
-
-    st.divider()
-    
-    id_to_tag_nome = {t['id']: t['nome'] for t in res_tags.data}
-    all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
-    
-    df_sub = pd.DataFrame(all_logs)
-    
-    ordine_colonne = [
-        "operatore",
-        "tag",
-	    "note",
-        "inizio", 
-        "fine", 
-        "ora_i", 
-        "ora_f",   
-        "id", 
-        "task_id"
-    ]
-    df_sub = df_sub[ordine_colonne]
-    
-    if not df_sub.empty and 'tag' in df_sub.columns:
-    # Trasformiamo la colonna tag usando la mappa inversa
-        df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
-    
-    if not df_sub.empty:
-        df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
-        df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
-        
-        # Gestione Parsing Orari DB 
-        df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i'), format='%H:%M:%S', errors='coerce').dt.time
-        df_sub['era_aperto'] = df_sub['ora_f'].isna() | (df_sub['ora_f'] == "")
-        ora_f_parsed = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time
-        df_sub['ora_f'] = ora_f_parsed.fillna(time(0, 0))
-        
-        mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
-        df_sub = df_sub[mask].copy()
-        df_sub["Sposta"] = False
-        df_sub["Elimina"] = False
-
-    if df_sub.empty: st.warning("Nessun log trovato."); return
-
-    edited_df = st.data_editor(
-        df_sub,
-        column_config={
-            "id": None, "task_id": None,"era_aperto": None,
-            "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
-            "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"), 
-            "note": st.column_config.TextColumn("Note", width="large"),
-            "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
-            "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
-            "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"),
-            "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm"),
-            "Sposta": st.column_config.CheckboxColumn("Sposta ➡️", default=False, help="Spunta per spostare questo specifico log nella nuova destinazione selezionata sopra"),
-            "Elimina": st.column_config.CheckboxColumn("Elimina", default=False)
-        },
-        disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_v10"
-    )
-    
-    c1, c2 = st.columns(2)
-    if c1.button("Salva Tutto", type="primary", width='stretch'):
-        supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
-        for _, row in edited_df.iterrows():
-            if row["Elimina"]: supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
-            else:
-                nome_tag_selezionato = row["tag"]
-                id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
-
-                inizio_val = str(row["inizio"]) if pd.notna(row["inizio"]) else None
-                fine_val = str(row["fine"]) if pd.notna(row["fine"]) else None
-                ora_i_val = str(row["ora_i"]) if pd.notna(row["ora_i"]) else None
-                ora_f_val = None
-                if pd.notna(row["ora_f"]):
-                    corrente_ora_f = row["ora_f"]
-                    if row["era_aperto"] and corrente_ora_f == time(0, 0):
-                        ora_f_val = None
-                    else:
-                        ora_f_val = corrente_ora_f.strftime("%H:%M:%S") if hasattr(corrente_ora_f, "strftime") else str(corrente_ora_f)
-                note_val = str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
-
-                task_destinazione_id = id_task_target if row["Sposta"] else row["task_id"]
-                
-                supabase.table("Log_Tempi").update({
-                    "task_id": task_destinazione_id, "operatore": row["operatore"], "tag": id_tag_da_salvare,
-                    "inizio": inizio_val, "fine": fine_val,
-                    "ora_i": ora_i_val, "ora_f": ora_f_val,
-                    "note": note_val
-                }).eq("id", row["id"]).execute()
-        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-
-    if c2.button("Annulla", width='stretch'): st.session_state.chart_key += 1; st.rerun()
-
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
     n = st.text_input("Nome Commessa")
@@ -756,8 +517,24 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
         pts = selected["selection"]["points"]
         if pts:
             d = pts[0].get("customdata", [])
-            if d and d[0] == "LOG_FITTIZIO": modal_gestione_clic(task_id=d[1], data_clic=pd.to_datetime(d[2]).date())
-            elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
+            if d and d[0] == "LOG_FITTIZIO":
+                st.session_state["gantt_click_action"] = {
+                    "type": "new_log",
+                    "task_id": d[1],
+                    "data_clic": pd.to_datetime(d[2]).date()
+                }
+                st.rerun()
+            elif d:
+                st.session_state["gantt_click_action"] = {
+                    "type": "edit_log",
+                    "log_id": d[0],
+                    "operatore": d[1],
+                    "inizio": d[2],
+                    "fine": d[3],
+                    "task_id": d[7],
+                    "note": d[6]
+                }
+                st.rerun()
     
 # --- 8. MAIN UI ---
 l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
@@ -872,7 +649,244 @@ if l and tk and cm:
         if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
         if b6.button("Importa 📥", width='stretch'): import_excel_modal()
         st.markdown('</div>', unsafe_allow_html=True)
-		
+	# --- NUOVO COMPONENTE EXPANDER UNICO PER GESTIONE E EDIT LOG ---
+def render_expander_gestione_log():
+    # Recuperiamo l'azione eventualmente attivata dal clic sul Gantt
+    click_action = st.session_state.get("gantt_click_action", None)
+    is_expanded = click_action is not None
+
+    expander_title = "🛠️ Pannello Gestione & Inserimento Log / Task"
+    if click_action:
+        if click_action["type"] == "edit_log":
+            expander_title = f"✏️ Modifica Log (ID: {click_action['log_id']} - Op: {click_action['operatore']})"
+        elif click_action["type"] == "new_log":
+            expander_title = f"⏱️ Nuovo Log per la data: {click_action['data_clic'].strftime('%d/%m/%Y')}"
+
+    with st.expander(expander_title, expanded=is_expanded):
+        tab_edit, tab_new_tk, tab_new_log = st.tabs([
+            "📝 Modifica Dettaglio Log", 
+            "📑 Nuovo Task con Log", 
+            "⏱️ Inserimento / Nuovo Log"
+        ])
+
+        cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
+        tags_data = get_cached_data("Tag")
+        ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
+        lista_tag = sorted([t['nome'] for t in tags_data])
+        mappa_tags = {t['nome']: t['id'] for t in tags_data}
+        cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+        cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
+
+        # --- TAB 1: EDIT LOG ESISTENTE ---
+        with tab_edit:
+            if click_action and click_action["type"] == "edit_log":
+                log_id = click_action["log_id"]
+                current_op = click_action["operatore"]
+                current_start = click_action["inizio"]
+                current_end = click_action["fine"]
+                current_task_id = click_action["task_id"]
+
+                current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
+                if current_task_info:
+                    curr_cm_id = current_task_info['commessa_id']
+                    curr_cm_nome = cms_id_to_nome.get(curr_cm_id, list(cms_dict.keys())[0])
+
+                    col_c, col_t, col_s = st.columns(3)
+                    with col_c:
+                        list_cm = list(cms_dict.keys())
+                        sel_cm_nome = st.selectbox("Sposta in Commessa:", options=list_cm, index=list_cm.index(curr_cm_nome), key="exp_ed_cm")
+                        sel_cm_id = cms_dict[sel_cm_nome]
+                    
+                    with col_t:
+                        tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
+                        task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
+                        list_tk = list(task_opts.keys())
+                        idx_tk = list_tk.index(current_task_info['nome_task']) if current_task_info['nome_task'] in list_tk else 0
+                        sel_task_nome = st.selectbox("Sposta in Task:", options=list_tk, index=idx_tk, key="exp_ed_tk")
+                        id_task_target = task_opts[sel_task_nome]
+
+                    with col_s:
+                        current_status = next((t['stato'] for t in tasks_filtrati if t['nome_task'] == sel_task_nome), STATI_TASK[0])
+                        nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_status), key="exp_ed_st")
+
+                    id_to_tag_nome = {t['id']: t['nome'] for t in tags_data}
+                    all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
+                    df_sub = pd.DataFrame(all_logs)
+
+                    if not df_sub.empty:
+                        ordine_colonne = ["operatore", "tag", "note", "inizio", "fine", "ora_i", "ora_f", "id", "task_id"]
+                        df_sub = df_sub[ordine_colonne]
+                        if 'tag' in df_sub.columns:
+                            df_sub['tag'] = df_sub['tag'].map(id_to_tag_nome)
+                        
+                        df_sub['inizio'] = pd.to_datetime(df_sub['inizio']).dt.date
+                        df_sub['fine'] = pd.to_datetime(df_sub['fine']).dt.date
+                        df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i'), format='%H:%M:%S', errors='coerce').dt.time
+                        df_sub['era_aperto'] = df_sub['ora_f'].isna() | (df_sub['ora_f'] == "")
+                        ora_f_parsed = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time
+                        df_sub['ora_f'] = ora_f_parsed.fillna(time(0, 0))
+                        
+                        mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
+                        df_sub = df_sub[mask].copy()
+                        df_sub["Sposta"] = False
+                        df_sub["Elimina"] = False
+
+                        edited_df = st.data_editor(
+                            df_sub,
+                            column_config={
+                                "id": None, "task_id": None, "era_aperto": None,
+                                "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+                                "tag": st.column_config.SelectboxColumn("Tag", options=lista_tag, width="medium"), 
+                                "note": st.column_config.TextColumn("Note", width="large"),
+                                "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
+                                "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
+                                "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"),
+                                "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm"),
+                                "Sposta": st.column_config.CheckboxColumn("Sposta ➡️"),
+                                "Elimina": st.column_config.CheckboxColumn("Elimina")
+                            },
+                            disabled=["id", "task_id"], width='stretch', hide_index=True, key="editor_expander_v1"
+                        )
+
+                        c1, c2 = st.columns(2)
+                        if c1.button("Salva Modifiche Log", type="primary", width='stretch', key="btn_exp_save_log"):
+                            supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
+                            for _, row in edited_df.iterrows():
+                                if row["Elimina"]:
+                                    supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
+                                else:
+                                    id_tag_da_salvare = mappa_tags.get(row["tag"])
+                                    inizio_val = str(row["inizio"]) if pd.notna(row["inizio"]) else None
+                                    fine_val = str(row["fine"]) if pd.notna(row["fine"]) else None
+                                    ora_i_val = str(row["ora_i"]) if pd.notna(row["ora_i"]) else None
+                                    ora_f_val = None
+                                    if pd.notna(row["ora_f"]):
+                                        corrente_ora_f = row["ora_f"]
+                                        if row["era_aperto"] and corrente_ora_f == time(0, 0):
+                                            ora_f_val = None
+                                        else:
+                                            ora_f_val = corrente_ora_f.strftime("%H:%M:%S") if hasattr(corrente_ora_f, "strftime") else str(corrente_ora_f)
+                                    note_val = str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
+
+                                    task_destinazione_id = id_task_target if row["Sposta"] else row["task_id"]
+                                    
+                                    supabase.table("Log_Tempi").update({
+                                        "task_id": task_destinazione_id, "operatore": row["operatore"], "tag": id_tag_da_salvare,
+                                        "inizio": inizio_val, "fine": fine_val, "ora_i": ora_i_val, "ora_f": ora_f_val, "note": note_val
+                                    }).eq("id", row["id"]).execute()
+
+                            st.session_state.pop("gantt_click_action", None)
+                            get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+
+                        if c2.button("Chiudi", width='stretch', key="btn_exp_close_log"):
+                            st.session_state.pop("gantt_click_action", None)
+                            st.rerun()
+            else:
+                st.info("💡 Fai clic su una barra del Gantt per caricare ed modificare i log selezionati.")
+
+        # --- TAB 2: NUOVO TASK CON LOG ---
+        with tab_new_tk:
+            c1, c2 = st.columns(2)
+            with c1:
+                lista_nomi_cm = list(cms_dict.keys())
+                lista_scelte_cm = lista_nomi_cm + ["➕ Nuova Commessa..."]
+                sel_cm = st.selectbox("Commessa", options=lista_scelte_cm, key="exp_nt_cm")
+                nome_nuova_cm = st.text_input("Nome Nuova Commessa", key="exp_nt_ncm") if sel_cm == "➕ Nuova Commessa..." else ""
+                nome_nuovo_tk = st.text_input("Nome Nuovo Task", key="exp_nt_ntk")
+                new_tk_status_1 = st.selectbox("Stato Task", options=STATI_TASK, index=0, key="exp_nt_st")
+            with c2:
+                op_sel_t = st.multiselect("Operatore/i", ops_list, default=[op_def] if op_def in ops_list else [], key="exp_nt_op")
+                tag_scelti_t = st.selectbox("Tag", options=lista_tag, index=None, key="exp_nt_tag")
+                id_tag_scelto_t = mappa_tags.get(tag_scelti_t)
+                
+                def_date = click_action["data_clic"] if (click_action and click_action["type"] == "new_log") else datetime.now().date()
+                date_range_t = st.date_input("Periodo Log", value=(def_date, def_date), format="DD/MM/YYYY", key="exp_nt_dr")
+                
+                ot1, ot2 = st.columns(2)
+                ora_i_t = ot1.time_input("Ora Inizio", value=time(8, 0), key="exp_nt_oi")
+                ora_f_t = None if ot2.checkbox("Log aperto", value=True, key="exp_nt_open") else ot2.time_input("Ora Fine", value=time(17, 0), key="exp_nt_of")
+                nota_t = st.text_input("Nota log", key="exp_nt_note")
+
+            if st.button("Registra Nuovo Task e Log", type="primary", width='stretch', key="btn_exp_add_tk"):
+                if not op_sel_t or len(date_range_t) < 2:
+                    st.warning("Seleziona operatore e periodo valido.")
+                else:
+                    data_inizio_t, data_fine_t = date_range_t
+                    curr_cm_id = cms_dict.get(sel_cm)
+                    if sel_cm == "➕ Nuova Commessa...":
+                        if not nome_nuova_cm: st.error("Inserisci il nome della commessa."); st.stop()
+                        res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
+                        curr_cm_id = res_cm.data[0]['id']
+                    
+                    if not nome_nuovo_tk: st.error("Inserisci il nome del task."); st.stop()
+                    res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
+                    final_task_id = res_tk.data[0]['id']
+
+                    nuovi_log_t = [{
+                        "task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t),
+                        "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None,
+                        "note": nota_t, "tag": id_tag_scelto_t
+                    } for op in op_sel_t]
+                    
+                    supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
+                    st.session_state.pop("gantt_click_action", None)
+                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+
+        # --- TAB 3: INSERIMENTO NUOVO LOG SU TASK ESISTENTE ---
+        with tab_new_log:
+            c1, c2 = st.columns(2)
+            with c1:
+                def_task_id = click_action["task_id"] if (click_action and click_action["type"] == "new_log") else None
+                def_task_info = next((t for t in tk_data if t['id'] == def_task_id), None)
+                def_cm_id = def_task_info['commessa_id'] if def_task_info else None
+                
+                cm_options = list(cms_dict.keys())
+                cm_idx = cm_options.index(cms_id_to_nome[def_cm_id]) if (def_cm_id and def_cm_id in cms_id_to_nome) else 0
+                sel_cm_nl = st.selectbox("Commessa Destinazione", options=cm_options, index=cm_idx, key="exp_nl_cm")
+                
+                target_cm_id = cms_dict[sel_cm_nl]
+                tasks_cm = [t for t in tk_data if t['commessa_id'] == target_cm_id]
+                tk_options = {t['nome_task']: t['id'] for t in tasks_cm}
+                
+                if tk_options:
+                    tk_list = list(tk_options.keys())
+                    def_tk_idx = tk_list.index(def_task_info['nome_task']) if (def_task_info and def_task_info['nome_task'] in tk_list) else 0
+                    sel_tk_nl = st.selectbox("Task Destinazione", options=tk_list, index=def_tk_idx, key="exp_nl_tk")
+                    target_task_id = tk_options[sel_tk_nl]
+                else:
+                    st.warning("Nessun task per questa commessa.")
+                    target_task_id = None
+
+            with c2:
+                op_sel_l = st.multiselect("Operatore/i", ops_list, default=[op_def] if op_def in ops_list else [], key="exp_nl_op")
+                tag_scelti_l = st.selectbox("Tag", options=lista_tag, index=None, key="exp_nl_tag")
+                id_tag_scelto_l = mappa_tags.get(tag_scelti_l)
+                
+                def_date_l = click_action["data_clic"] if (click_action and click_action["type"] == "new_log") else datetime.now().date()
+                date_range_l = st.date_input("Periodo Log", value=(def_date_l, def_date_l), format="DD/MM/YYYY", key="exp_nl_dr")
+                
+                ol1, ol2 = st.columns(2)
+                ora_i_l = ol1.time_input("Ora Inizio", value=time(8, 0), key="exp_nl_oi")
+                ora_f_l = None if ol2.checkbox("Log aperto", value=True, key="exp_nl_open") else ol2.time_input("Ora Fine", value=time(17, 0), key="exp_nl_of")
+                nota_l = st.text_input("Nota log", key="exp_nl_note")
+
+            if st.button("Registra Log", type="primary", width='stretch', key="btn_exp_add_log"):
+                if not target_task_id:
+                    st.error("Seleziona un Task valido.")
+                elif not op_sel_l or len(date_range_l) < 2:
+                    st.warning("Seleziona operatore e periodo valido.")
+                else:
+                    data_inizio_l, data_fine_l = date_range_l
+                    nuovi_log_l = [{
+                        "task_id": target_task_id, "operatore": op, "inizio": str(data_inizio_l), "fine": str(data_fine_l),
+                        "ora_i": ora_i_l.strftime('%H:%M:%S'), "ora_f": ora_f_l.strftime('%H:%M:%S') if ora_f_l else None,
+                        "note": nota_l, "tag": id_tag_scelto_l
+                    } for op in op_sel_l]
+
+                    supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
+                    st.session_state.pop("gantt_click_action", None)
+                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+                    
     # --- SEZIONE LOG APERTI ---
     log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
     st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
