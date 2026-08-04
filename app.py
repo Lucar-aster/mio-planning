@@ -30,8 +30,10 @@ supabase = init_connection()
 
 @st.cache_data
 def get_cached_data(table):
-    try: return supabase.table(table).select("*").execute().data
-    except: return []
+    try: 
+        return supabase.table(table).select("*").execute().data
+    except Exception: 
+        return []
 
 if 'chart_key' not in st.session_state:
     st.session_state.chart_key = 0
@@ -41,11 +43,12 @@ if 'vista_compressa' not in st.session_state:
 # --- 2. CSS ---
 st.markdown(f"""
     <head>
-        <link rel="icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" type="image/png">
-        <link rel="shortcut icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png" type="image/png">
-        <link rel="apple-touch-icon" href="https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png">
+        <link rel="icon" href="{LOGO_URL}" type="image/png">
+        <link rel="shortcut icon" href="{LOGO_URL}" type="image/png">
+        <link rel="apple-touch-icon" href="{LOGO_URL}">
     </head>
 """, unsafe_allow_html=True)
+
 def local_css(file_name):
     if os.path.exists(file_name):
         with open(file_name) as f:
@@ -66,6 +69,7 @@ with header_col1:
     """, unsafe_allow_html=True)
     opsn = [o['nome'] for o in get_cached_data("Operatori")]
     op_def = st.selectbox("Operatore Attivo", opsn, label_visibility="collapsed") if opsn else ""
+
 with header_col2:
     ops = get_cached_data("Operatori")
     tags = get_cached_data("Tag")
@@ -82,7 +86,7 @@ with header_col2:
             <div class="legend-row"><span class="legend-label">🔖 Tag</span>{tag_html}</div>
         </div>
     """, unsafe_allow_html=True)
-    
+
 # --- 4. FUNZIONI DI AGGIORNAMENTO DB (SETUP) ---
 def aggiorna_database_setup(nome_tabella, edited_df, original_df):
     try:
@@ -90,7 +94,8 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
         ids_attuali = set(edited_df['id'].dropna().tolist())
         ids_da_eliminare = ids_originali - ids_attuali
         
-        for idx in ids_da_eliminare: supabase.table(nome_tabella).delete().eq("id", idx).execute()
+        for idx in ids_da_eliminare: 
+            supabase.table(nome_tabella).delete().eq("id", idx).execute()
 
         for _, row in edited_df.iterrows():
             row_dict = row.dropna().to_dict()
@@ -117,7 +122,8 @@ def modal_commessa():
     s = st.selectbox("Stato", options=STATI_COMMESSA, index=1)
     if st.button("Salva", width='stretch'):
         supabase.table("Commesse").insert({"nome_commessa": n, "stato": s}).execute()
-        get_cached_data.clear(); st.rerun()
+        get_cached_data.clear()
+        st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
@@ -139,7 +145,8 @@ def modal_log():
     sel_task = st.selectbox("Task", options=task_list, key="new_log_tk_sb")
     
     new_task_name, default_status_index = "", 1 
-    if sel_task == "➕ Aggiungi nuovo task...": new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti")
+    if sel_task == "➕ Aggiungi nuovo task...": 
+        new_task_name = st.text_input("Inserisci nome nuovo task", key="new_log_new_tk_ti")
     else:
         current_status = task_status_map.get(sel_task, STATI_TASK[1])
         if current_status in STATI_TASK: default_status_index = STATI_TASK.index(current_status)
@@ -769,7 +776,7 @@ if l and tk and cm:
             t = pd.to_datetime(t_str, format='%H:%M:%S', errors='coerce').time()
             if pd.isna(t): return 0.0
             return (t.hour + t.minute / 60.0 - 7.0) / 12.0
-        except: return None
+        except Exception: return None
 
     def calcola_logica_visuale(row):
         f_i = orario_a_frazione(row['ora_i'])
@@ -926,7 +933,7 @@ with tabs[1]:
                 e_date = f"{row['Fine'].strftime('%Y-%m-%d')}T{row['ora_f']}"
                 
                 cal_events.append({"id": str(row["id"]), "title": clean_title, "start": s_date, "end": e_date, "color": color_map.get(row["operatore"], "#3D85C6"), "allDay": True, "extendedProps": {"nota": clean_note}})
-            except: continue
+            except Exception: continue
 
         cal_options = {"initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 500, "views": {"multiMonthYear": {"duration": {"months": 2}}}, "height": "auto", "contentHeight": "auto", "aspectRatio": 1.3, "expandRows": False, "locale": "it", "firstDay": 1, "weekNumbers": True, "weekText": "Sett.", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "multiMonthYear,dayGridMonth,timeGridWeek"}, "editable": False, "selectable": True}
         st.markdown("""<style>.fc .fc-multimonth-month {padding: 0px !important; margin-bottom: 2px !important;} .fc .fc-daygrid-day-frame {min-height: 35px !important; max-height: 120px !important;} .fc .fc-daygrid-day-top {flex-direction: row !important; font-size: 0.85em !important;} .fc-daygrid-event {margin-top: 0px !important; margin-bottom: 1px !important; padding: 0px 2px !important; font-size: 0.8em !important;} .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;} iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 1500px !important; height: 1500px !important;}</style>""", unsafe_allow_html=True)
@@ -958,7 +965,7 @@ with tabs[2]:
                 s_date = f"{row['Inizio'].strftime('%Y-%m-%d')}T{row['ora_i']}"
                 e_date = f"{row['Fine'].strftime('%Y-%m-%d')}T{row['ora_f']}"
                 cal_events_agenda.append({"id": str(row["id"]), "title": clean_title, "start": s_date, "end": e_date, "color": color_map.get(row["operatore"], "#3D85C6"), "extendedProps": {"nota": clean_note}})
-            except: continue
+            except Exception: continue
 
         agenda_options = {"initialView": "listDay", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "listDay,listWeek,listMonth"}, "buttonText": {"listDay": "Giorno", "listWeek": "Settimana", "listMonth": "Mese"}, "noEventsContent": "Nessun task per questa data", "displayEventTime": True, "locale": "it", "height": 1000}
         calendar(events=cal_events_agenda, options=agenda_options, key="calendar_agenda_vertical")
@@ -1072,7 +1079,7 @@ with tabs[5]:
         if 'df_c' not in locals():
             data_c = get_cached_data("Commesse")
             df_c = pd.DataFrame(data_c) if data_c else pd.DataFrame()
-    except Exception as e:
+    except Exception:
         df_c = pd.DataFrame()
         
     if not df_p.empty:
@@ -1200,7 +1207,8 @@ with tabs[5]:
                     hex_val = hex_val.lstrip('#')
                     rgb = tuple(int(hex_val[i:i+2], 16) for i in (0, 2, 4))
                     return f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})'
-                except: return f'rgba(128, 128, 128, {alpha})'
+                except Exception: 
+                    return f'rgba(128, 128, 128, {alpha})'
 
             link_colors = [hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]]
 
