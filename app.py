@@ -888,7 +888,8 @@ if st.session_state.log_da_modificare is not None:
     current_task_id = params.get("current_task_id")
     
     # Creiamo un contenitore con bordo per dare l'effetto di un modulo dedicato
-    with st.expander("📝 Gestione Dettaglio Log", expanded=False):
+    with st.container(border=True):
+        st.subheader("📝 Gestione Dettaglio Log")
         
         # Caricamento dati ottimizzato con cache
         cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
