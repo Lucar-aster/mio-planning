@@ -1092,7 +1092,11 @@ with tabs[0]:
         else:
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
+			colori_ops = {
+                (o['nome'] if isinstance(o, dict) else str(o)): (o.get('colore', '#8dbad2') if isinstance(o, dict) else '#8dbad2')
+                for o in ops_list
+            } if ops_list else {}
+        render_gantt_fragment(df_p, colori_ops, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
         
 with tabs[1]: 
     if not df.empty:
