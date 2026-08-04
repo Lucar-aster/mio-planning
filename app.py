@@ -65,7 +65,7 @@ with header_col1:
         </div>
     """, unsafe_allow_html=True)
     opsn = [o['nome'] for o in get_cached_data("Operatori")]
-    op_def = st.selectbox("Operatore Attivo", opsn, label_visibility="collapsed")
+    op_def = st.selectbox("Operatore Attivo", opsn, label_visibility="collapsed") if opsn else ""
 with header_col2:
     ops = get_cached_data("Operatori")
     tags = get_cached_data("Tag")
@@ -94,7 +94,6 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
 
         for _, row in edited_df.iterrows():
             row_dict = row.dropna().to_dict()
-            # Puliamo oggetti non supportati da Supabase in fase di update
             for key, val in row_dict.items():
                 if isinstance(val, time): row_dict[key] = str(val)
                 if isinstance(val, datetime): row_dict[key] = str(val.date())
@@ -111,7 +110,7 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
     except Exception as e:
         st.error(f"Errore: {e}")
 
-# --- 5. MODALI ---
+# --- 5. MODALI SECONDARIE ---
 @st.dialog("➕ Nuova Commessa")
 def modal_commessa():
     n = st.text_input("Nome Commessa")
@@ -127,8 +126,9 @@ def modal_log():
     lista_tag = sorted([t['nome'] for t in tags_data])
     res_tags = supabase.table("Tag").select("id, nome").execute()
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
-    op_ms = st.multiselect("Operatore", options=ops_list, default=op_def, key="new_log_ops_ms")
+    op_ms = st.multiselect("Operatore", options=ops_list, default=[op_def] if op_def in ops_list else [], key="new_log_ops_ms")
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+    if not cms_dict: st.warning("Crea prima una commessa."); return
     sel_cm_nome = st.selectbox("Commessa", options=list(cms_dict.keys()), key="new_log_cm_sb")
     sel_cm_id = cms_dict[sel_cm_nome]
     tasks_filtrati = [t for t in tk_data if t['commessa_id'] == sel_cm_id]
@@ -187,11 +187,12 @@ def modal_log():
                     "ora_i": ora_i.strftime('%H:%M:%S'), "ora_f": str(ora_f) if ora_f else None, "note": nota, "tag": id_tag_scelto_lg
                 }).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-            
+
 @st.dialog("📂 Clona Commessa con Date")
 def modal_clona_avanzata():
     cm_data, tk_data, log_data = get_cached_data("Commesse"), get_cached_data("Task"), get_cached_data("Log_Tempi")
     cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
+    if not cms_dict: st.warning("Nessuna commessa presente."); return
     sel_cm_nome = st.selectbox("Seleziona la Commessa sorgente", list(cms_dict.keys()))
     nuovo_nome = st.text_input("Nome della nuova Commessa", value=f"{sel_cm_nome} (COPIA)")
     copia_log = st.checkbox("Copia anche i log tempi (Pianificazione)", value=False)
@@ -218,7 +219,7 @@ def modal_clona_avanzata():
                 nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "ora_i": l.get('ora_i', '08:00:00'), "ora_f": l.get('ora_f', '17:00:00'), "note": l.get('note', "")} for l in logs_vecchi]
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
             get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-            
+
 @st.dialog("📥 Importa Log da Excel")
 def import_excel_modal():
     st.write("Scarica il modello, compilalo e caricalo qui sotto.")
@@ -252,7 +253,6 @@ def import_excel_modal():
                     error_log = []
 
                     for idx, row in df_excel.iterrows():
-                        # A. Validazione Operatore
                         op_name = str(row.get('operatore', '')).strip().lower()
                         if op_name in ops_ref:
                             op_name_db = ops_ref[op_name]
@@ -260,7 +260,6 @@ def import_excel_modal():
                             st.warning(f"Riga {idx+2}: Operatore '{op_name}' non trovato.")
                             continue
 
-                        # B. Validazione Tag
                         t_name = str(row.get('tag', '')).strip().lower()
                         if t_name not in tags_ref:
                             st.warning(f"Riga {idx+2}: Tag '{t_name}' non trovato.")
@@ -288,12 +287,9 @@ def import_excel_modal():
                         try:
                             data_val = pd.to_datetime(row['data']).strftime('%Y-%m-%d')
                             def format_excel_time(val):
-                                if pd.isna(val):
-                                    return "00:00:00"
-                                if isinstance(val, time):
-                                    return val.strftime('%H:%M:%S')
-                                if hasattr(val, 'strftime'):
-                                    return val.strftime('%H:%M:%S')
+                                if pd.isna(val): return "00:00:00"
+                                if isinstance(val, time): return val.strftime('%H:%M:%S')
+                                if hasattr(val, 'strftime'): return val.strftime('%H:%M:%S')
                                 return str(val).strip()
 
                             ora_i_val = format_excel_time(row['ora_inizio'])
@@ -302,16 +298,10 @@ def import_excel_modal():
                             st.warning(f"Errore formato data/ora alla riga {idx+2}: {e}")
                             continue
 
-                        # E. Preparazione Log
                         logs_to_insert.append({
-                            "operatore": op_name_db,
-                            "inizio": data_val,
-                            "fine": data_val,
-                            "ora_i": ora_i_val,
-                            "ora_f": ora_f_val,
-                            "tag": tag_id,
-                            "task_id": task_id,
-                            "note": str(row['note']) if pd.notna(row['note']) else ""
+                            "operatore": op_name_db, "inizio": data_val, "fine": data_val,
+                            "ora_i": ora_i_val, "ora_f": ora_f_val, "tag": tag_id,
+                            "task_id": task_id, "note": str(row['note']) if pd.notna(row['note']) else ""
                         })
 
                     if logs_to_insert:
@@ -330,11 +320,10 @@ def import_excel_modal():
 
 def calcola_ore_evolute_12h(group, col_tag):
     intervalli = []
-    ORE_TOTALI_GIORNO = 12.0 # Nuova scala temporale 07-19 
+    ORE_TOTALI_GIORNO = 12.0 
     for _, r in group.iterrows():
         durata_lorda = (r['frac_f'] - r['frac_i']) * ORE_TOTALI_GIORNO      
         f_i, f_f = r['frac_i'], r['frac_f'] 
-        # LOGICA PAUSA PRANZO: 
         if durata_lorda >= 8.0:
             riduzione = 1.0 / ORE_TOTALI_GIORNO
             f_f = f_f - riduzione
@@ -353,21 +342,17 @@ def calcola_ore_evolute_12h(group, col_tag):
     for i in range(len(punti) - 1):
         p_inizio = punti[i]
         p_fine = punti[i+1]
-        
-        if p_fine == p_inizio:
-            continue
+        if p_fine == p_inizio: continue
         midpoint = (p_inizio + p_fine) / 2.0    
         task_attivi = [t for t in intervalli if t['inizio'] <= midpoint and t['fine'] >= midpoint]
         if task_attivi:
             num_task = len(task_attivi)
-            # Quota ore del segmento: (ampiezza segmento * 12 ore) / numero task
             quota_ore = ((p_fine - p_inizio) * ORE_TOTALI_GIORNO) / num_task   
             for t in task_attivi:
                 tag = t['tag']
                 ore_per_tag[tag] = ore_per_tag.get(tag, 0) + quota_ore            
     return pd.Series(ore_per_tag)
 
-# --- 6. FUNZIONI HELPER GRAFICHE ---
 def get_it_date_label(dt, delta):
     mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
     giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
@@ -375,19 +360,11 @@ def get_it_date_label(dt, delta):
     return f"{giorni[dt.weekday()]} {dt.day:02d}<br>{mesi[dt.month-1]}<br>Sett. {dt.isocalendar()[1]}"
 	
 def genera_colore_opaco(testo):
-    # 1. Genera un hash univoco dal testo per avere sempre lo stesso colore per quel tag
     hash_object = hashlib.md5(testo.encode())
     hash_hex = hash_object.hexdigest()
-    
-    # 2. Converti l'inizio dell'hash in un numero per la Tinta (0-360)
-    # Usiamo il modulo 360 per restare nel cerchio cromatico
     tinta = int(hash_hex[:8], 16) % 360
+    saturazione, luminosita = 40, 55 
     
-    # 3. Definiamo Saturazione e Luminosità per colori opachi
-    saturazione = 40  # Bassa per non essere vivace
-    luminosita = 55   # Media per equilibrio
-    
-    # 4. Funzione helper per convertire HSL in HEX
     def hsl_to_hex(h, s, l):
         l /= 100
         a = s * min(l, 1 - l) / 100
@@ -407,13 +384,12 @@ def modal_tag():
     if nuovo_tag_n:
         if nuovo_tag_n not in lista_tag:
             colore_generato = genera_colore_opaco(nuovo_tag_n)
-            # Inserimento immediato nel DB Tag per renderlo disponibile
             supabase.table("Tag").insert({"nome": nuovo_tag_n, "colore": colore_generato}).execute()
             st.success(f"Tag '{nuovo_tag_n}' creato!")
             get_cached_data.clear()
             st.rerun()
-                    
-# --- 7. GANTT FRAGMENT ---
+
+# --- 6. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     res_tags = supabase.table("Tag").select("id, nome, colore").execute()
@@ -421,7 +397,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     
     if df_plot.empty: st.info("Nessun dato trovato."); return
     
-    # Abbiamo rimosso merge_consecutive_logs come richiesto!
     df_merged = df_plot.copy()
     df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
@@ -453,7 +428,6 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
-        
         colore_base = color_map.get(op, "#8dbad2")
         lista_colori_sfondo = [colore_base] * len(df_op)
         colore_tag = df_op['tag'].astype(str).str.strip().str.lower().map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist()
@@ -513,145 +487,25 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     selected = st.plotly_chart(fig, width='stretch', key=f"gantt_chart_{st.session_state.chart_key}", on_select="rerun", config={'displaylogo': False, 'modeBarButtonsToRemove': ['zoom', 'pan', 'select', 'lasso2d', 'zoomIn', 'zoomOut', 'autoScale', 'resetScale', 'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines'], 
     'toImageButtonOptions': {'format': 'png','filename': 'gantt_aster','height': 1080,'width': 1920, 'scale': 2}})
 
+    # --- SALVATAGGIO CLIC IN SESSION STATE PER EXPANDER ---
     if selected and "selection" in selected and "points" in selected["selection"]:
         pts = selected["selection"]["points"]
         if pts:
             d = pts[0].get("customdata", [])
             if d and d[0] == "LOG_FITTIZIO":
                 st.session_state["gantt_click_action"] = {
-                    "type": "new_log",
-                    "task_id": d[1],
-                    "data_clic": pd.to_datetime(d[2]).date()
+                    "type": "new_log", "task_id": d[1], "data_clic": pd.to_datetime(d[2]).date()
                 }
                 st.rerun()
             elif d:
                 st.session_state["gantt_click_action"] = {
-                    "type": "edit_log",
-                    "log_id": d[0],
-                    "operatore": d[1],
-                    "inizio": d[2],
-                    "fine": d[3],
-                    "task_id": d[7],
-                    "note": d[6]
+                    "type": "edit_log", "log_id": d[0], "operatore": d[1],
+                    "inizio": d[2], "fine": d[3], "task_id": d[7], "note": d[6]
                 }
                 st.rerun()
-    
-# --- 8. MAIN UI ---
-l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
-df = pd.DataFrame()
-if l and tk and cm:
-    tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'Pianificato 🔵')} for t in tk}
-    cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
-    df = pd.DataFrame(l)
-    
-    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
-    df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('n', "N/A"))
-    df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
-    df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
-    df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "Pianificato 🔵"))
-    
-    # SETUP ORARI: Valori di Default e calcolo frazione di giornata per 08:00 - 17:00
-    if 'ora_i' not in df.columns: df['ora_i'] = '08:00:00'
-    if 'ora_f' not in df.columns: df['ora_f'] = None
-    
-    df['ora_i'] = df['ora_i'].fillna('08:00:00').astype(str)
-    
 
-    def orario_a_frazione(t_str):
-        try:
-            if not t_str or t_str == 'nan' or t_str == 'None': return 0.0
-            t = pd.to_datetime(t_str, format='%H:%M:%S', errors='coerce').time()
-            if pd.isna(t): return 0.0
-            # 8:00 corrisponde allo 0 della cella, 17:00 corrisponde a 1 (totale 9 ore)
-            return (t.hour + t.minute / 60.0 - 7.0) / 12.0
-        except: return None
-    def calcola_logica_visuale(row):
-        f_i = orario_a_frazione(row['ora_i'])
-        if f_i is None: f_i = 0.0 # Fallback se manca ora inizio
-
-        if pd.isna(row['ora_f']) or row['ora_f'] == 'None' or row['ora_f'] == '':
-            ora_attuale_str = datetime.now().strftime('%H:%M:%S')
-            f_f = orario_a_frazione(ora_attuale_str)
-            # Limitiamo la fine al range visibile (max 17:00)
-            if f_f is None: f_f = 1.0 
-            f_f = min(max(f_f, f_i), 1.0)
-        else:
-            f_f = orario_a_frazione(row['ora_f'])
-            if f_f is None: f_f = 1.0
-
-        min_dur = 0.5 / 12.0
-        durata_fraz = max(f_f - f_i, min_dur)
-        return pd.Series([f_i, f_f, durata_fraz])
-    
-    df[['frac_i', 'frac_f', 'Visual_Durata_Frac']] = df.apply(calcola_logica_visuale, axis=1)
-	
-    # Convertiamo l'Inizio e la Fine "visivi" del plot spostandoli avanti per la frazione calcolata
-    df['Visual_Inizio'] = df['Inizio'] + pd.to_timedelta(df['frac_i'], unit='D')
-    df['Durata_ms'] = df['Visual_Durata_Frac'] * 24 * 3600 * 1000
-    df['Visual_Fine'] = df['Visual_Inizio'] + pd.to_timedelta(df['Visual_Durata_Frac'], unit='D')
-    
-    # Prepariamo la formattazione della nota aggiungendoci l'ora e i minuti
-    def formatta_nota(row):
-        # Formattazione data
-        data_str = row['Inizio'].strftime('%d/%m') if hasattr(row['Inizio'], 'strftime') else str(row['Inizio'])
-        
-        # Gestione ora inizio
-        ora_i = str(row['ora_i'])[:5] if pd.notna(row['ora_i']) else "??:??"
-        
-        # Gestione ora fine (se è NaN o None, scriviamo "...")
-        if pd.isna(row['ora_f']) or row['ora_f'] == 'None' or row['ora_f'] == '':
-            ora_f = "In corso"
-        else:
-            ora_f = str(row['ora_f'])[:5]
-        
-        nota = row.get('note', '') if pd.notna(row.get('note')) else ""
-        
-        return f"• <i>{data_str} [{ora_i}-{ora_f}]</i>: {nota}"
-
-    # Applichiamo la funzione
-    df['note_html'] = df.apply(formatta_nota, axis=1)
-    
-    # --- AREA CONTROLLI (FIXED HEADER) ---
-    with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
-        res_tags = supabase.table("Tag").select("id, nome").execute()
-        mappa_id_to_nome = {t['id']: t['nome'] for t in res_tags.data}
-        if 'tag' in df.columns:
-            df['tag'] = df['tag'].map(mappa_id_to_nome).fillna("Senza Tag")
-            
-        c1, c2, c4, c3 = st.columns([1, 1, 1, 2])
-        f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()), label_visibility="collapsed", placeholder="Progetti")
-        f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()), label_visibility="collapsed", placeholder="Operatori")
-        f_s_tag = c4.multiselect("Tag", sorted(df['tag'].unique().astype(str)), label_visibility="collapsed", placeholder="Tag")
-        with c3:
-            cs, cd = st.columns(2)
-            scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=0, label_visibility="collapsed")
-            f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)], label_visibility="collapsed") if scala == "Personalizzato" else None
-
-		
-        s1, s2, s4, s3 = st.columns([1, 1, 1, 2])
-        f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=[], label_visibility="collapsed", placeholder="Stato Commesse")
-        f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
-
-        with s3:
-            f_range_i = df['Inizio'].min()
-            f_range_f = df['Fine'].max() + pd.Timedelta(days=7)
-            f_range = st.date_input("Intervallo Date", value=[f_range_i, f_range_f], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
-        with s4:
-            search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
-            
-        st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
-        b1, b3, b7, b4, b5, b6 = st.columns(6)
-        if b1.button("➕ Commessa", width='stretch'): modal_commessa()
-        if b3.button("⏱️ Log", width='stretch'): modal_log()
-        if b7.button("🔖 Tag", width='stretch'): modal_tag()
-        if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
-        label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
-        if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
-        if b6.button("Importa 📥", width='stretch'): import_excel_modal()
-        st.markdown('</div>', unsafe_allow_html=True)
-	# --- NUOVO COMPONENTE EXPANDER UNICO PER GESTIONE E EDIT LOG ---
+# --- 7. COMPONENTE EXPANDER UNICO PER GESTIONE E EDIT LOG ---
 def render_expander_gestione_log():
-    # Recuperiamo l'azione eventualmente attivata dal clic sul Gantt
     click_action = st.session_state.get("gantt_click_action", None)
     is_expanded = click_action is not None
 
@@ -689,12 +543,12 @@ def render_expander_gestione_log():
                 current_task_info = next((t for t in tk_data if t['id'] == current_task_id), None)
                 if current_task_info:
                     curr_cm_id = current_task_info['commessa_id']
-                    curr_cm_nome = cms_id_to_nome.get(curr_cm_id, list(cms_dict.keys())[0])
+                    curr_cm_nome = cms_id_to_nome.get(curr_cm_id, list(cms_dict.keys())[0] if cms_dict else "")
 
                     col_c, col_t, col_s = st.columns(3)
                     with col_c:
                         list_cm = list(cms_dict.keys())
-                        sel_cm_nome = st.selectbox("Sposta in Commessa:", options=list_cm, index=list_cm.index(curr_cm_nome), key="exp_ed_cm")
+                        sel_cm_nome = st.selectbox("Sposta in Commessa:", options=list_cm, index=list_cm.index(curr_cm_nome) if curr_cm_nome in list_cm else 0, key="exp_ed_cm")
                         sel_cm_id = cms_dict[sel_cm_nome]
                     
                     with col_t:
@@ -702,8 +556,8 @@ def render_expander_gestione_log():
                         task_opts = {t['nome_task']: t['id'] for t in tasks_filtrati}
                         list_tk = list(task_opts.keys())
                         idx_tk = list_tk.index(current_task_info['nome_task']) if current_task_info['nome_task'] in list_tk else 0
-                        sel_task_nome = st.selectbox("Sposta in Task:", options=list_tk, index=idx_tk, key="exp_ed_tk")
-                        id_task_target = task_opts[sel_task_nome]
+                        sel_task_nome = st.selectbox("Sposta in Task:", options=list_tk, index=idx_tk, key="exp_ed_tk") if list_tk else st.selectbox("Sposta in Task:", options=["Nessun Task"], key="exp_ed_tk")
+                        id_task_target = task_opts.get(sel_task_nome, current_task_id)
 
                     with col_s:
                         current_status = next((t['stato'] for t in tasks_filtrati if t['nome_task'] == sel_task_nome), STATI_TASK[0])
@@ -782,7 +636,7 @@ def render_expander_gestione_log():
                             st.session_state.pop("gantt_click_action", None)
                             st.rerun()
             else:
-                st.info("💡 Fai clic su una barra del Gantt per caricare ed modificare i log selezionati.")
+                st.info("💡 Fai clic su una barra del Gantt per caricare e modificare i log selezionati.")
 
         # --- TAB 2: NUOVO TASK CON LOG ---
         with tab_new_tk:
@@ -841,10 +695,10 @@ def render_expander_gestione_log():
                 def_cm_id = def_task_info['commessa_id'] if def_task_info else None
                 
                 cm_options = list(cms_dict.keys())
-                cm_idx = cm_options.index(cms_id_to_nome[def_cm_id]) if (def_cm_id and def_cm_id in cms_id_to_nome) else 0
-                sel_cm_nl = st.selectbox("Commessa Destinazione", options=cm_options, index=cm_idx, key="exp_nl_cm")
+                cm_idx = cm_options.index(cms_id_to_nome[def_cm_id]) if (def_cm_id and def_cm_id in cms_id_to_nome and cms_id_to_nome[def_cm_id] in cm_options) else 0
+                sel_cm_nl = st.selectbox("Commessa Destinazione", options=cm_options, index=cm_idx, key="exp_nl_cm") if cm_options else st.selectbox("Commessa", options=["Nessuna"], key="exp_nl_cm")
                 
-                target_cm_id = cms_dict[sel_cm_nl]
+                target_cm_id = cms_dict.get(sel_cm_nl)
                 tasks_cm = [t for t in tk_data if t['commessa_id'] == target_cm_id]
                 tk_options = {t['nome_task']: t['id'] for t in tasks_cm}
                 
@@ -886,38 +740,139 @@ def render_expander_gestione_log():
                     supabase.table("Log_Tempi").insert(nuovi_log_l).execute()
                     st.session_state.pop("gantt_click_action", None)
                     get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
-                    
-    # --- SEZIONE LOG APERTI ---
-    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
-    st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
-    for _, row in log_aperti.iterrows():
-        with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
-            c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
-            data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
-            ora_inizio = pd.to_datetime(row['ora_i']).time()
-            inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
-            trascorso = datetime.now(tz) - inizio_dt
-            ore, resto = divmod(trascorso.seconds, 3600)
-            minuti, _ = divmod(resto, 60)
-            c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
-            c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
-            c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
-            if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
-                ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
-                supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-                st.success("Log chiuso!")
-                get_cached_data.clear()
-                st.rerun()
-                
-            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
-                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
-                    # 1. Chiudo il log attuale
-                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-                    get_cached_data.clear()
-                    # 2. Apro la modale per lo stesso task
-                    modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
 
-    # --- FILTRAGGIO DATI ---
+# --- 8. MAIN UI & PREPARAZIONE DATI ---
+l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get_cached_data("Commesse"), get_cached_data("Operatori")
+
+# Dichiarazione preventiva dei DataFrame per evitare NameError
+df = pd.DataFrame()
+df_p = pd.DataFrame()
+
+if l and tk and cm:
+    tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'Pianificato 🔵')} for t in tk}
+    cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
+    df = pd.DataFrame(l)
+    
+    df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
+    df['Commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('n', "N/A"))
+    df['Task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('n', "N/A"))
+    df['stato_commessa'] = df['task_id'].apply(lambda x: cm_m.get(tk_m.get(x, {}).get('c'), {}).get('s', "In corso 🟡"))
+    df['stato_task'] = df['task_id'].apply(lambda x: tk_m.get(x, {}).get('s', "Pianificato 🔵"))
+    
+    if 'ora_i' not in df.columns: df['ora_i'] = '08:00:00'
+    if 'ora_f' not in df.columns: df['ora_f'] = None
+    df['ora_i'] = df['ora_i'].fillna('08:00:00').astype(str)
+
+    def orario_a_frazione(t_str):
+        try:
+            if not t_str or t_str == 'nan' or t_str == 'None': return 0.0
+            t = pd.to_datetime(t_str, format='%H:%M:%S', errors='coerce').time()
+            if pd.isna(t): return 0.0
+            return (t.hour + t.minute / 60.0 - 7.0) / 12.0
+        except: return None
+
+    def calcola_logica_visuale(row):
+        f_i = orario_a_frazione(row['ora_i'])
+        if f_i is None: f_i = 0.0
+
+        if pd.isna(row['ora_f']) or row['ora_f'] == 'None' or row['ora_f'] == '':
+            ora_attuale_str = datetime.now().strftime('%H:%M:%S')
+            f_f = orario_a_frazione(ora_attuale_str)
+            if f_f is None: f_f = 1.0 
+            f_f = min(max(f_f, f_i), 1.0)
+        else:
+            f_f = orario_a_frazione(row['ora_f'])
+            if f_f is None: f_f = 1.0
+
+        min_dur = 0.5 / 12.0
+        durata_fraz = max(f_f - f_i, min_dur)
+        return pd.Series([f_i, f_f, durata_fraz])
+    
+    df[['frac_i', 'frac_f', 'Visual_Durata_Frac']] = df.apply(calcola_logica_visuale, axis=1)
+    df['Visual_Inizio'] = df['Inizio'] + pd.to_timedelta(df['frac_i'], unit='D')
+    df['Durata_ms'] = df['Visual_Durata_Frac'] * 24 * 3600 * 1000
+    df['Visual_Fine'] = df['Visual_Inizio'] + pd.to_timedelta(df['Visual_Durata_Frac'], unit='D')
+    
+    def formatta_nota(row):
+        data_str = row['Inizio'].strftime('%d/%m') if hasattr(row['Inizio'], 'strftime') else str(row['Inizio'])
+        ora_i = str(row['ora_i'])[:5] if pd.notna(row['ora_i']) else "??:??"
+        ora_f = "In corso" if (pd.isna(row['ora_f']) or row['ora_f'] == 'None' or row['ora_f'] == '') else str(row['ora_f'])[:5]
+        nota = row.get('note', '') if pd.notna(row.get('note')) else ""
+        return f"• <i>{data_str} [{ora_i}-{ora_f}]</i>: {nota}"
+
+    df['note_html'] = df.apply(formatta_nota, axis=1)
+
+# --- AREA CONTROLLI (PANNELLO FILTRI) ---
+with st.expander("🛠️ Pannello Filtri e Strumenti", expanded=True):
+    res_tags = supabase.table("Tag").select("id, nome").execute()
+    mappa_id_to_nome = {t['id']: t['nome'] for t in res_tags.data}
+    if not df.empty and 'tag' in df.columns:
+        df['tag'] = df['tag'].map(mappa_id_to_nome).fillna("Senza Tag")
+        
+    c1, c2, c4, c3 = st.columns([1, 1, 1, 2])
+    f_c = c1.multiselect("Progetti", sorted(df['Commessa'].unique()) if not df.empty else [], label_visibility="collapsed", placeholder="Progetti")
+    f_o = c2.multiselect("Operatori", sorted(df['operatore'].unique()) if not df.empty else [], label_visibility="collapsed", placeholder="Operatori")
+    f_s_tag = c4.multiselect("Tag", sorted(df['tag'].unique().astype(str)) if not df.empty else [], label_visibility="collapsed", placeholder="Tag")
+    with c3:
+        cs, cd = st.columns(2)
+        scala = cs.selectbox("Scala", ["Settimana","2 Settimane", "Mese", "Trimestre", "Semestre", "Personalizzato"], index=0, label_visibility="collapsed")
+        f_custom = cd.date_input("Periodo", value=[datetime.now(), datetime.now() + timedelta(days=7)], label_visibility="collapsed") if scala == "Personalizzato" else None
+
+    s1, s2, s4, s3 = st.columns([1, 1, 1, 2])
+    f_s_cm = s1.multiselect("Stato Commesse", options=STATI_COMMESSA, default=[], label_visibility="collapsed", placeholder="Stato Commesse")
+    f_s_tk = s2.multiselect("Stato Task", options=STATI_TASK, default=[], label_visibility="collapsed", placeholder="Stato Task")
+
+    with s3:
+        f_range_i = df['Inizio'].min() if not df.empty else datetime.now().date()
+        f_range_f = (df['Fine'].max() + pd.Timedelta(days=7)) if not df.empty else (datetime.now().date() + timedelta(days=7))
+        f_range = st.date_input("Intervallo Date", value=[f_range_i, f_range_f], format="DD/MM/YYYY", label_visibility="collapsed", key="filter_date_range")
+    with s4:
+        search_text = st.text_input("🔍 Cerca per Testo", value="", placeholder="Cerca per Testo", label_visibility="collapsed").lower()
+        
+    st.markdown('<div class="spacer-btns"></div>', unsafe_allow_html=True)
+    b1, b3, b7, b4, b5, b6 = st.columns(6)
+    if b1.button("➕ Commessa", width='stretch'): modal_commessa()
+    if b3.button("⏱️ Log", width='stretch'): modal_log()
+    if b7.button("🔖 Tag", width='stretch'): modal_tag()
+    if b4.button("📍 Oggi", width='stretch'): st.session_state.chart_key += 1; st.rerun()
+    label_view = "↔️ Espandi" if st.session_state.vista_compressa else "↕️ Comprimi"
+    if b5.button(label_view, width='stretch'): st.session_state.vista_compressa = not st.session_state.vista_compressa; st.rerun()
+    if b6.button("Importa 📥", width='stretch'): import_excel_modal()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- SEZIONE LOG APERTI ---
+if not df.empty:
+    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')]
+    if not log_aperti.empty:
+        st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
+        for _, row in log_aperti.iterrows():
+            with st.container():
+                c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
+                data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
+                ora_inizio = pd.to_datetime(row['ora_i']).time()
+                inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
+                trascorso = datetime.now(tz) - inizio_dt
+                ore, resto = divmod(trascorso.seconds, 3600)
+                minuti, _ = divmod(resto, 60)
+                c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
+                c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
+                c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
+                if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
+                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                    st.success("Log chiuso!")
+                    get_cached_data.clear(); st.rerun()
+                    
+                if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
+                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                    st.session_state["gantt_click_action"] = {
+                        "type": "new_log", "task_id": row['task_id'], "data_clic": datetime.now(tz).date()
+                    }
+                    get_cached_data.clear(); st.rerun()
+
+# --- FILTRAGGIO DATI ---
+if not df.empty:
     df_p = df.copy()
     if f_c: df_p = df_p[df_p['Commessa'].isin(f_c)]
     if f_o: df_p = df_p[df_p['operatore'].isin(f_o)]
@@ -925,33 +880,41 @@ def render_expander_gestione_log():
     if f_s_tk: df_p = df_p[df_p['stato_task'].isin(f_s_tk)]
     if f_s_tag: df_p = df_p[df_p['tag'].isin(f_s_tag)]
     if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(search_text) | df_p['Task'].astype(str).str.lower().str.contains(search_text)]
-    
-if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-    start_search = pd.to_datetime(f_range[0])
-    end_search = pd.to_datetime(f_range[1])
+
+# Filtro Intervallo Date in modo sicuro (senza NameError)
+start_search = pd.to_datetime(f_range[0]) if isinstance(f_range, (list, tuple)) and len(f_range) == 2 else pd.to_datetime(datetime.now().date())
+end_search = pd.to_datetime(f_range[1]) if isinstance(f_range, (list, tuple)) and len(f_range) == 2 else pd.to_datetime(datetime.now().date() + timedelta(days=7))
+
+if not df_p.empty:
     df_p['inizio'] = pd.to_datetime(df_p['inizio'])
     df_p['fine'] = pd.to_datetime(df_p['fine'])
     df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)]
-    
+
+# --- RENDERING DELL'EXPANDER PER IL GESTIONE LOG ---
+render_expander_gestione_log()
+
+# --- TABS PRINCIPALI ---
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestione Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
 with tabs[0]: 
-    if not df.empty:
+    if not df_p.empty:
         if start_search <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) <= end_search:
             oggi_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         else:
-            metaint = (end_search-start_search)/2
+            metaint = (end_search - start_search) / 2
             oggi_dt = start_search + metaint
         if scala == "Personalizzato" and f_custom and len(f_custom) == 2: x_range = [pd.to_datetime(f_custom[0]), pd.to_datetime(f_custom[1])]
         else:
             d = {"Settimana": 4, "2 Settimane": 8, "Mese": 15, "Trimestre": 45, "Semestre": 90}.get(scala, 15)
             x_range = [oggi_dt - timedelta(days=d), oggi_dt + timedelta(days=d)]
-        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
-        
+        render_gantt_fragment(df_p, {o['nome']: o.get('colore', '#8dbad2') for o in ops_list if ops_list and isinstance(o, dict)}, oggi_dt, x_range, (x_range[1]-x_range[0]).days, [])
+    else:
+        st.info("Nessun dato presente nel periodo o nei filtri selezionati.")
+
 with tabs[1]: 
-    if not df.empty:
+    if not df_p.empty:
         cal_events = []
-        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
+        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list if isinstance(o, dict)}
         
         for _, row in df_p.iterrows():
             try:
@@ -959,7 +922,6 @@ with tabs[1]:
                 clean_title = str(raw_title).replace('"', "'").replace('\n', ' ').replace('\r', '')
                 clean_note = str(row.get('note', '')).replace('"', "'").replace('\n', ' ')
                 
-                # Sfruttiamo le ore reali per mostrare meglio i blocchi in FullCalendar!
                 s_date = f"{row['Inizio'].strftime('%Y-%m-%d')}T{row['ora_i']}"
                 e_date = f"{row['Fine'].strftime('%Y-%m-%d')}T{row['ora_f']}"
                 
@@ -967,7 +929,6 @@ with tabs[1]:
             except: continue
 
         cal_options = {"initialView": "multiMonthYear", "multiMonthMaxColumns": 2,"multiMonthMinWidth": 500, "views": {"multiMonthYear": {"duration": {"months": 2}}}, "height": "auto", "contentHeight": "auto", "aspectRatio": 1.3, "expandRows": False, "locale": "it", "firstDay": 1, "weekNumbers": True, "weekText": "Sett.", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "multiMonthYear,dayGridMonth,timeGridWeek"}, "editable": False, "selectable": True}
-        
         st.markdown("""<style>.fc .fc-multimonth-month {padding: 0px !important; margin-bottom: 2px !important;} .fc .fc-daygrid-day-frame {min-height: 35px !important; max-height: 120px !important;} .fc .fc-daygrid-day-top {flex-direction: row !important; font-size: 0.85em !important;} .fc-daygrid-event {margin-top: 0px !important; margin-bottom: 1px !important; padding: 0px 2px !important; font-size: 0.8em !important;} .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;} iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 1500px !important; height: 1500px !important;}</style>""", unsafe_allow_html=True)
 
         try:
@@ -975,17 +936,20 @@ with tabs[1]:
             if state and "eventClick" in state:
                 eid = int(state["eventClick"]["event"]["id"])
                 sel = df[df['id'] == eid].iloc[0]
-                modal_edit_log(sel['id'], sel['operatore'], sel['Inizio'], sel['Fine'], sel['task_id'], sel['note'])
-            if state and state.get("dateClick"):
-                modal_log()
-        except Exception as e: st.error(f"Errore nel caricamento del componente: {e}")
+                st.session_state["gantt_click_action"] = {
+                    "type": "edit_log", "log_id": sel['id'], "operatore": sel['operatore'],
+                    "inizio": sel['Inizio'], "fine": sel['Fine'], "task_id": sel['task_id'], "note": sel['note']
+                }
+                st.rerun()
+            if state and state.get("dateClick"): modal_log()
+        except Exception as e: st.error(f"Errore nel caricamento del calendario: {e}")
     else: st.info("Nessun dato presente. Registra un log per vedere il calendario.")
 
 with tabs[2]: 
-    if not df.empty:
+    if not df_p.empty:
         st.subheader("Agenda Verticale")
         cal_events_agenda = []
-        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
+        color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list if isinstance(o, dict)}
         
         for _, row in df_p.iterrows():
             try:
@@ -998,35 +962,28 @@ with tabs[2]:
 
         agenda_options = {"initialView": "listDay", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "listDay,listWeek,listMonth"}, "buttonText": {"listDay": "Giorno", "listWeek": "Settimana", "listMonth": "Mese"}, "noEventsContent": "Nessun task per questa data", "displayEventTime": True, "locale": "it", "height": 1000}
         calendar(events=cal_events_agenda, options=agenda_options, key="calendar_agenda_vertical")
-        
+
 with tabs[3]: 
     st.header("📋 Gestione Logs")
-
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
         df_edit['Fine'] = pd.to_datetime(df_edit['Fine']).dt.date
         cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
-        task_list = sorted([s['nome_task'] for s in get_cached_data("Task")])
-        ops_list = sorted([o['nome'] for o in get_cached_data("Operatori")])
+        task_list = sorted([s['nome_task'] for s in tk_data])
+        ops_names = sorted([o['nome'] for o in get_cached_data("Operatori")])
         tag_list = sorted([t['nome'] for t in get_cached_data("Tag")])
-        cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
-        cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
         map_task = {s['nome_task']: s['id'] for s in tk_data}
-        res_tags = supabase.table("Tag").select("id, nome").execute()
 
-        # Conversione sicura per il Data Editor
         df_edit['ora_i'] = pd.to_datetime(df_edit['ora_i'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(8, 0))
         df_edit['ora_f'] = pd.to_datetime(df_edit['ora_f'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(17, 0))
 
         edited_log = st.data_editor(
             df_edit, 
             column_config={
-                "id": None,
-                "Commessa": st.column_config.Column(disabled=True),
-				"Task": st.column_config.Column(disabled=True),
-                "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+                "id": None, "Commessa": st.column_config.Column(disabled=True), "Task": st.column_config.Column(disabled=True),
+                "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_names, width="medium", required=True),
                 "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"),
                 "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
                 "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"),
@@ -1040,7 +997,6 @@ with tabs[3]:
                 nome_tag_selezionato = r["tag"]
                 id_tag_da_salvare = mappa_tags.get(nome_tag_selezionato)
                 tag_value = id_tag_da_salvare if pd.notna(id_tag_da_salvare) else None
-                task_val= map_task.get(r["Task"])
                 try:
                     supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": tag_value}).eq("id", r['id']).execute()
                 except Exception as e:
@@ -1107,7 +1063,6 @@ with tabs[5]:
     def format_hours_to_hhmm(decimal_hours):
         hours = int(decimal_hours)
         minutes = int(round((decimal_hours - hours) * 60))
-        # Gestisce il caso in cui l'arrotondamento porti a 60 minuti
         if minutes == 60:
             hours += 1
             minutes = 0
@@ -1126,19 +1081,16 @@ with tabs[5]:
         df_p[col_tag] = df_p[col_tag].fillna("Nessun Tag").astype(str).str.strip()
         df_p['data_log'] = pd.to_datetime(df_p['inizio']).dt.date
 
-        # Calcolo ore nette per operatore/giorno
         risultato_apply = df_p.groupby(['operatore', 'data_log'], group_keys=True).apply(
             lambda x: calcola_ore_evolute_12h(x, col_tag),
             include_groups=False
         )
 
-        # Trasformazione robusta in DataFrame
         if isinstance(risultato_apply, pd.DataFrame):
             df_netto_globale = risultato_apply.stack().reset_index()
         else:
             df_netto_globale = risultato_apply.reset_index()
 
-        # Rinominazione dinamica per evitare ValueError
         mappa_nomi = {
             df_netto_globale.columns[-1]: 'ore_lavorate',
             df_netto_globale.columns[-2]: col_tag,
@@ -1148,14 +1100,12 @@ with tabs[5]:
         df_netto_globale = df_netto_globale.rename(columns=mappa_nomi)
         df_netto_globale = df_netto_globale[['operatore', 'data_log', col_tag, 'ore_lavorate']]
 
-        # Totale per il periodo filtrato
         df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
         if not df_totale_periodo.empty:
             if col_tag in df_totale_periodo.columns:
                 df_totale_periodo[col_tag] = df_totale_periodo[col_tag].fillna("Altro").astype(str)
             def formatta_ore(ore_decimali):
-                if pd.isna(ore_decimali) or ore_decimali <= 0:
-                    return "00:00"
+                if pd.isna(ore_decimali) or ore_decimali <= 0: return "00:00"
                 ore = int(ore_decimali)
                 minuti = int(round((ore_decimali - ore) * 60))
                 if minuti == 60:
@@ -1179,12 +1129,8 @@ with tabs[5]:
 
             fig_stats = px.bar(
                 df_totale_periodo,
-                x='operatore',
-                y='ore_lavorate',
-                color=col_tag,
-                barmode='group',
-                color_discrete_map=color_discrete_map,
-                text='testo_ore',
+                x='operatore', y='ore_lavorate', color=col_tag, barmode='group',
+                color_discrete_map=color_discrete_map, text='testo_ore',
                 title="Ore Effettive (Netto sovrapposizioni e pausa)",
                 labels={'testo_ore': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'},
                 template="plotly_white"
@@ -1195,15 +1141,10 @@ with tabs[5]:
         with c2:
             st.subheader("🔖 Ore Totali per Tag")
             if not df_totale_periodo.empty:
-                # Raggruppiamo per tag sommando le ore calcolate nel periodo filtrato
                 df_tag_pie = df_totale_periodo.groupby(col_tag)['ore_lavorate'].sum().reset_index()
-                
-                # Applichiamo la formattazione HH:MM anche per le etichette del grafico
                 df_tag_pie['testo_ore_tag'] = df_tag_pie['ore_lavorate'].apply(format_hours_to_hhmm)
-                
                 df_tag_pie['legenda_tag'] = df_tag_pie[col_tag] + ": " + df_tag_pie['testo_ore_tag'] + " ore"
                 
-                # Generiamo la mappa colori personalizzata per mantenere la coerenza con i tag del DB
                 color_discrete_map = {}
                 tags_ref = get_cached_data("Tag")
                 if tags_ref:
@@ -1212,48 +1153,30 @@ with tabs[5]:
                         col_t = str(t.get('colore', '#8dbad2')).strip()
                         color_discrete_map[nome_t] = col_t if col_t.startswith('#') else f'#{col_t}'
 
-                # Creazione del grafico a torta
                 fig_tag_pie = px.pie(
-                    df_tag_pie,
-                    names='legenda_tag',
-                    values='ore_lavorate',
-                    color=col_tag,
-                    color_discrete_map=color_discrete_map,
-                    hole=.3
+                    df_tag_pie, names='legenda_tag', values='ore_lavorate',
+                    color=col_tag, color_discrete_map=color_discrete_map, hole=.3
                 )
                 
-                # Configurazione per mostrare testo personalizzato (Nome Tag + Ore) DENTRO il grafico
                 fig_tag_pie.update_traces(
-                    textposition='inside',
-                    textinfo='text',
+                    textposition='inside', textinfo='text',
                     text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'],
                     hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>",
-                    customdata=df_tag_pie['testo_ore_tag'],
-					insidetextorientation='horizontal',
+                    customdata=df_tag_pie['testo_ore_tag'], insidetextorientation='horizontal'
                 )
                 
                 fig_tag_pie.update_layout(
-                    height=350, 
-                    margin=dict(l=0, r=0, t=30, b=0), 
-                    showlegend=True,
-					legend=dict(
-                        orientation="v",       # Legenda verticale
-                        yanchor="middle",      # Centrata verticalmente rispetto alla torta
-                        y=0.5,
-                        xanchor="left",        # Posizionata a destra della torta
-                        x=1.02
-                    )
+                    height=350, margin=dict(l=0, r=0, t=30, b=0), showlegend=True,
+                    legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02)
                 )
                 
                 st.plotly_chart(fig_tag_pie, use_container_width=True)
             else:
                 st.info("Nessun dato sui tag trovato per generare il grafico.")
 				
-        # --- SEZIONE SANKEY ---
         st.markdown("---")
         st.subheader("📊 Flusso Ore: Commesse ➔ Tag")
         
-        # Recupero pesi per distribuire le ore nette sulle commesse
         distribuzione_commesse = df_p.groupby(['operatore', col_tag, col_comm])['Visual_Durata_Frac'].sum().reset_index()
         tot_frac = distribuzione_commesse.groupby(['operatore', col_tag])['Visual_Durata_Frac'].transform('sum')
         distribuzione_commesse['peso'] = distribuzione_commesse['Visual_Durata_Frac'] / tot_frac
@@ -1287,8 +1210,7 @@ with tabs[5]:
                 link = dict(
                     source=links_sankey[col_comm].map(node_map),
                     target=links_sankey[col_tag].map(node_map),
-                    value=links_sankey['ore_pesate'],
-                    color=link_colors,
+                    value=links_sankey['ore_pesate'], color=link_colors,
                     customdata=links_sankey['ore_formattate'],
                     hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Durata: %{customdata}<extra></extra>'
                 )
@@ -1298,4 +1220,3 @@ with tabs[5]:
             
     else:
         st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
-        
