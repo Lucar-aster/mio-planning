@@ -1033,7 +1033,7 @@ if st.session_state.log_da_modificare is not None:
     st.divider() # Linea di separazione estetica
     
     # --- SEZIONE LOG APERTI ---
-    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None') | (df['ora_f'] == '')] # Filtra log senza fine
+log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None') | (df['ora_f'] == '')] # Filtra log senza fine
 if not log_aperti.empty:
     st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
     for _, row in log_aperti.iterrows():
