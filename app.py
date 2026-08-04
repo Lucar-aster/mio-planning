@@ -1033,28 +1033,29 @@ if st.session_state.log_da_modificare is not None:
     st.divider() # Linea di separazione estetica
     
     # --- SEZIONE LOG APERTI ---
-    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
-    st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
-    for _, row in log_aperti.iterrows():
-        with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
-            c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
-            data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
-            ora_inizio = pd.to_datetime(row['ora_i']).time()
-            inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
-            trascorso = datetime.now(tz) - inizio_dt
-            ore, resto = divmod(trascorso.seconds, 3600)
-            minuti, _ = divmod(resto, 60)
-            c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
-            c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
-            c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
-            if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
-                ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
-                supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-                st.success("Log chiuso!")
-                get_cached_data.clear()
-                st.rerun()
+    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None') | (df['ora_f'] == '')] # Filtra log senza fine
+	if not log_aperti.empty:
+        st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
+        for _, row in log_aperti.iterrows():
+            with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
+                c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
+                data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
+                ora_inizio = pd.to_datetime(row['ora_i']).time()
+                inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
+                trascorso = datetime.now(tz) - inizio_dt
+                ore, resto = divmod(trascorso.seconds, 3600)
+                minuti, _ = divmod(resto, 60)
+                c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
+                c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
+                c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
+                if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
+                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                    st.success("Log chiuso!")
+                    get_cached_data.clear()
+                    st.rerun()
                 
-            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
+                if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
                     ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
                     # 1. Chiudo il log attuale
                     supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
