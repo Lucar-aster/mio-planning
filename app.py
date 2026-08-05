@@ -989,7 +989,6 @@ with tabs[2]:
 with tabs[3]: 
     st.header("📋 Gestione Logs")
 
-    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
@@ -1002,6 +1001,7 @@ with tabs[3]:
         cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
         map_task = {s['nome_task']: s['id'] for s in tk_data}
         res_tags = supabase.table("Tag").select("id, nome").execute()
+        mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
 
         # Conversione sicura per il Data Editor
         df_edit['ora_i'] = pd.to_datetime(df_edit['ora_i'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(8, 0))
