@@ -988,8 +988,7 @@ with tabs[2]:
         
 with tabs[3]: 
     st.header("📋 Gestione Logs")
-    if 'res_tags' not in locals() and 'res_tags' not in globals():
-        res_tags = supabase.table("Tag").select("id, nome").execute()
+
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
