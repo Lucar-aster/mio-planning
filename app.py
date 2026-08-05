@@ -874,35 +874,34 @@ if l and tk and cm:
         st.markdown('</div>', unsafe_allow_html=True)
 		
     # --- SEZIONE LOG APERTI ---
-    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fine
-    if not log_aperti.empty:
-        st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
-        for _, row in log_aperti.iterrows():
-            with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
-                c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
-                data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
-                ora_inizio = pd.to_datetime(row['ora_i']).time()
-                inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
-                trascorso = datetime.now(tz) - inizio_dt
-                ore, resto = divmod(trascorso.seconds, 3600)
-                minuti, _ = divmod(resto, 60)
-                c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
-                c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
-                c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
-                if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
-                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
-                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-                    st.success("Log chiuso!")
-                    get_cached_data.clear()
-                    st.rerun()
+    log_aperti = df[df['ora_f'].isna() | (df['ora_f'] == 'None')] # Filtra log senza fineif not log_aperti.empty:
+    st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
+    for _, row in log_aperti.iterrows():
+        with st.container():    # Layout: Info Log | Tempo Trascorso | Pulsante Stop
+            c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
+            data_inizio = row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio']
+            ora_inizio = pd.to_datetime(row['ora_i']).time()
+            inizio_dt = datetime.combine(data_inizio, ora_inizio).replace(tzinfo=tz)
+            trascorso = datetime.now(tz) - inizio_dt
+            ore, resto = divmod(trascorso.seconds, 3600)
+            minuti, _ = divmod(resto, 60)
+            c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
+            c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
+            c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {ore}h {minuti}m</p>", unsafe_allow_html=True)
+            if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
+                ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                st.success("Log chiuso!")
+                get_cached_data.clear()
+                st.rerun()
                 
-                if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
-                        ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
-                        # 1. Chiudo il log attuale
-                        supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
-                        get_cached_data.clear()
-                        # 2. Apro la modale per lo stesso task
-                        modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
+            if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
+                    ora_fine_adesso = datetime.now(tz).strftime('%H:%M:%S')
+                    # 1. Chiudo il log attuale
+                    supabase.table("Log_Tempi").update({"ora_f": ora_fine_adesso}).eq("id", row['id']).execute()
+                    get_cached_data.clear()
+                    # 2. Apro la modale per lo stesso task
+                    modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
 
     # --- FILTRAGGIO DATI ---
     df_p = df.copy()
@@ -913,12 +912,12 @@ if l and tk and cm:
     if f_s_tag: df_p = df_p[df_p['tag'].isin(f_s_tag)]
     if search_text: df_p = df_p[df_p['Commessa'].astype(str).str.lower().str.contains(search_text) | df_p['Task'].astype(str).str.lower().str.contains(search_text)]
     
-    if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
-        start_search = pd.to_datetime(f_range[0])
-        end_search = pd.to_datetime(f_range[1])
-        df_p['inizio'] = pd.to_datetime(df_p['inizio'])
-        df_p['fine'] = pd.to_datetime(df_p['fine'])
-        df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)]
+if isinstance(f_range, (list, tuple)) and len(f_range) == 2:
+    start_search = pd.to_datetime(f_range[0])
+    end_search = pd.to_datetime(f_range[1])
+    df_p['inizio'] = pd.to_datetime(df_p['inizio'])
+    df_p['fine'] = pd.to_datetime(df_p['fine'])
+    df_p = df_p[(df_p['inizio'] <= end_search) & (df_p['fine'] >= start_search)]
     
 tabs = st.tabs(["📊 Timeline", "📅 Calendario", "📑 Agenda", "📋 Gestione Logs", "⚙️ Gestione", "📈 Statistiche"])    
 
@@ -989,6 +988,7 @@ with tabs[2]:
 with tabs[3]: 
     st.header("📋 Gestione Logs")
 
+    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
@@ -1001,7 +1001,6 @@ with tabs[3]:
         cms_id_to_nome = {c['id']: c['nome_commessa'] for c in cm_data}
         map_task = {s['nome_task']: s['id'] for s in tk_data}
         res_tags = supabase.table("Tag").select("id, nome").execute()
-        mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
 
         # Conversione sicura per il Data Editor
         df_edit['ora_i'] = pd.to_datetime(df_edit['ora_i'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(8, 0))
@@ -1138,20 +1137,12 @@ with tabs[5]:
         # Totale per il periodo filtrato
         df_totale_periodo = df_netto_globale.groupby(['operatore', col_tag])['ore_lavorate'].sum().reset_index()
         if not df_totale_periodo.empty:
+            if 'testo_ore' in df_totale_periodo.columns:
+                df_totale_periodo['testo_ore'] = df_totale_periodo['testo_ore'].fillna("00:00").astype(str)
+                df_totale_periodo['testo_ore'] = df_totale_periodo['testo_ore'].replace("0", "00:00")
             if col_tag in df_totale_periodo.columns:
                 df_totale_periodo[col_tag] = df_totale_periodo[col_tag].fillna("Altro").astype(str)
-            def formatta_ore(ore_decimali):
-                if pd.isna(ore_decimali) or ore_decimali <= 0:
-                    return "00:00"
-                ore = int(ore_decimali)
-                minuti = int(round((ore_decimali - ore) * 60))
-                if minuti == 60:
-                    ore += 1
-                    minuti = 0
-                return f"{ore:02d}:{minuti:02d}"
-                
-            df_totale_periodo['testo_ore'] = df_totale_periodo['ore_lavorate'].apply(formatta_ore)
-            
+
         c1, c2 = st.columns([2, 1])
 
         with c1:
