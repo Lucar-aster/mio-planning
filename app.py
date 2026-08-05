@@ -764,7 +764,7 @@ if l and tk and cm:
         st.markdown('</div>', unsafe_allow_html=True)
         
     # --- LOGICA SOSTITUTIVA DELLA MODALE (ORA IN UN EXPANDER) ---    
-	with st.expander(f"⚙️ Gestione Task & Log - {data_clic.strftime('%d/%m/%Y')}", expanded=False):
+with st.expander(f"⚙️ Gestione Task & Log - {data_clic.strftime('%d/%m/%Y')}", expanded=False):
     
     # 1. Recupero dati base
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
