@@ -764,22 +764,20 @@ if l and tk and cm:
         st.markdown('</div>', unsafe_allow_html=True)
         
     # --- LOGICA SOSTITUTIVA DELLA MODALE (ORA IN UN EXPANDER) ---    
-with st.expander(f"⚙️ Gestione Task & Log - {data_clic.strftime('%d/%m/%Y')}", expanded=False):
-    
-    # 1. Recupero dati base
-    cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
-    task_info = next((t for t in tk_data if t['id'] == task_id), None)
-    
-    if not task_info:
-        st.error("Task non trovato.")
-    else:
-        commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
-        tags_data = get_cached_data("Tag")
-        lista_tag = sorted([t['nome'] for t in tags_data])
-        mappa_tags = {t['nome']: t['id'] for t in tags_data}
-        
-        # 2. Layout a 3 Colonne
-        col1, col2, col3 = st.columns(3)
+def modal_gestione_clic(task_id, data_clic):
+    with st.expander(f"⚙️ Gestione Task & Log - {data_clic.strftime('%d/%m/%Y')}", expanded=False):
+        # 1. Recupero dati base
+        cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
+        task_info = next((t for t in tk_data if t['id'] == task_id), None)
+        if not task_info:
+            st.error("Task non trovato.")
+        else:
+            commessa_info = next((c for c in cm_data if c['id'] == task_info['commessa_id']), None)
+            tags_data = get_cached_data("Tag")
+            lista_tag = sorted([t['nome'] for t in tags_data])
+            mappa_tags = {t['nome']: t['id'] for t in tags_data}
+            # 2. Layout a 3 Colonne
+            col1, col2, col3 = st.columns(3)
         
         # --- COLONNA 1: MODIFICA ANAGRAFICA ---
         with col1:
