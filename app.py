@@ -820,7 +820,7 @@ def modal_gestione_clic(task_id, data_clic):
                 
                 nota_t = st.text_input("Nota log")  
                 c1, c2 = st.columns(2)
-                    if c1.button("Registra Task", type="primary", width='stretch'):
+                if c1.button("Registra Task", type="primary", width='stretch'):
                     if not op_sel_t or len(date_range_t) < 2: st.warning("Seleziona operatore e range date valido.")
                     else:
                         data_inizio_t, data_fine_t = date_range_t
