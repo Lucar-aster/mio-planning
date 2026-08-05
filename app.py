@@ -988,7 +988,9 @@ with tabs[2]:
         
 with tabs[3]: 
     st.header("📋 Gestione Logs")
-
+    
+    res_tags = supabase.table("Tag").select("id, nome").execute()
+    mappa_id_to_nome = {t['id']: t['nome'] for t in res_tags.data}
     mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
