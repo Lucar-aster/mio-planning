@@ -820,24 +820,24 @@ def modal_gestione_clic(task_id, data_clic):
                 
                 nota_t = st.text_input("Nota log")  
                 c1, c2 = st.columns(2)
-                if c1.button("Registra Task", type="primary", width='stretch'):
-                if not op_sel_t or len(date_range_t) < 2: st.warning("Seleziona operatore e range date valido.")
-                else:
-                    data_inizio_t, data_fine_t = date_range_t
-                    curr_cm_id = cms_dict.get(sel_cm)
-                    if sel_cm == "➕ Nuova Commessa...":
-                        if not nome_nuova_cm: st.error("Inserisci nome commessa"); return
-                        res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
-                        curr_cm_id = res_cm.data[0]['id']
-                    if not nome_nuovo_tk: st.error("Inserisci nome task"); return
-                    res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
-                    final_task_id = res_tk.data[0]['id']
+                    if c1.button("Registra Task", type="primary", width='stretch'):
+                    if not op_sel_t or len(date_range_t) < 2: st.warning("Seleziona operatore e range date valido.")
+                    else:
+                        data_inizio_t, data_fine_t = date_range_t
+                        curr_cm_id = cms_dict.get(sel_cm)
+                        if sel_cm == "➕ Nuova Commessa...":
+                            if not nome_nuova_cm: st.error("Inserisci nome commessa"); return
+                            res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
+                            curr_cm_id = res_cm.data[0]['id']
+                        if not nome_nuovo_tk: st.error("Inserisci nome task"); return
+                        res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": curr_cm_id, "stato": new_tk_status_1}).execute()
+                        final_task_id = res_tk.data[0]['id']
 
-                    nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None, "note": nota_t, "tag": id_tag_scelto_t} for op in op_sel_t]
-                    supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
-                    get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+                        nuovi_log_t = [{"task_id": final_task_id, "operatore": op, "inizio": str(data_inizio_t), "fine": str(data_fine_t), "ora_i": ora_i_t.strftime('%H:%M:%S'), "ora_f": ora_f_t.strftime('%H:%M:%S') if ora_f_t else None, "note": nota_t, "tag": id_tag_scelto_t} for op in op_sel_t]
+                        supabase.table("Log_Tempi").insert(nuovi_log_t).execute()
+                        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
         
-                if c2.button("Annulla", width='stretch', key="annulla_t"): st.session_state.chart_key += 1; st.rerun()
+                    if c2.button("Annulla", width='stretch', key="annulla_t"): st.session_state.chart_key += 1; st.rerun()
     with col3:    
         st.markdown(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}")
         with st.container(border=True):
