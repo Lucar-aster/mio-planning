@@ -621,7 +621,7 @@ if l and tk and cm:
                     supabase.table("Log_Tempi").update({"ora_f": datetime.now(tz).strftime('%H:%M:%S')}).eq("id", row['id']).execute()
                     get_cached_data.clear(); st.rerun()
                     
-                if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", use_container_width=True):
+                if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", width='stretch'):
                     supabase.table("Log_Tempi").update({"ora_f": datetime.now(tz).strftime('%H:%M:%S')}).eq("id", row['id']).execute()
                     get_cached_data.clear()
                     modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
@@ -759,7 +759,7 @@ with tabs[5]:
             st.subheader("👥 Carico Lavoro per Operatore")
             fig_stats = px.bar(df_totale_periodo, x='operatore', y='ore_lavorate', color=col_tag, barmode='group', color_discrete_map=color_discrete_map, text='testo_ore', title="Ore Effettive (Netto sovrapposizioni e pausa)", labels={'testo_ore': 'Ore Totali', 'operatore': 'Operatore', col_tag: 'Tag'}, template="plotly_white")
             fig_stats.update_layout(hovermode="x unified")
-            st.plotly_chart(fig_stats, use_container_width=True)
+            st.plotly_chart(fig_stats, width='stretch')
 
         with c2:
             st.subheader("🔖 Ore Totali per Tag")
@@ -771,7 +771,7 @@ with tabs[5]:
                 fig_tag_pie = px.pie(df_tag_pie, names='legenda_tag', values='ore_lavorate', color=col_tag, color_discrete_map=color_discrete_map, hole=.3)
                 fig_tag_pie.update_traces(textposition='inside', textinfo='text', text=df_tag_pie[col_tag] + "<br>" + df_tag_pie['testo_ore_tag'], hovertemplate="<b>%{label}</b><br>Ore: %{customdata}<extra></extra>", customdata=df_tag_pie['testo_ore_tag'], insidetextorientation='horizontal')
                 fig_tag_pie.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0), showlegend=True, legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02))
-                st.plotly_chart(fig_tag_pie, use_container_width=True)
+                st.plotly_chart(fig_tag_pie, width='stretch')
             else: st.info("Nessun dato sui tag trovato per generare il grafico.")
 				
         st.markdown("---")
@@ -794,6 +794,6 @@ with tabs[5]:
 
             fig_sankey = go.Figure(data=[go.Sankey(node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors), textfont = dict(size = 14, color = "black"), link = dict(source=links_sankey[col_comm].map(node_map), target=links_sankey[col_tag].map(node_map), value=links_sankey['ore_pesate'], color=[hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]], customdata=links_sankey['ore_formattate'], hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Durata: %{customdata}<extra></extra>'))])
             fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
-            st.plotly_chart(fig_sankey, use_container_width=True)
+            st.plotly_chart(fig_sankey, width='stretch')
             
     else: st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
