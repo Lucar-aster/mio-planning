@@ -13,9 +13,12 @@ from streamlit_calendar import calendar
 import plotly.express as px
 import io
 
+if 'sidebar_state' not in st.session_state:
+    st.session_state.sidebar_state = 'collapsed'
+
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
-st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide", initial_sidebar_state=st.session_state.sidebar_state)
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
@@ -38,6 +41,7 @@ if 'chart_key' not in st.session_state:
 if 'vista_compressa' not in st.session_state:
     st.session_state.vista_compressa = False
 
+   
 # --- 2. CSS ---
 st.markdown(f"""
     <head>
@@ -805,7 +809,7 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             if d and d[0] == "LOG_FITTIZIO":
                 st.session_state['selected_task_id'] = d[1]
                 st.session_state['selected_data_clic'] = pd.to_datetime(d[2]).date()
-                st.session_state["initial_sidebar_state"] = "expanded"
+                st.session_state.sidebar_state = 'expanded'
                 st.rerun()
             elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
     
