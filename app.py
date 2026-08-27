@@ -817,6 +817,8 @@ l, tk, cm, ops_list = get_cached_data("Log_Tempi"), get_cached_data("Task"), get
 df = pd.DataFrame()
 df_p = pd.DataFrame()
 f_range = None
+res_tags = None
+
 if l and tk and cm:
     tk_m = {t['id']: {'n': t['nome_task'], 'c': t['commessa_id'], 's': t.get('stato', 'Pianificato 🔵')} for t in tk}
     cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
