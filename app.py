@@ -137,7 +137,7 @@ def modal_gestione_clic(task_id, data_clic):
         lista_tag = sorted([t['nome'] for t in tags_data])
         mappa_tags = {t['nome']: t['id'] for t in tags_data}
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.tabs(3)
         
         # --- COLONNA 1: Modifica Anagrafica ---
         with col1:
