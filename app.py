@@ -808,6 +808,17 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
             if d and d[0] == "LOG_FITTIZIO":
                 st.session_state['selected_task_id'] = d[1]
                 st.session_state['selected_data_clic'] = pd.to_datetime(d[2]).date()
+                st.components.v1.html(
+                    """
+                    <script>
+                        var button = window.parent.document.querySelector('button[data-testid="stSidebarCollapseButton"]');
+                        if (button) {
+                            button.click();
+                        }
+                    </script>
+                    """,
+                    height=0,
+                )
                 st.rerun()
             elif d: modal_edit_log(d[0], d[1], d[2], d[3], d[7], d[6])
     
