@@ -229,8 +229,8 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         nuovo_stato_task = st.selectbox("Aggiorna Stato Task:", options=STATI_TASK, index=STATI_TASK.index(current_status))
 
     st.divider()
-    
-    all_logs = supabase.table("Log_Tempi").select("*").eq("operatore", current_op).eq("task_id", current_task_id).execute().data
+    raw_logs = get_cached_data("Log_Tempi")
+    all_logs = [l for l in raw_logs if l.get('operatore') == current_op and l.get('task_id') == current_task_id]
     df_sub = pd.DataFrame(all_logs)
     
     if not df_sub.empty:
@@ -254,7 +254,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         df_sub,
         column_config={
             "id": None, "task_id": None,"era_aperto": None,
-            "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, width="medium", required=True),
+            "operatore": st.column_config.SelectboxColumn("Operatore", options=ops_list, required=True),
             "tag": st.column_config.SelectboxColumn("Tag", options=tag_list, width="medium"), 
             "note": st.column_config.TextColumn("Note", width="large"),
             "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"),
@@ -481,7 +481,8 @@ def modal_tag():
 def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, shapes):
     if df_plot.empty: st.info("Nessun dato trovato."); return
     
-    mappa_colori_tag = {str(t['nome']).strip().lower(): t['colore'] for t in supabase.table("Tag").select("id, nome, colore").execute().data}
+    tags_cached = get_cached_data("Tag")
+    mappa_colori_tag = {str(t['nome']).strip().lower(): t['colore'] for t in tags_cached}
     df_merged = df_plot.copy()
     df_tasks_univoci = df_merged[['Commessa', 'Task', 'task_id', 'stato_commessa', 'stato_task']].drop_duplicates()
     fig = go.Figure()
