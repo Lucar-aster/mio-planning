@@ -160,7 +160,7 @@ def cb_registra_log(task_id, new_tk_status_2, op_sel_l, date_range_l, ora_i_l, o
 	
 @st.dialog("Gestione Task & Log", width="large")
 def modal_gestione_clic(task_id, data_clic):
-	if "modal_error" in st.session_state:
+    if "modal_error" in st.session_state:
         st.error(st.session_state.pop("modal_error"))
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
     task_info = next((t for t in tk_data if t['id'] == task_id), None)
