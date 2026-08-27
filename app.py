@@ -137,11 +137,11 @@ def modal_gestione_clic(task_id, data_clic):
         lista_tag = sorted([t['nome'] for t in tags_data])
         mappa_tags = {t['nome']: t['id'] for t in tags_data}
         
-        col1, col2, col3 = st.tabs(3)
+        tab1, tab2, tab3 = st.tabs(3)
         
         # --- COLONNA 1: Modifica Anagrafica ---
-        with col1:
-            st.markdown("### 🏗️ Modifica Anagrafica")
+        with tab1:
+            st.markdown("🏗️ Modifica Anagrafica")
             with st.container(border=True):
                 new_tk_name = st.text_input("Nome Task", value=task_info.get('nome_task', ''), key="exp_tk_name")
                 new_tk_status = st.selectbox("Stato Task", options=STATI_TASK, index=STATI_TASK.index(task_info.get('stato', STATI_TASK[0])), key="exp_tk_stat")
@@ -159,8 +159,8 @@ def modal_gestione_clic(task_id, data_clic):
                     st.rerun()
 
         # --- COLONNA 2: Nuovo Task con Log ---
-        with col2:
-            st.markdown("### 📑 Nuovo Task con Log")
+        with tab2:
+            st.markdown("📑 Nuovo Task con Log")
             with st.container(border=True):
                 cms_dict = {c['nome_commessa']: c['id'] for c in cm_data}
                 lista_nomi_cm = list(cms_dict.keys())
@@ -225,7 +225,7 @@ def modal_gestione_clic(task_id, data_clic):
                     st.rerun()
 
         # --- COLONNA 3: Nuovo Log ---
-        with col3:    
+        with tab3:    
             st.markdown(f"### ⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}")
             with st.container(border=True):
                 nome_commessa = commessa_info.get('nome_commessa', 'Non specificata') if commessa_info else 'Non specificata'
