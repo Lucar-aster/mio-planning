@@ -1,4 +1,4 @@
-header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
+header[data-testid="stHeader"] { background-color: transparent !important; z-index: 99999 !important; }
     .block-container { padding-top: 0rem !important; padding-bottom: 0rem !important; margin-top: -30px; }
     
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
@@ -42,3 +42,10 @@ header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
     font-size: 12px !important;
     min-height: 24px !important;
     }
+
+button[data-testid="stSidebarCollapseButton"] {
+    visibility: visible !important;
+    display: flex !important;
+    z-index: 100000 !important;
+    color: #000000 !important; /* Cambia in #ffffff se usi il tema scuro */
+}
