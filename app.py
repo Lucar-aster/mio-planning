@@ -15,7 +15,7 @@ import io
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
-st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Aster Contract", page_icon=LOGO_URL, layout="wide", initial_sidebar_state="expanded")
 
 STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Completata 🟢", "Sospesa 🟠", "Cancellata 🔴"]
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
