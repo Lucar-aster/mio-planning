@@ -120,12 +120,11 @@ def modal_gestione_clic(task_id, data_clic):
         if data_clic else "⚙️ Gestione Task & Log (Seleziona un elemento dal grafico)"
     )
 
-    with st.expander(titolo_expander, expanded=is_open):
+    with st.sidebar.expander(titolo_expander, expanded=is_open):
         if not task_id:
             st.info("👈 Fai clic su una casella del grafico per gestire il Task o inserire un nuovo Log.")
             return
 
-        # --- DA QUI IN POI IL TUO CODICE ORIGINALE DELLA MODALE ---
         cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
         task_info = next((t for t in tk_data if t['id'] == task_id), None)
         
