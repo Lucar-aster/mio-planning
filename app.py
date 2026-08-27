@@ -611,6 +611,21 @@ if l and tk and cm:
         st.markdown('</div>', unsafe_allow_html=True)
 		
     # --- SEZIONE LOG APERTI ---
+    def azione_chiudi_log(log_id):
+        ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
+        # Chiamata a DB
+        supabase.table("Log_Tempi").update({"ora_f": ora_attuale}).eq("id", log_id).execute()
+        # Invalida la cache locale per il prossimo render
+        get_cached_data.clear()
+
+    def azione_chiudi_e_apri_modal(log_id, task_id):
+        azione_chiudi_log(log_id)
+        # Salva in session_state quale modal aprire subito dopo il render
+        st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
+    if "target_task_modal" in st.session_state:
+        task_id_m, data_m = st.session_state.pop("target_task_modal")
+        modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
+        
     if not (log_aperti := df[df['ora_f'].isna() | (df['ora_f'] == 'None')]).empty:
         st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
         for _, row in log_aperti.iterrows():
@@ -619,16 +634,22 @@ if l and tk and cm:
                 trascorso = datetime.now(tz) - datetime.combine(row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio'], pd.to_datetime(row['ora_i']).time()).replace(tzinfo=tz)
                 c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
                 c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
-                c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {trascorso.seconds // 3600}h {(trascorso.seconds % 3600) // 60}m</p>", unsafe_allow_html=True)
-                
-                if c4.button("Fine", key=f"stop_{row['id']}", type="primary"):
-                    supabase.table("Log_Tempi").update({"ora_f": datetime.now(tz).strftime('%H:%M:%S')}).eq("id", row['id']).execute()
-                    get_cached_data.clear(); st.rerun()
-                    
-                if c5.button("Fine + ➕", key=f"next_{row['id']}", type="primary", width='stretch'):
-                    supabase.table("Log_Tempi").update({"ora_f": datetime.now(tz).strftime('%H:%M:%S')}).eq("id", row['id']).execute()
-                    get_cached_data.clear()
-                    modal_gestione_clic(task_id=row['task_id'], data_clic=datetime.now(tz).date())
+                c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {trascorso.seconds // 3600}h {(trascorso.seconds % 3600) // 60}m</p>", unsafe_allow_html=True)  
+                c4.button(
+                    "Fine", 
+                    key=f"stop_{row['id']}", 
+                    type="primary", 
+                    on_click=azione_chiudi_log, 
+                    args=(row['id'],)
+                )
+                c5.button(
+                    "Fine + ➕", 
+                    key=f"next_{row['id']}", 
+                    type="primary", 
+                    width='stretch',
+                    on_click=azione_chiudi_e_apri_modal,
+                    args=(row['id'], row['task_id'])
+                )
 
     # --- FILTRAGGIO DATI ---
     df_p = df.copy()
