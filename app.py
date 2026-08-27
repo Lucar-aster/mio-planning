@@ -1048,7 +1048,8 @@ with tabs[2]:
 with tabs[3]: 
     st.header("📋 Gestione Logs")
 
-    mappa_tags = {t['nome']: t['id'] for t in res_tags.data}
+    tags_data = get_cached_data("Tag") or []
+    mappa_tags = {t['nome']: t['id'] for t in tags_data if isinstance(t, dict) and 'nome' in t and 'id' in t}
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'] = pd.to_datetime(df_edit['Inizio']).dt.date
