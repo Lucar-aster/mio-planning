@@ -623,10 +623,10 @@ if l and tk and cm:
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
-        # Salva in session_state quale modal aprire subito dopo il render
+
         st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
     if "target_task_modal" in st.session_state:
-        task_id_m, data_m = st.session_state.pop("target_task_modal")
+        task_id_m, data_m = st.session_state.active_dialog("target_task_modal")
         modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
         
     if not (log_aperti := df[df['ora_f'].isna() | (df['ora_f'] == 'None')]).empty:
