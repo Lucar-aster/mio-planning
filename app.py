@@ -616,11 +616,14 @@ if l and tk and cm:
     # --- SEZIONE LOG APERTI ---
     def azione_chiudi_log(log_id):
         ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
+        # Chiamata a DB
         supabase.table("Log_Tempi").update({"ora_f": ora_attuale}).eq("id", log_id).execute()
+        # Invalida la cache locale per il prossimo render
         get_cached_data.clear()
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
+
         st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
     if "target_task_modal" in st.session_state:
         task_id_m, data_m = st.session_state.active_dialog("target_task_modal")
@@ -635,22 +638,21 @@ if l and tk and cm:
                 c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
                 c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
                 c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {trascorso.seconds // 3600}h {(trascorso.seconds % 3600) // 60}m</p>", unsafe_allow_html=True)  
-                if c4.button(
+                c4.button(
                     "Fine", 
                     key=f"stop_{row['id']}", 
-                    type="primary",
-                    width='stretch'
-                ):
-                    azione_chiudi_log(row['id'])
-                    st.rerun()
-                if c5.button(
+                    type="primary", 
+                    on_click=azione_chiudi_log, 
+                    args=(row['id'],)
+                )
+                c5.button(
                     "Fine + ➕", 
                     key=f"next_{row['id']}", 
                     type="primary", 
-                    width='stretch'
-                ):
-                    azione_chiudi_e_apri_modal(row['id'], row['task_id'])
-                    st.rerun()
+                    width='stretch',
+                    on_click=azione_chiudi_e_apri_modal,
+                    args=(row['id'], row['task_id'])
+                )
 
     # --- FILTRAGGIO DATI ---
     df_p = df.copy()
