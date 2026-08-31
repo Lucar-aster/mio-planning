@@ -11,6 +11,7 @@ import hashlib
 from streamlit_calendar import calendar
 import plotly.express as px
 import io
+import threading
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
@@ -104,6 +105,25 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
     except Exception as e: st.error(f"Errore: {e}")
 
 # --- 5. MODALI ---
+def _salva_log_background(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status):
+    try:
+        final_id = target_id
+        if sel_task == "➕ Aggiungi nuovo task...":
+            res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": new_task_status.strip()}).execute()
+            if res.data: final_id = res.data[0]['id']
+        else:
+            supabase.table("Task").update({"stato": new_task_status.strip()}).eq("id", target_id).execute()
+
+        if final_id:
+            for log in nuovi_log:
+                log["task_id"] = final_id
+            supabase.table("Log_Tempi").insert(nuovi_log).execute()
+            get_cached_data.clear("Log_Tempi")
+            get_cached_data.clear("Task")
+    except Exception as e:
+        print(f"Errore salvataggio log in background: {e}")
+
+        
 @st.dialog("Gestione Task & Log", width="large")
 def modal_gestione_clic(task_id, data_clic):
     cm_data, tk_data = get_cached_data("Commesse"), get_cached_data("Task")
@@ -340,23 +360,27 @@ def modal_log():
     if st.button("Registra Log", width='stretch', type="primary"):
         if not op_ms: st.error("⚠️ Seleziona operatore!"); return
         target_id = None
-        if sel_task == "➕ Aggiungi nuovo task...":
-            if new_task_name.strip():
-                res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": new_task_status.strip()}).execute()
-                if res.data: target_id = res.data[0]['id']
-            else: st.error("Nome task mancante"); return
-        else:
-            target_id = task_opts[sel_task]
-            supabase.table("Task").update({"stato": new_task_status.strip()}).eq("id", target_id).execute()
+        if sel_task == "➕ Aggiungi nuovo task..." and not new_task_name.strip():
+            st.error("Nome task mancante"); return
+            
+        target_id = task_opts[sel_task]
+        nuovi_log = [{
+            "operatore": op_name, 
+            "inizio": str(data_i), 
+            "fine": str(data_f),
+            "ora_i": ora_i.strftime('%H:%M:%S'), 
+            "ora_f": str(ora_f) if ora_f else None, 
+            "note": nota, 
+            "tag": id_tag_scelto_lg
+        } for op_name in op_ms]
+
+        threading.Thread(
+            target=_salva_log_background,
+            args=(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status),
+            daemon=True
+        ).start()
         
-        if target_id:
-            for op_name in op_ms:
-                supabase.table("Log_Tempi").insert({
-                    "operatore": op_name, "task_id": target_id, 
-                    "inizio": str(data_i), "fine": str(data_f),
-                    "ora_i": ora_i.strftime('%H:%M:%S'), "ora_f": str(ora_f) if ora_f else None, "note": nota, "tag": id_tag_scelto_lg
-                }).execute()
-            get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+        st.session_state.chart_key += 1; st.rerun()
             
 @st.dialog("📂 Clona Commessa con Date")
 def modal_clona_avanzata():
