@@ -617,7 +617,7 @@ if l and tk and cm:
     def azione_chiudi_log(log_id):
         ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
         supabase.table("Log_Tempi").update({"ora_f": ora_attuale}).eq("id", log_id).execute()
-        get_cached_data.clear("Log_Tempi"))
+        get_cached_data.clear("Log_Tempi")
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
