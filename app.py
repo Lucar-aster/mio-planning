@@ -616,10 +616,8 @@ if l and tk and cm:
     # --- SEZIONE LOG APERTI ---
     def azione_chiudi_log(log_id):
         ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
-        # Chiamata a DB
         supabase.table("Log_Tempi").update({"ora_f": ora_attuale}).eq("id", log_id).execute()
-        # Invalida la cache locale per il prossimo render
-        get_cached_data.clear()
+        get_cached_data.clear("Log_Tempi"))
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
