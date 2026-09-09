@@ -12,6 +12,7 @@ from streamlit_calendar import calendar
 import plotly.express as px
 import io
 import threading
+import logging
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
@@ -21,17 +22,63 @@ STATI_COMMESSA = ["Quotazione 🟣", "Pianificata 🔵", "In corso 🟡", "Compl
 STATI_TASK = ["Pianificato 🔵", "In corso 🟡", "In attesa ⚪", "Completato 🟢", "Sospeso 🟠"]
 tz = ZoneInfo("Europe/Rome")
 
+# --- SYSTEM LOGGING HANDLER (NON-BLOCCANTE) ---
+class SupabaseLogHandler(logging.Handler):
+    """Custom Logging Handler per inviare log di sistema e errori a Supabase o console in modo sicuro."""
+    def __init__(self, supabase_client):
+        super().__init__()
+        self.supabase = supabase_client
+
+    def emit(self, record):
+        try:
+            log_entry = self.format(record)
+            # Inserimento asincrono/protetto del log di errore/sistema
+            # Se esiste una tabella 'App_Logs' su Supabase viene salvato lì, altrimenti gestisce l'eccezione
+            if record.levelno >= logging.ERROR and self.supabase:
+                self.supabase.table("App_Logs").insert({
+                    "livello": record.levelname,
+                    "messaggio": log_entry,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }).execute()
+        except Exception:
+            # Evita crash dell'app se la tabella App_Logs non esiste o se il DB è irraggiungibile
+            pass
+
+def init_logger(supabase_client=None):
+    logger = logging.getLogger("AsterAppLogger")
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        
+        # Stream Handler per la console
+        ch = logging.StreamHandler()
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+        
+        # Custom DB Handler per tracciare errori critical/error sul DB
+        if supabase_client:
+            db_handler = SupabaseLogHandler(supabase_client)
+            db_handler.setFormatter(formatter)
+            db_handler.setLevel(logging.ERROR)
+            logger.addHandler(db_handler)
+            
+    return logger
+
 # --- 3. CONNESSIONE E CACHING ---
 @st.cache_resource
 def init_connection():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 supabase = init_connection()
+logger = init_logger(supabase)
 
 @st.cache_data
 def get_cached_data(table):
-    try: return supabase.table(table).select("*").execute().data
-    except: return []
+    try: 
+        return supabase.table(table).select("*").execute().data
+    except Exception as e: 
+        logger.error(f"Errore lettura tabella {table}: {e}")
+        return []
 
 if 'chart_key' not in st.session_state: st.session_state.chart_key = 0
 if 'vista_compressa' not in st.session_state: st.session_state.vista_compressa = False
@@ -101,8 +148,11 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
             else:
                 supabase.table(nome_tabella).update(row_dict).eq("id", curr_id).execute()
         st.success(f"Dati {nome_tabella} aggiornati!")
+        logger.info(f"Aggiornata tabella {nome_tabella}")
         get_cached_data.clear(); st.rerun()
-    except Exception as e: st.error(f"Errore: {e}")
+    except Exception as e: 
+        logger.error(f"Errore aggiornamento setup {nome_tabella}: {e}")
+        st.error(f"Errore: {e}")
 
 # --- 5. MODALI ---
 def _salva_log_background(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status):
@@ -120,8 +170,10 @@ def _salva_log_background(nuovi_log, sel_task, target_id, new_task_name, sel_cm_
             supabase.table("Log_Tempi").insert(nuovi_log).execute()
             get_cached_data.clear("Log_Tempi")
             get_cached_data.clear("Task")
+            logger.info(f"Log salvati in background per task {final_id}")
     except Exception as e:
-        print(f"Errore salvataggio log in background: {e}")
+        logger.error(f"Errore salvataggio log in background: {e}")
+
 def _salva_modifiche_anagrafica_bg(task_id, new_tk_name, new_tk_status, commessa_id=None, new_cm_name=None, new_cm_status=None):
     try:
         supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
@@ -129,8 +181,9 @@ def _salva_modifiche_anagrafica_bg(task_id, new_tk_name, new_tk_status, commessa
             supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_id).execute()
         get_cached_data.clear("Task")
         get_cached_data.clear("Commesse")
+        logger.info(f"Modificata anagrafica task {task_id}")
     except Exception as e:
-        print(f"Errore modifica anagrafica background: {e}")
+        logger.error(f"Errore modifica anagrafica background: {e}")
 
 def _registra_nuovo_task_log_bg(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk, new_tk_status_1, date_range_t, ora_i_t, ora_f_t, nota_t, id_tag_scelto_t, op_sel_t):
     try:
@@ -158,8 +211,9 @@ def _registra_nuovo_task_log_bg(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk
             } for op in op_sel_t]
             supabase.table("Log_Tempi").insert(nuovi_log).execute()
             get_cached_data.clear("Log_Tempi")
+            logger.info(f"Registrato nuovo task e log per commessa {c_id}")
     except Exception as e:
-        print(f"Errore nuovo task con log background: {e}")
+        logger.error(f"Errore nuovo task con log background: {e}")
 
 def _registra_log_esistente_bg(task_id, new_tk_status_2, date_range_l, ora_i_l, ora_f_l, nota_l, id_tag_scelto_l, op_sel_l):
     try:
@@ -178,8 +232,9 @@ def _registra_log_esistente_bg(task_id, new_tk_status_2, date_range_l, ora_i_l, 
         } for op in op_sel_l]
         supabase.table("Log_Tempi").insert(nuovi_log).execute()
         get_cached_data.clear("Log_Tempi")
+        logger.info(f"Registrato log esistente per task {task_id}")
     except Exception as e:
-        print(f"Errore registrazione log background: {e}")
+        logger.error(f"Errore registrazione log background: {e}")
         
 @st.dialog("Gestione Task & Log", width="large")
 def modal_gestione_clic(task_id, data_clic):
@@ -535,7 +590,9 @@ def import_excel_modal():
                         st.success(f"Inseriti {len(logs_to_insert)} log!")
                         get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
                     else: st.error("Nessun dato valido trovato.")
-                except Exception as ex: st.error(f"Errore tecnico: {ex}")
+                except Exception as ex: 
+                    logger.error(f"Errore importazione excel: {ex}")
+                    st.error(f"Errore tecnico: {ex}")
 
 def calcola_ore_evolute_12h(group, col_tag):
     intervalli = []
@@ -816,7 +873,9 @@ with tabs[3]:
         if st.button("Salva Modifiche Tabella"):
             for _, r in edited_log.iterrows():
                 try: supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": mappa_tags.get(r["tag"])}).eq("id", r['id']).execute()
-                except Exception as e: st.error(f"Errore log {r['id']}: {e}")
+                except Exception as e: 
+                    logger.error(f"Errore aggiornamento log {r['id']}: {e}")
+                    st.error(f"Errore log {r['id']}: {e}")
             st.success("Modifiche salvate!"); get_cached_data.clear(); st.rerun()
 
 with tabs[4]: 
