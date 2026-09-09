@@ -13,6 +13,7 @@ import plotly.express as px
 import io
 import threading
 import logging
+import time
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
@@ -129,30 +130,78 @@ with header_col2:
     """, unsafe_allow_html=True)
     
 # --- 4. FUNZIONI DI AGGIORNAMENTO DB (SETUP) ---
-def aggiorna_database_setup(nome_tabella, edited_df, original_df):
+def _bg_aggiorna_setup(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_update):
     try:
-        ids_originali = set(pd.DataFrame(original_df)['id'].dropna()) if original_df else set()
-        ids_attuali = set(edited_df['id'].dropna())
-        
-        for idx in (ids_originali - ids_attuali): supabase.table(nome_tabella).delete().eq("id", idx).execute()
+        if ids_da_eliminare:
+            for idx in ids_da_eliminare: supabase.table(nome_tabella).delete().eq("id", idx).execute()
+        if rows_to_insert:
+            supabase.table(nome_tabella).insert(rows_to_insert).execute()
+        if rows_to_update:
+            for r in rows_to_update: 
+                rid = r.pop('id')
+                supabase.table(nome_tabella).update(r).eq("id", rid).execute()
+        get_cached_data.clear()
+    except Exception as e: logger.error(f"Errore bg setup {nome_tabella}: {e}")
 
-        for _, row in edited_df.iterrows():
-            row_dict = row.dropna().to_dict()
-            for key, val in row_dict.items():
-                if isinstance(val, time): row_dict[key] = str(val)
-                elif isinstance(val, datetime): row_dict[key] = str(val.date())
-                
-            curr_id = row_dict.pop('id', None)
-            if curr_id is None or pd.isna(curr_id):
-                supabase.table(nome_tabella).insert(row_dict).execute()
-            else:
-                supabase.table(nome_tabella).update(row_dict).eq("id", curr_id).execute()
-        st.success(f"Dati {nome_tabella} aggiornati!")
-        logger.info(f"Aggiornata tabella {nome_tabella}")
-        get_cached_data.clear(); st.rerun()
-    except Exception as e: 
-        logger.error(f"Errore aggiornamento setup {nome_tabella}: {e}")
-        st.error(f"Errore: {e}")
+def _bg_salva_dettaglio(id_task_target, nuovo_stato_task, log_da_eliminare, log_da_aggiornare):
+    try:
+        supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
+        if log_da_eliminare:
+            for lid in log_da_eliminare: supabase.table("Log_Tempi").delete().eq("id", lid).execute()
+        if log_da_aggiornare:
+            for log in log_da_aggiornare:
+                lid = log.pop('id')
+                supabase.table("Log_Tempi").update(log).eq("id", lid).execute()
+        get_cached_data.clear()
+    except Exception as e: logger.error(f"Errore bg salva dettaglio: {e}")
+
+def _bg_azione_singola(tabella, azione, payload, match_col=None, match_val=None):
+    # Worker generico per operazioni singole (Nuova Commessa, Nuovo Tag, Chiudi Log)
+    try:
+        if azione == "insert":
+            supabase.table(tabella).insert(payload).execute()
+        elif azione == "update":
+            supabase.table(tabella).update(payload).eq(match_col, match_val).execute()
+        get_cached_data.clear()
+    except Exception as e: logger.error(f"Errore bg {azione} su {tabella}: {e}")
+
+def _bg_operazione_pesante(target_func, *args):
+    # Wrapper generico per non bloccare l'interfaccia durante i loop lunghi
+    try:
+        target_func(*args)
+        get_cached_data.clear()
+    except Exception as e: logger.error(f"Errore operazione pesante: {e}")
+    
+def aggiorna_database_setup(nome_tabella, edited_df, original_df):
+    ids_originali = set(pd.DataFrame(original_df)['id'].dropna()) if original_df else set()
+    ids_attuali = set(edited_df['id'].dropna())
+    ids_da_eliminare = list(ids_originali - ids_attuali)
+    
+    rows_to_insert = []
+    rows_to_update = []
+    
+    for _, row in edited_df.iterrows():
+        row_dict = row.dropna().to_dict()
+        for key, val in row_dict.items():
+            if isinstance(val, time): row_dict[key] = str(val)
+            elif isinstance(val, datetime): row_dict[key] = str(val.date())
+            
+        curr_id = row_dict.pop('id', None)
+        if curr_id is None or pd.isna(curr_id):
+            rows_to_insert.append(row_dict)
+        else:
+            row_dict['id'] = curr_id
+            rows_to_update.append(row_dict)
+            
+    threading.Thread(
+        target=_bg_aggiorna_setup,
+        args=(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_update),
+        daemon=True
+    ).start()
+    
+    st.toast(f"Aggiornamento {nome_tabella} salvato!", icon="⚡")
+    time.sleep(0.15) # Mitiga il ripristino di vecchi dati nella cache
+    get_cached_data.clear(); st.rerun()
 
 # --- 5. MODALI ---
 def _salva_log_background(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status):
@@ -426,15 +475,18 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     
     c1, c2 = st.columns(2)
     if c1.button("Salva Tutto", type="primary", width='stretch'):
-        supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
+        log_da_eliminare = []
+        log_da_aggiornare = []
         for _, row in edited_df.iterrows():
-            if row["Elimina"]: supabase.table("Log_Tempi").delete().eq("id", row["id"]).execute()
+            if row["Elimina"]:
+                log_da_eliminare.append(row["id"])
             else:
                 ora_f_val = None
                 if pd.notna(row["ora_f"]) and not (row["era_aperto"] and row["ora_f"] == time(0, 0)):
                     ora_f_val = row["ora_f"].strftime("%H:%M:%S") if hasattr(row["ora_f"], "strftime") else str(row["ora_f"])
                 
-                supabase.table("Log_Tempi").update({
+                log_da_aggiornare.append({
+                    "id": row["id"],
                     "task_id": id_task_target if row["Sposta"] else row["task_id"], 
                     "operatore": row["operatore"], "tag": mappa_tags.get(row["tag"]),
                     "inizio": str(row["inizio"]) if pd.notna(row["inizio"]) else None, 
@@ -442,7 +494,16 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
                     "ora_i": str(row["ora_i"]) if pd.notna(row["ora_i"]) else None, 
                     "ora_f": ora_f_val,
                     "note": str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
-                }).eq("id", row["id"]).execute()
+                })
+                
+        threading.Thread(
+            target=_bg_salva_dettaglio,
+            args=(id_task_target, nuovo_stato_task, log_da_eliminare, log_da_aggiornare),
+            daemon=True
+        ).start()
+        
+        st.toast("Modifiche log salvate!", icon="⚡")
+        time.sleep(0.15)
         get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
     if c2.button("Annulla", width='stretch'): st.session_state.chart_key += 1; st.rerun()
 
@@ -451,7 +512,12 @@ def modal_commessa():
     n = st.text_input("Nome Commessa")
     s = st.selectbox("Stato", options=STATI_COMMESSA, index=1)
     if st.button("Salva", width='stretch'):
-        supabase.table("Commesse").insert({"nome_commessa": n, "stato": s}).execute()
+        threading.Thread(
+            target=_bg_azione_singola,
+            args=("Commesse", "insert", {"nome_commessa": nome_commessa, "stato": stato_commessa}), daemon=True
+        ).start()
+        st.toast(f"Commessa {nome_commessa} creata!", icon="⚡")
+        time.sleep(0.15)
         get_cached_data.clear(); st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
@@ -773,8 +839,13 @@ if l and tk and cm:
     # --- SEZIONE LOG APERTI ---
     def azione_chiudi_log(log_id):
         ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
-        supabase.table("Log_Tempi").update({"ora_f": ora_attuale}).eq("id", log_id).execute()
-        get_cached_data.clear("Log_Tempi")
+        threading.Thread(
+            target=_bg_azione_singola, 
+            args=("Log_Tempi", "update", {"ora_f": ora_attuale}, "id", log_id), daemon=True
+        ).start()
+        st.toast("Log chiuso correttamente!", icon="✅")
+        time.sleep(0.15)
+        get_cached_data.clear(); st.rerun()
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
