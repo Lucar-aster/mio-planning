@@ -935,7 +935,11 @@ with tabs[3]:
     if not df_p.empty:
         df_edit = df_p[['id', 'Commessa', 'Task', 'operatore', 'tag', 'Inizio', 'Fine', 'ora_i', 'ora_f', 'note']].copy()
         df_edit['Inizio'], df_edit['Fine'] = pd.to_datetime(df_edit['Inizio']).dt.date, pd.to_datetime(df_edit['Fine']).dt.date
-        df_edit['ora_i'], df_edit['ora_f'] = pd.to_datetime(df_edit['ora_i'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(8, 0)), pd.to_datetime(df_edit['ora_f'], format='%H:%M:%S', errors='coerce').dt.time.fillna(time(17, 0))
+        dt_i = pd.to_datetime(df_edit['ora_i'], format='%H:%M:%S', errors='coerce')
+        df_edit['ora_i'] = dt_i.fillna(pd.to_datetime('08:00:00', format='%H:%M:%S')).dt.time
+        
+        dt_f = pd.to_datetime(df_edit['ora_f'], format='%H:%M:%S', errors='coerce')
+        df_edit['ora_f'] = dt_f.fillna(pd.to_datetime('17:00:00', format='%H:%M:%S')).dt.time
 
         map_task = {s['nome_task']: s['id'] for s in get_cached_data("Task")}
         mappa_tags = {t['nome']: t['id'] for t in get_cached_data("Tag")}
