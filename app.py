@@ -483,7 +483,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
                 log_da_eliminare.append(row["id"])
             else:
                 ora_f_val = None
-                if pd.notna(row["ora_f"]) and not (row["era_aperto"] and row["ora_f"] == time(0, 0)):
+                if pd.notna(row["ora_f"]) and not (row["era_aperto"] and row["ora_f"] == dt.time(0, 0)):
                     ora_f_val = row["ora_f"].strftime("%H:%M:%S") if hasattr(row["ora_f"], "strftime") else str(row["ora_f"])
                 
                 log_da_aggiornare.append({
