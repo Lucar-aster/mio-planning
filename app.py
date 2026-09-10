@@ -449,7 +449,7 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
         df_sub['ora_i'] = pd.to_datetime(df_sub.get('ora_i'), format='%H:%M:%S', errors='coerce').dt.time
         
         df_sub['era_aperto'] = df_sub['ora_f'].isna() | (df_sub['ora_f'] == "")
-        df_sub['ora_f'] = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time.fillna(time(0, 0))
+        df_sub['ora_f'] = pd.to_datetime(df_sub.get('ora_f'), format='%H:%M:%S', errors='coerce').dt.time.fillna(pd.to_datetime('00:00:00', format='%H:%M:%S'))
         
         mask = (df_sub['inizio'] >= pd.to_datetime(current_start).date()) & (df_sub['inizio'] <= pd.to_datetime(current_end).date())
         df_sub = df_sub[mask].copy()
