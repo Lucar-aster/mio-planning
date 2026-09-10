@@ -13,6 +13,7 @@ import plotly.express as px
 import io
 import threading
 import logging
+import datetime as dt
 import time
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
@@ -338,9 +339,9 @@ def modal_gestione_clic(task_id, data_clic):
                 ora_i_t = datetime.now(tz).time()
                 ot1.info(f"Registrato orario d'inizio: {ora_i_t.strftime('%H:%M')}")
             else:
-                ora_i_t = ot1.time_input("Ora Inizio", value=datetime.time(8, 0), key="o_i_t_t")
+                ora_i_t = ot1.time_input("Ora Inizio", value=dt.time(8, 0), key="o_i_t_t")
             
-            ora_f_t = None if ot2.checkbox("Log aperto", value=True, key="ao_f_t") else ot2.time_input("Ora Fine", value=datetime.time(17, 0), key="o_f_t")
+            ora_f_t = None if ot2.checkbox("Log aperto", value=True, key="ao_f_t") else ot2.time_input("Ora Fine", value=dt.time(17, 0), key="o_f_t")
                 
             nota_t = st.text_input("Nota log")  
             c1, c2 = st.columns(2)
@@ -374,9 +375,9 @@ def modal_gestione_clic(task_id, data_clic):
                 ora_i_l = datetime.now(tz).time()
                 ol1.info(f"Registrato orario d'inizio: {ora_i_l.strftime('%H:%M')}")
             else:
-                ora_i_l = ol1.time_input("Ora Inizio", value=datetime.time(8, 0), key="o_i_t_l")
+                ora_i_l = ol1.time_input("Ora Inizio", value=dt.time(8, 0), key="o_i_t_l")
             
-            ora_f_l = None if ol2.checkbox("Log aperto", value=True, key="ao_f_l") else ol2.time_input("Ora Fine", value=datetime.time(17, 0), key="o_f_l")
+            ora_f_l = None if ol2.checkbox("Log aperto", value=True, key="ao_f_l") else ol2.time_input("Ora Fine", value=dt.time(17, 0), key="o_f_l")
         
             op_sel_l = st.multiselect("Seleziona Operatore", [o['nome'] for o in ops], default=op_def, key="op_sel_l")
             id_tag_scelto_l = mappa_tags.get(st.selectbox("Seleziona Tag", options=lista_tag, index=None, key="tag_scelti_l"))
@@ -547,10 +548,10 @@ def modal_log():
     data_i, data_f = c1.date_input("Inizio", value=oggi), c2.date_input("Fine", value=oggi)
 
     olg1, olg2 = st.columns(2) 
-    ora_i = datetime.now(tz).time() if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg") else olg1.time_input("Ora Inizio", value=datetime.time(8, 0), key="o_i_tg")
+    ora_i = datetime.now(tz).time() if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg") else olg1.time_input("Ora Inizio", value=dt.time(8, 0), key="o_i_tg")
     if olg1.checkbox("Usa ora attuale", value=True, key="ao_i_lg_msg"): st.info(f"Registrato orario d'inizio: {ora_i.strftime('%H:%M')}")
     
-    ora_f = None if olg2.checkbox("Log aperto", value=True, key="ao_f_lg") else olg2.time_input("Ora Fine", value=datetime.time(17, 0), key="o_f_lg")
+    ora_f = None if olg2.checkbox("Log aperto", value=True, key="ao_f_lg") else olg2.time_input("Ora Fine", value=dt.time(17, 0), key="o_f_lg")
     
     nota = st.text_area("Note")
     
