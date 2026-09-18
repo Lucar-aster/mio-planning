@@ -351,10 +351,11 @@ def modal_gestione_clic(task_id, data_clic):
                 else:
                     curr_cm_id = cms_dict.get(sel_cm)
                     registra_nuovo_task_log_sync(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk, new_tk_status_1, date_range_t, ora_i_t, ora_f_t, nota_t, id_tag_scelto_t, op_sel_t)
+                    st.session_state.target_task_modal = None
                     st.session_state.chart_key += 1
                     st.rerun()
         
-            if c2.button("Annulla", width='stretch', key="annulla_t"): st.session_state.chart_key += 1; st.rerun()
+            if c2.button("Annulla", width='stretch', key="annulla_t"): st.session_state.target_task_modal = None; st.session_state.chart_key += 1; st.rerun()
 
     with col3:    
         with st.expander(f"⏱️ Nuovo Log - {data_clic.strftime('%d/%m/%Y')}", expanded=True):
@@ -381,10 +382,11 @@ def modal_gestione_clic(task_id, data_clic):
                     st.warning("Seleziona operatore e range date.")
                 else:
                     registra_log_esistente_sync(task_id, new_tk_status_2, date_range_l, ora_i_l, ora_f_l, nota_l, id_tag_scelto_l, op_sel_l)
+                    st.session_state.target_task_modal = None
                     st.session_state.chart_key += 1
                     st.rerun()
         
-            if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.chart_key += 1; st.rerun()
+            if c2.button("Annulla", width='stretch', key="annulla_l"): st.session_state.target_task_modal = None; st.session_state.chart_key += 1; st.rerun()
         
 @st.dialog("📝 Gestione Dettaglio Log", width="large")
 def modal_edit_log(log_id, current_op, current_start, current_end, current_task_id, current_note=""):
@@ -853,7 +855,7 @@ if l and tk and cm:
         azione_chiudi_log(log_id)
         st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
         
-    if "target_task_modal" in st.session_state:
+    if "target_task_modal" in st.session_state and st.session_state.target_task_modal is not None:
         task_id_m, data_m = st.session_state.pop("target_task_modal")
         modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
         
