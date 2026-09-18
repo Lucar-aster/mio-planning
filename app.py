@@ -11,10 +11,9 @@ import hashlib
 from streamlit_calendar import calendar
 import plotly.express as px
 import io
-import threading
 import logging
 import datetime as dt
-import time
+import time # Mantenuto per compatibilità generale
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
@@ -34,8 +33,6 @@ class SupabaseLogHandler(logging.Handler):
     def emit(self, record):
         try:
             log_entry = self.format(record)
-            # Inserimento asincrono/protetto del log di errore/sistema
-            # Se esiste una tabella 'App_Logs' su Supabase viene salvato lì, altrimenti gestisce l'eccezione
             if record.levelno >= logging.ERROR and self.supabase:
                 self.supabase.table("App_Logs").insert({
                     "livello": record.levelname,
@@ -43,7 +40,6 @@ class SupabaseLogHandler(logging.Handler):
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }).execute()
         except Exception:
-            # Evita crash dell'app se la tabella App_Logs non esiste o se il DB è irraggiungibile
             pass
 
 def init_logger(supabase_client=None):
@@ -52,12 +48,10 @@ def init_logger(supabase_client=None):
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         
-        # Stream Handler per la console
         ch = logging.StreamHandler()
         ch.setFormatter(formatter)
         logger.addHandler(ch)
         
-        # Custom DB Handler per tracciare errori critical/error sul DB
         if supabase_client:
             db_handler = SupabaseLogHandler(supabase_client)
             db_handler.setFormatter(formatter)
@@ -66,7 +60,7 @@ def init_logger(supabase_client=None):
             
     return logger
 
-# --- 3. CONNESSIONE E CACHING ---
+# --- 3. CONNESSIONE E CACHING EVOLUTO ---
 @st.cache_resource
 def init_connection():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
@@ -74,13 +68,31 @@ def init_connection():
 supabase = init_connection()
 logger = init_logger(supabase)
 
-@st.cache_data
-def get_cached_data(table):
-    try: 
+@st.cache_data(ttl=300)
+def _fetch_supabase_table(table, refresh_counter):
+    """Funzione nascosta che preleva i dati. Cache limitata a 5m globalmente e legata al contatore."""
+    try:
         return supabase.table(table).select("*").execute().data
-    except Exception as e: 
+    except Exception as e:
         logger.error(f"Errore lettura tabella {table}: {e}")
         return []
+
+def get_cached_data(table):
+    """Restituisce i dati della cache. Se un utente invalida la cache locale, salta l'invalido per questo utente."""
+    if "cache_counters" not in st.session_state:
+        st.session_state.cache_counters = {}
+    counter = st.session_state.cache_counters.get(table, 0)
+    return _fetch_supabase_table(table, counter)
+
+def clear_cache(table=None):
+    """Aggiorna la cache in maniera localizzata per evitare reloads massivi inutili."""
+    if "cache_counters" not in st.session_state:
+         st.session_state.cache_counters = {}
+    if table:
+         st.session_state.cache_counters[table] = st.session_state.cache_counters.get(table, 0) + 1
+    else:
+         for k in ["Commesse", "Task", "Log_Tempi", "Operatori", "Tag"]:
+             st.session_state.cache_counters[k] = st.session_state.cache_counters.get(k, 0) + 1
 
 if 'chart_key' not in st.session_state: st.session_state.chart_key = 0
 if 'vista_compressa' not in st.session_state: st.session_state.vista_compressa = False
@@ -130,8 +142,8 @@ with header_col2:
         </div>
     """, unsafe_allow_html=True)
     
-# --- 4. FUNZIONI DI AGGIORNAMENTO DB (SETUP) ---
-def _bg_aggiorna_setup(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_update):
+# --- 4. FUNZIONI DI AGGIORNAMENTO DB (SINCRONE E OTTIMIZZATE) ---
+def esegui_aggiorna_setup(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_update):
     try:
         if ids_da_eliminare:
             for idx in ids_da_eliminare: supabase.table(nome_tabella).delete().eq("id", idx).execute()
@@ -141,10 +153,10 @@ def _bg_aggiorna_setup(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_u
             for r in rows_to_update: 
                 rid = r.pop('id')
                 supabase.table(nome_tabella).update(r).eq("id", rid).execute()
-        get_cached_data.clear()
-    except Exception as e: logger.error(f"Errore bg setup {nome_tabella}: {e}")
+        clear_cache(nome_tabella)
+    except Exception as e: logger.error(f"Errore setup {nome_tabella}: {e}")
 
-def _bg_salva_dettaglio(id_task_target, nuovo_stato_task, log_da_eliminare, log_da_aggiornare):
+def salva_dettaglio_sync(id_task_target, nuovo_stato_task, log_da_eliminare, log_da_aggiornare):
     try:
         supabase.table("Task").update({"stato": nuovo_stato_task}).eq("id", id_task_target).execute()
         if log_da_eliminare:
@@ -153,26 +165,19 @@ def _bg_salva_dettaglio(id_task_target, nuovo_stato_task, log_da_eliminare, log_
             for log in log_da_aggiornare:
                 lid = log.pop('id')
                 supabase.table("Log_Tempi").update(log).eq("id", lid).execute()
-        get_cached_data.clear()
-    except Exception as e: logger.error(f"Errore bg salva dettaglio: {e}")
+        clear_cache("Task")
+        clear_cache("Log_Tempi")
+    except Exception as e: logger.error(f"Errore salva dettaglio: {e}")
 
-def _bg_azione_singola(tabella, azione, payload, match_col=None, match_val=None):
-    # Worker generico per operazioni singole (Nuova Commessa, Nuovo Tag, Chiudi Log)
+def azione_singola_sync(tabella, azione, payload, match_col=None, match_val=None):
     try:
         if azione == "insert":
             supabase.table(tabella).insert(payload).execute()
         elif azione == "update":
             supabase.table(tabella).update(payload).eq(match_col, match_val).execute()
-        get_cached_data.clear()
-    except Exception as e: logger.error(f"Errore bg {azione} su {tabella}: {e}")
+        clear_cache(tabella)
+    except Exception as e: logger.error(f"Errore {azione} su {tabella}: {e}")
 
-def _bg_operazione_pesante(target_func, *args):
-    # Wrapper generico per non bloccare l'interfaccia durante i loop lunghi
-    try:
-        target_func(*args)
-        get_cached_data.clear()
-    except Exception as e: logger.error(f"Errore operazione pesante: {e}")
-    
 def aggiorna_database_setup(nome_tabella, edited_df, original_df):
     ids_originali = set(pd.DataFrame(original_df)['id'].dropna()) if original_df else set()
     ids_attuali = set(edited_df['id'].dropna())
@@ -181,8 +186,8 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
     rows_to_insert = []
     rows_to_update = []
     
-    for _, row in edited_df.iterrows():
-        row_dict = row.dropna().to_dict()
+    # Rimosso iterrows() a favore di to_dict('records') (miglioramento prestazioni)
+    for row_dict in edited_df.dropna(how='all').to_dict('records'):
         for key, val in row_dict.items():
             if isinstance(val, time): row_dict[key] = str(val)
             elif isinstance(val, datetime): row_dict[key] = str(val.date())
@@ -194,60 +199,55 @@ def aggiorna_database_setup(nome_tabella, edited_df, original_df):
             row_dict['id'] = curr_id
             rows_to_update.append(row_dict)
             
-    threading.Thread(
-        target=_bg_aggiorna_setup,
-        args=(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_update),
-        daemon=True
-    ).start()
-    
+    esegui_aggiorna_setup(nome_tabella, ids_da_eliminare, rows_to_insert, rows_to_update)
     st.toast(f"Aggiornamento {nome_tabella} salvato!", icon="⚡")
-    time.sleep(0.15) # Mitiga il ripristino di vecchi dati nella cache
-    get_cached_data.clear(); st.rerun()
+    st.rerun()
 
 # --- 5. MODALI ---
-def _salva_log_background(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status):
+def salva_log_sync(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status):
     try:
         final_id = target_id
         if sel_task == "➕ Aggiungi nuovo task...":
             res = supabase.table("Task").insert({"nome_task": new_task_name.strip(), "commessa_id": sel_cm_id, "stato": new_task_status.strip()}).execute()
             if res.data: final_id = res.data[0]['id']
+            clear_cache("Task")
         else:
             supabase.table("Task").update({"stato": new_task_status.strip()}).eq("id", target_id).execute()
+            clear_cache("Task")
 
         if final_id:
             for log in nuovi_log:
                 log["task_id"] = final_id
             supabase.table("Log_Tempi").insert(nuovi_log).execute()
-            get_cached_data.clear("Log_Tempi")
-            get_cached_data.clear("Task")
-            logger.info(f"Log salvati in background per task {final_id}")
+            clear_cache("Log_Tempi")
+            logger.info(f"Log salvati per task {final_id}")
     except Exception as e:
-        logger.error(f"Errore salvataggio log in background: {e}")
+        logger.error(f"Errore salvataggio log: {e}")
 
-def _salva_modifiche_anagrafica_bg(task_id, new_tk_name, new_tk_status, commessa_id=None, new_cm_name=None, new_cm_status=None):
+def salva_modifiche_anagrafica_sync(task_id, new_tk_name, new_tk_status, commessa_id=None, new_cm_name=None, new_cm_status=None):
     try:
         supabase.table("Task").update({"nome_task": new_tk_name, "stato": new_tk_status}).eq("id", task_id).execute()
+        clear_cache("Task")
         if commessa_id:
             supabase.table("Commesse").update({"nome_commessa": new_cm_name, "stato": new_cm_status}).eq("id", commessa_id).execute()
-        get_cached_data.clear("Task")
-        get_cached_data.clear("Commesse")
+            clear_cache("Commesse")
         logger.info(f"Modificata anagrafica task {task_id}")
     except Exception as e:
-        logger.error(f"Errore modifica anagrafica background: {e}")
+        logger.error(f"Errore modifica anagrafica: {e}")
 
-def _registra_nuovo_task_log_bg(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk, new_tk_status_1, date_range_t, ora_i_t, ora_f_t, nota_t, id_tag_scelto_t, op_sel_t):
+def registra_nuovo_task_log_sync(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk, new_tk_status_1, date_range_t, ora_i_t, ora_f_t, nota_t, id_tag_scelto_t, op_sel_t):
     try:
         c_id = curr_cm_id
         if sel_cm == "➕ Nuova Commessa...":
             res_cm = supabase.table("Commesse").insert({"nome_commessa": nome_nuova_cm, "stato": STATI_COMMESSA[2]}).execute()
             if res_cm.data:
                 c_id = res_cm.data[0]['id']
-                get_cached_data.clear("Commesse")
+                clear_cache("Commesse")
         
         res_tk = supabase.table("Task").insert({"nome_task": nome_nuovo_tk, "commessa_id": c_id, "stato": new_tk_status_1}).execute()
         if res_tk.data:
             final_task_id = res_tk.data[0]['id']
-            get_cached_data.clear("Task")
+            clear_cache("Task")
             
             nuovi_log = [{
                 "task_id": final_task_id,
@@ -260,15 +260,15 @@ def _registra_nuovo_task_log_bg(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk
                 "tag": id_tag_scelto_t
             } for op in op_sel_t]
             supabase.table("Log_Tempi").insert(nuovi_log).execute()
-            get_cached_data.clear("Log_Tempi")
+            clear_cache("Log_Tempi")
             logger.info(f"Registrato nuovo task e log per commessa {c_id}")
     except Exception as e:
-        logger.error(f"Errore nuovo task con log background: {e}")
+        logger.error(f"Errore nuovo task con log: {e}")
 
-def _registra_log_esistente_bg(task_id, new_tk_status_2, date_range_l, ora_i_l, ora_f_l, nota_l, id_tag_scelto_l, op_sel_l):
+def registra_log_esistente_sync(task_id, new_tk_status_2, date_range_l, ora_i_l, ora_f_l, nota_l, id_tag_scelto_l, op_sel_l):
     try:
         supabase.table("Task").update({"stato": new_tk_status_2}).eq("id", task_id).execute()
-        get_cached_data.clear("Task")
+        clear_cache("Task")
         
         nuovi_log = [{
             "task_id": task_id,
@@ -281,10 +281,10 @@ def _registra_log_esistente_bg(task_id, new_tk_status_2, date_range_l, ora_i_l, 
             "tag": id_tag_scelto_l
         } for op in op_sel_l]
         supabase.table("Log_Tempi").insert(nuovi_log).execute()
-        get_cached_data.clear("Log_Tempi")
+        clear_cache("Log_Tempi")
         logger.info(f"Registrato log esistente per task {task_id}")
     except Exception as e:
-        logger.error(f"Errore registrazione log background: {e}")
+        logger.error(f"Errore registrazione log: {e}")
         
 @st.dialog("Gestione Task & Log", width="large")
 def modal_gestione_clic(task_id, data_clic):
@@ -310,11 +310,7 @@ def modal_gestione_clic(task_id, data_clic):
                 new_cm_n = new_cm_name if commessa_info else None
                 new_cm_s = new_cm_status if commessa_info else None
                 
-                threading.Thread(
-                    target=_salva_modifiche_anagrafica_bg,
-                    args=(task_id, new_tk_name, new_tk_status, commessa_id, new_cm_n, new_cm_s),
-                    daemon=True
-                ).start()
+                salva_modifiche_anagrafica_sync(task_id, new_tk_name, new_tk_status, commessa_id, new_cm_n, new_cm_s)
                 
                 st.session_state.chart_key += 1
                 st.rerun()
@@ -354,12 +350,7 @@ def modal_gestione_clic(task_id, data_clic):
                     st.error("Inserisci nome task")
                 else:
                     curr_cm_id = cms_dict.get(sel_cm)
-                    threading.Thread(
-                        target=_registra_nuovo_task_log_bg,
-                        args=(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk, new_tk_status_1, date_range_t, ora_i_t, ora_f_t, nota_t, id_tag_scelto_t, op_sel_t),
-                        daemon=True
-                    ).start()
-                    
+                    registra_nuovo_task_log_sync(sel_cm, nome_nuova_cm, curr_cm_id, nome_nuovo_tk, new_tk_status_1, date_range_t, ora_i_t, ora_f_t, nota_t, id_tag_scelto_t, op_sel_t)
                     st.session_state.chart_key += 1
                     st.rerun()
         
@@ -389,12 +380,7 @@ def modal_gestione_clic(task_id, data_clic):
                 if not op_sel_l or len(date_range_l) < 2: 
                     st.warning("Seleziona operatore e range date.")
                 else:
-                    threading.Thread(
-                        target=_registra_log_esistente_bg,
-                        args=(task_id, new_tk_status_2, date_range_l, ora_i_l, ora_f_l, nota_l, id_tag_scelto_l, op_sel_l),
-                        daemon=True
-                    ).start()
-                    
+                    registra_log_esistente_sync(task_id, new_tk_status_2, date_range_l, ora_i_l, ora_f_l, nota_l, id_tag_scelto_l, op_sel_l)
                     st.session_state.chart_key += 1
                     st.rerun()
         
@@ -478,34 +464,31 @@ def modal_edit_log(log_id, current_op, current_start, current_end, current_task_
     if c1.button("Salva Tutto", type="primary", width='stretch'):
         log_da_eliminare = []
         log_da_aggiornare = []
-        for _, row in edited_df.iterrows():
-            if row["Elimina"]:
-                log_da_eliminare.append(row["id"])
+        
+        # Eliminazione iterrows per elaborazione dictionary (molto più performante)
+        for row_dict in edited_df.to_dict('records'):
+            if row_dict["Elimina"]:
+                log_da_eliminare.append(row_dict["id"])
             else:
                 ora_f_val = None
-                if pd.notna(row["ora_f"]) and not (row["era_aperto"] and row["ora_f"] == dt.time(0, 0)):
-                    ora_f_val = row["ora_f"].strftime("%H:%M:%S") if hasattr(row["ora_f"], "strftime") else str(row["ora_f"])
+                if pd.notna(row_dict["ora_f"]) and not (row_dict["era_aperto"] and row_dict["ora_f"] == dt.time(0, 0)):
+                    ora_f_val = row_dict["ora_f"].strftime("%H:%M:%S") if hasattr(row_dict["ora_f"], "strftime") else str(row_dict["ora_f"])
                 
                 log_da_aggiornare.append({
-                    "id": row["id"],
-                    "task_id": id_task_target if row["Sposta"] else row["task_id"], 
-                    "operatore": row["operatore"], "tag": mappa_tags.get(row["tag"]),
-                    "inizio": str(row["inizio"]) if pd.notna(row["inizio"]) else None, 
-                    "fine": str(row["fine"]) if pd.notna(row["fine"]) else None,
-                    "ora_i": str(row["ora_i"]) if pd.notna(row["ora_i"]) else None, 
+                    "id": row_dict["id"],
+                    "task_id": id_task_target if row_dict["Sposta"] else row_dict["task_id"], 
+                    "operatore": row_dict["operatore"], "tag": mappa_tags.get(row_dict["tag"]),
+                    "inizio": str(row_dict["inizio"]) if pd.notna(row_dict["inizio"]) else None, 
+                    "fine": str(row_dict["fine"]) if pd.notna(row_dict["fine"]) else None,
+                    "ora_i": str(row_dict["ora_i"]) if pd.notna(row_dict["ora_i"]) else None, 
                     "ora_f": ora_f_val,
-                    "note": str(row["note"]) if pd.notna(row["note"]) and row["note"] else ""
+                    "note": str(row_dict["note"]) if pd.notna(row_dict["note"]) and row_dict["note"] else ""
                 })
                 
-        threading.Thread(
-            target=_bg_salva_dettaglio,
-            args=(id_task_target, nuovo_stato_task, log_da_eliminare, log_da_aggiornare),
-            daemon=True
-        ).start()
+        salva_dettaglio_sync(id_task_target, nuovo_stato_task, log_da_eliminare, log_da_aggiornare)
         
         st.toast("Modifiche log salvate!", icon="⚡")
-        time.sleep(0.15)
-        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+        st.session_state.chart_key += 1; st.rerun()
     if c2.button("Annulla", width='stretch'): st.session_state.chart_key += 1; st.rerun()
 
 @st.dialog("➕ Nuova Commessa")
@@ -513,13 +496,9 @@ def modal_commessa():
     n = st.text_input("Nome Commessa")
     s = st.selectbox("Stato", options=STATI_COMMESSA, index=1)
     if st.button("Salva", width='stretch'):
-        threading.Thread(
-            target=_bg_azione_singola,
-            args=("Commesse", "insert", {"nome_commessa": nome_commessa, "stato": stato_commessa}), daemon=True
-        ).start()
-        st.toast(f"Commessa {nome_commessa} creata!", icon="⚡")
-        time.sleep(0.15)
-        get_cached_data.clear(); st.rerun()
+        azione_singola_sync("Commesse", "insert", {"nome_commessa": n, "stato": s})
+        st.toast(f"Commessa {n} creata!", icon="⚡")
+        st.rerun()
 
 @st.dialog("⏱️ Nuovo Log")
 def modal_log():
@@ -572,12 +551,7 @@ def modal_log():
             "tag": id_tag_scelto_lg
         } for op_name in op_ms]
 
-        threading.Thread(
-            target=_salva_log_background,
-            args=(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status),
-            daemon=True
-        ).start()
-        
+        salva_log_sync(nuovi_log, sel_task, target_id, new_task_name, sel_cm_id, new_task_status)
         st.session_state.chart_key += 1; st.rerun()
             
 @st.dialog("📂 Clona Commessa con Date")
@@ -606,7 +580,12 @@ def modal_clona_avanzata():
             if copia_log and logs_vecchi:
                 nuovi_logs = [{"operatore": l['operatore'], "task_id": old_to_new_tasks[l['task_id']], "inizio": (pd.to_datetime(l['inizio']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "fine": (pd.to_datetime(l['fine']) + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'), "ora_i": l.get('ora_i', '08:00:00'), "ora_f": l.get('ora_f', '17:00:00'), "note": l.get('note', "")} for l in logs_vecchi]
                 supabase.table("Log_Tempi").insert(nuovi_logs).execute()
-            get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+            
+            clear_cache("Commesse")
+            clear_cache("Task")
+            if copia_log and logs_vecchi:
+                clear_cache("Log_Tempi")
+            st.session_state.chart_key += 1; st.rerun()
             
 @st.dialog("📥 Importa Log da Excel")
 def import_excel_modal():
@@ -628,34 +607,40 @@ def import_excel_modal():
                     df_excel = pd.read_excel(uploaded_file)
                     logs_to_insert, error_log = [], []
 
-                    for idx, row in df_excel.iterrows():
-                        op_name = str(row.get('operatore', '')).strip().lower()
-                        t_name = str(row.get('tag', '')).strip().lower()
+                    # Rimosso iterrows a favore di enumerazione del dictionary records
+                    for idx, row_dict in enumerate(df_excel.to_dict('records')):
+                        op_name = str(row_dict.get('operatore', '')).strip().lower()
+                        t_name = str(row_dict.get('tag', '')).strip().lower()
                         if op_name not in ops_ref or t_name not in tags_ref:
                             st.warning(f"Riga {idx+2}: Operatore o Tag non trovato."); continue
 
-                        c_key = str(row.get('commessa', '')).strip().lower()
+                        c_key = str(row_dict.get('commessa', '')).strip().lower()
                         c_id = comms_ref.get(c_key)
                         if not c_id:
-                            c_id = supabase.table("Commesse").insert({"nome_commessa": str(row.get('commessa', '')).strip(), "stato": "In corso 🟡"}).execute().data[0]['id']
+                            c_id = supabase.table("Commesse").insert({"nome_commessa": str(row_dict.get('commessa', '')).strip(), "stato": "In corso 🟡"}).execute().data[0]['id']
                             comms_ref[c_key] = c_id
+                            clear_cache("Commesse")
 
-                        task_name = str(row.get('task', '')).strip()
+                        task_name = str(row_dict.get('task', '')).strip()
                         check_t = supabase.table("Task").select("id").eq("commessa_id", c_id).eq("nome_task", task_name).execute()
-                        task_id = check_t.data[0]['id'] if check_t.data else supabase.table("Task").insert({"commessa_id": c_id, "nome_task": task_name, "stato": "In corso 🟡"}).execute().data[0]['id']
+                        if check_t.data:
+                            task_id = check_t.data[0]['id']
+                        else:
+                            task_id = supabase.table("Task").insert({"commessa_id": c_id, "nome_task": task_name, "stato": "In corso 🟡"}).execute().data[0]['id']
+                            clear_cache("Task")
 
                         try:
                             def fmt_time(val): return val.strftime('%H:%M:%S') if hasattr(val, 'strftime') else (str(val).strip() if pd.notna(val) else "00:00:00")
                             logs_to_insert.append({
-                                "operatore": ops_ref[op_name], "inizio": pd.to_datetime(row['data']).strftime('%Y-%m-%d'), "fine": pd.to_datetime(row['data']).strftime('%Y-%m-%d'),
-                                "ora_i": fmt_time(row['ora_inizio']), "ora_f": fmt_time(row['ora_fine']), "tag": tags_ref[t_name], "task_id": task_id, "note": str(row['note']) if pd.notna(row['note']) else ""
+                                "operatore": ops_ref[op_name], "inizio": pd.to_datetime(row_dict['data']).strftime('%Y-%m-%d'), "fine": pd.to_datetime(row_dict['data']).strftime('%Y-%m-%d'),
+                                "ora_i": fmt_time(row_dict['ora_inizio']), "ora_f": fmt_time(row_dict['ora_fine']), "tag": tags_ref[t_name], "task_id": task_id, "note": str(row_dict['note']) if pd.notna(row_dict['note']) else ""
                             })
                         except Exception as e: st.warning(f"Errore riga {idx+2}: {e}")
 
                     if logs_to_insert:
                         supabase.table("Log_Tempi").insert(logs_to_insert).execute()
                         st.success(f"Inseriti {len(logs_to_insert)} log!")
-                        get_cached_data.clear(); st.session_state.chart_key += 1; st.rerun()
+                        clear_cache("Log_Tempi"); st.session_state.chart_key += 1; st.rerun()
                     else: st.error("Nessun dato valido trovato.")
                 except Exception as ex: 
                     logger.error(f"Errore importazione excel: {ex}")
@@ -663,10 +648,11 @@ def import_excel_modal():
 
 def calcola_ore_evolute_12h(group, col_tag):
     intervalli = []
-    for _, r in group.iterrows():
-        durata_lorda, f_i, f_f = (r['frac_f'] - r['frac_i']) * 12.0, r['frac_i'], r['frac_f'] 
+    # Itertuples per performance superiori e iterazione sicura in pandas
+    for row in group.itertuples():
+        durata_lorda, f_i, f_f = (row.frac_f - row.frac_i) * 12.0, row.frac_i, row.frac_f 
         if durata_lorda >= 8.0: f_f = max(f_i, f_f - (1.0 / 12.0))
-        intervalli.append({'inizio': f_i, 'fine': f_f, 'tag': r[col_tag]})
+        intervalli.append({'inizio': f_i, 'fine': f_f, 'tag': getattr(row, col_tag)})
     
     intervalli.sort(key=lambda x: x['inizio'])
     ore_per_tag = {}
@@ -704,7 +690,7 @@ def modal_tag():
         if nuovo_tag_n not in lista_tag:
             supabase.table("Tag").insert({"nome": nuovo_tag_n, "colore": genera_colore_opaco(nuovo_tag_n)}).execute()
             st.success(f"Tag '{nuovo_tag_n}' creato!")
-            get_cached_data.clear(); st.rerun()
+            clear_cache("Tag"); st.rerun()
                     
 # --- 7. GANTT FRAGMENT ---
 @st.fragment(run_every=60)
@@ -721,23 +707,47 @@ def render_gantt_fragment(df_plot, color_map, oggi_dt, x_range, delta_giorni, sh
     m_emj_tk = {"Pianificato 🔵": "🔵", "In corso 🟡": "🟡", "In attesa ⚪": "⚪", "Completato 🟢": "🟢", "Sospeso 🟠": "🟠"}
     
     click_dates = pd.date_range(start=x_range[0], end=x_range[1], freq='D')
-    grid_bases, grid_xs, grid_ys, grid_customdata = [], [], [], []
-
-    for _, r in df_tasks_univoci.iterrows():
-        c_label = "<br>".join(textwrap.wrap(f"{m_emj_cm.get(r['stato_commessa'], '⚫')} {r['Commessa']}", 15))
-        y_val = c_label if st.session_state.vista_compressa else (c_label, "<br>".join(textwrap.wrap(f"{m_emj_tk.get(r.get('stato_task'), '⚫')} {r['Task']}", 30)))
-        for d in click_dates:
-            grid_bases.append(d); grid_xs.append(86400000); grid_ys.append(y_val); grid_customdata.append(["LOG_FITTIZIO", r['task_id'], d.date()])
-
-    fig.add_trace(go.Bar(base=grid_bases, x=grid_xs, y=grid_ys if st.session_state.vista_compressa else list(zip(*grid_ys)), orientation='h', marker=dict(color="rgba(0,0,0,0)"), showlegend=False, hoverinfo='none', customdata=grid_customdata, width=0.9, offset=-0.45))
+    
+    # ---------------------------------------------------------
+    # OTTIMIZZAZIONE DEL RENDERING GANTT CHART (Punto 5)
+    # Vettorializzazione della griglia fittizia per eliminare cicli for nidificati costosi
+    # ---------------------------------------------------------
+    y_vals, task_ids = [], []
+    for row in df_tasks_univoci.itertuples():
+        c_label = "<br>".join(textwrap.wrap(f"{m_emj_cm.get(row.stato_commessa, '⚫')} {row.Commessa}", 15))
+        y_val = c_label if st.session_state.vista_compressa else (c_label, "<br>".join(textwrap.wrap(f"{m_emj_tk.get(getattr(row, 'stato_task', '⚫'), '⚫')} {row.Task}", 30)))
+        y_vals.append(y_val)
+        task_ids.append(row.task_id)
+        
+    dates_list = click_dates.tolist()
+    num_dates, num_tasks = len(dates_list), len(y_vals)
+    
+    if num_tasks > 0 and num_dates > 0:
+        grid_bases = dates_list * num_tasks
+        grid_xs = [86400000] * (num_dates * num_tasks)
+        grid_ys = [y for y in y_vals for _ in range(num_dates)]
+        grid_customdata = [["LOG_FITTIZIO", t_id, d.date()] for t_id in task_ids for d in dates_list]
+        
+        fig.add_trace(go.Bar(base=grid_bases, x=grid_xs, y=grid_ys if st.session_state.vista_compressa else list(zip(*grid_ys)), orientation='h', marker=dict(color="rgba(0,0,0,0)"), showlegend=False, hoverinfo='none', customdata=grid_customdata, width=0.9, offset=-0.45))
             
     for op in df_merged['operatore'].unique():
         df_op = df_merged[df_merged['operatore'] == op]
         colore_tag = df_op['tag'].astype(str).str.strip().str.lower().map(mappa_colori_tag).fillna("rgba(0,0,0,0)").tolist()
-        y_labels = [("<br>".join(textwrap.wrap(f"{m_emj_cm.get(r['stato_commessa'], '⚫')} {r['Commessa']}", 15)) if st.session_state.vista_compressa else ["<br>".join(textwrap.wrap(f"{m_emj_cm.get(r['stato_commessa'], '⚫')} {r['Commessa']}", 15)), "<br>".join(textwrap.wrap(f"{m_emj_tk.get(r.get('stato_task'), '⚫')} {r['Task']}", 30))]) for _, r in df_op.iterrows()]
+        
+        # Itertuples ottimizzato
+        y_labels = []
+        for row in df_op.itertuples():
+            cm_label = "<br>".join(textwrap.wrap(f"{m_emj_cm.get(row.stato_commessa, '⚫')} {row.Commessa}", 15))
+            if st.session_state.vista_compressa:
+                y_labels.append(cm_label)
+            else:
+                tk_label = "<br>".join(textwrap.wrap(f"{m_emj_tk.get(getattr(row, 'stato_task', '⚫'), '⚫')} {row.Task}", 30))
+                y_labels.append([cm_label, tk_label])
 
         fig.add_trace(go.Bar(base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if st.session_state.vista_compressa else list(zip(*y_labels)), orientation='h', marker=dict(color=[color_map.get(op, "#8dbad2")] * len(df_op), cornerradius=12), width=0.4, offsetgroup=f"group_{op}", hoverinfo='skip'))
-        fig.add_trace(go.Bar(base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if st.session_state.vista_compressa else list(zip(*y_labels)), orientation='h', name=op, offsetgroup=f"group_{op}", marker=dict(color="rgba(0,0,0,0)", cornerradius=12, pattern=dict(shape="/", fgcolor=colore_tag, fgopacity=0.9, size=6,solidity=0.3, fillmode="overlay")), width=0.4, customdata=list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'], df_op['tag'], colore_tag)), hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]} / <span style='background-color:%{customdata[9]}'>&nbsp;%{customdata[8]}&nbsp;</span><br>%{customdata[6]}<extra></extra>"))
+        
+        customdata = list(zip(df_op['id'], df_op['operatore'], df_op['Inizio'], df_op['Fine'], df_op['Commessa'], df_op['Task'], df_op['note_html'], df_op['task_id'], df_op['tag'], colore_tag))
+        fig.add_trace(go.Bar(base=df_op['Visual_Inizio'], x=df_op['Durata_ms'], y=y_labels if st.session_state.vista_compressa else list(zip(*y_labels)), orientation='h', name=op, offsetgroup=f"group_{op}", marker=dict(color="rgba(0,0,0,0)", cornerradius=12, pattern=dict(shape="/", fgcolor=colore_tag, fgopacity=0.9, size=6,solidity=0.3, fillmode="overlay")), width=0.4, customdata=customdata, hovertemplate="<b>%{customdata[4]} - %{customdata[5]}</b><br>%{customdata[1]} / <span style='background-color:%{customdata[9]}'>&nbsp;%{customdata[8]}&nbsp;</span><br>%{customdata[6]}<extra></extra>"))
         
     start_buffer, end_buffer = x_range[0] - timedelta(days=180), x_range[1] + timedelta(days=180)
     full_range = pd.date_range(start=start_buffer, end=end_buffer, freq='D')
@@ -768,7 +778,6 @@ if l and tk and cm:
     cm_m = {c['id']: {'n': c['nome_commessa'], 's': c.get('stato', 'In corso 🟡')} for c in cm}
     df = pd.DataFrame(l)
     
-    # Ottimizzazione: Vettorializzazione e map invece di lambda functions
     df['Inizio'], df['Fine'] = pd.to_datetime(df['inizio']).dt.normalize(), pd.to_datetime(df['fine']).dt.normalize()
     
     tk_mapped = df['task_id'].map(tk_m).fillna({})
@@ -777,7 +786,6 @@ if l and tk and cm:
     df['stato_commessa'] = tk_mapped.map(lambda x: cm_m.get(x.get('c'), {}).get('s', "In corso 🟡") if isinstance(x, dict) else "In corso 🟡")
     df['stato_task'] = tk_mapped.map(lambda x: x.get('s', "Pianificato 🔵") if isinstance(x, dict) else "Pianificato 🔵")
     
-    # Ottimizzazione VETTORIALE di `calcola_logica_visuale`
     df['ora_i'] = df.get('ora_i', '08:00:00').fillna('08:00:00').astype(str)
     if 'ora_f' not in df.columns: df['ora_f'] = None
     
@@ -790,7 +798,6 @@ if l and tk and cm:
     df['frac_f'] = ((t_f.dt.hour + t_f.dt.minute / 60.0) - 7.0) / 12.0
     df['frac_f'] = df['frac_f'].fillna(1.0)
     
-    # Min/Max vettoriali
     df['frac_f'] = df[['frac_f', 'frac_i']].max(axis=1).clip(upper=1.0)
     df['Visual_Durata_Frac'] = (df['frac_f'] - df['frac_i']).clip(lower=0.5/12.0)
     
@@ -798,7 +805,6 @@ if l and tk and cm:
     df['Durata_ms'] = df['Visual_Durata_Frac'] * 86400000
     df['Visual_Fine'] = df['Visual_Inizio'] + pd.to_timedelta(df['Visual_Durata_Frac'], unit='D')
     
-    # Ottimizzazione VETTORIALE di `formatta_nota`
     d_str = df['Inizio'].dt.strftime('%d/%m')
     oi_str = df['ora_i'].str[:5].fillna("??:??")
     of_str = df['ora_f'].astype(str).str[:5].where(~m_open, "In corso")
@@ -840,45 +846,41 @@ if l and tk and cm:
     # --- SEZIONE LOG APERTI ---
     def azione_chiudi_log(log_id):
         ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
-        threading.Thread(
-            target=_bg_azione_singola, 
-            args=("Log_Tempi", "update", {"ora_f": ora_attuale}, "id", log_id), daemon=True
-        ).start()
+        azione_singola_sync("Log_Tempi", "update", {"ora_f": ora_attuale}, "id", log_id)
         st.toast("Log chiuso correttamente!", icon="✅")
-        time.sleep(0.15)
-        get_cached_data.clear(); st.rerun()
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
-
         st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
+        
     if "target_task_modal" in st.session_state:
         task_id_m, data_m = st.session_state.pop("target_task_modal")
         modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
         
     if not (log_aperti := df[df['ora_f'].isna() | (df['ora_f'] == 'None')]).empty:
         st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
-        for _, row in log_aperti.iterrows():
+        # Sostituito iterrows()
+        for row in log_aperti.itertuples():
             with st.container():
                 c1, c2, c3, c4, c5 = st.columns([4, 2, 2, 0.7, 0.7], gap="small")
-                trascorso = datetime.now(tz) - datetime.combine(row['Inizio'].date() if hasattr(row['Inizio'], 'date') else row['Inizio'], pd.to_datetime(row['ora_i']).time()).replace(tzinfo=tz)
-                c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row['Commessa']} - {row['Task']}</strong> | {row['operatore']} - {row['tag']} | {row['note']}</p>", unsafe_allow_html=True)
-                c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row['ora_i'][:5]}</p>", unsafe_allow_html=True)
+                trascorso = datetime.now(tz) - datetime.combine(row.Inizio.date() if hasattr(row.Inizio, 'date') else row.Inizio, pd.to_datetime(row.ora_i).time()).replace(tzinfo=tz)
+                c1.markdown(f"<p style='margin-bottom:0; font-size:14px;'><strong>{row.Commessa} - {row.Task}</strong> | {row.operatore} - {row.tag} | {getattr(row, 'note', '')}</p>", unsafe_allow_html=True)
+                c2.markdown(f"<p style='margin-bottom:0; font-size:14px;'>Iniziato alle: {row.ora_i[:5]}</p>", unsafe_allow_html=True)
                 c3.markdown(f"<p style='margin-bottom:0; font-size:14px; color:#d97706;'>⏳ da {trascorso.seconds // 3600}h {(trascorso.seconds % 3600) // 60}m</p>", unsafe_allow_html=True)  
                 c4.button(
                     "Fine", 
-                    key=f"stop_{row['id']}", 
+                    key=f"stop_{row.id}", 
                     type="primary", 
                     on_click=azione_chiudi_log, 
-                    args=(row['id'],)
+                    args=(row.id,)
                 )
                 c5.button(
                     "Fine + ➕", 
-                    key=f"next_{row['id']}", 
+                    key=f"next_{row.id}", 
                     type="primary", 
                     width='stretch',
                     on_click=azione_chiudi_e_apri_modal,
-                    args=(row['id'], row['task_id'])
+                    args=(row.id, getattr(row, 'task_id', None))
                 )
 
     # --- FILTRAGGIO DATI ---
@@ -909,9 +911,10 @@ with tabs[1]:
     if not df.empty:
         cal_events = []
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
-        for _, row in df_p.iterrows():
+        # Sostituito iterrows()
+        for row in df_p.itertuples():
             try:
-                cal_events.append({"id": str(row["id"]), "title": f"{row['operatore']} | {row['Task']}".replace('"', "'").replace('\n', ' '), "start": f"{row['Inizio'].strftime('%Y-%m-%d')}T{row['ora_i']}", "end": f"{row['Fine'].strftime('%Y-%m-%d')}T{row['ora_f']}", "color": color_map.get(row["operatore"], "#3D85C6"), "allDay": True, "extendedProps": {"nota": str(row.get('note', '')).replace('"', "'").replace('\n', ' ')}})
+                cal_events.append({"id": str(row.id), "title": f"{row.operatore} | {row.Task}".replace('"', "'").replace('\n', ' '), "start": f"{row.Inizio.strftime('%Y-%m-%d')}T{row.ora_i}", "end": f"{row.Fine.strftime('%Y-%m-%d')}T{row.ora_f}", "color": color_map.get(row.operatore, "#3D85C6"), "allDay": True, "extendedProps": {"nota": str(getattr(row, 'note', '')).replace('"', "'").replace('\n', ' ')}})
             except: continue
 
         st.markdown("""<style>.fc .fc-multimonth-month {padding: 0px !important; margin-bottom: 2px !important;} .fc .fc-daygrid-day-frame {min-height: 35px !important; max-height: 120px !important;} .fc .fc-daygrid-day-top {flex-direction: row !important; font-size: 0.85em !important;} .fc-daygrid-event {margin-top: 0px !important; margin-bottom: 1px !important; padding: 0px 2px !important; font-size: 0.8em !important;} .fc-multimonth-daygrid {--fc-daygrid-event-h-height: 18px;} iframe[title="streamlit_calendar.calendar"] {width: 100% !important; min-height: 1500px !important; height: 1500px !important;}</style>""", unsafe_allow_html=True)
@@ -928,7 +931,8 @@ with tabs[2]:
     if not df.empty:
         st.subheader("Agenda Verticale")
         color_map = {o['nome']: o.get('colore', '#3D85C6') for o in ops_list}
-        cal_events_agenda = [{"id": str(row["id"]), "title": f"{row['operatore']} | {row['Commessa']} | {row['Task']} - {row['note']}".replace('"', "'").replace('\n', ' '), "start": f"{row['Inizio'].strftime('%Y-%m-%d')}T{row['ora_i']}", "end": f"{row['Fine'].strftime('%Y-%m-%d')}T{row['ora_f']}", "color": color_map.get(row["operatore"], "#3D85C6"), "extendedProps": {"nota": str(row.get('note', '')).replace('"', "'").replace('\n', ' ')}} for _, row in df_p.iterrows()]
+        # Sostituito iterrows()
+        cal_events_agenda = [{"id": str(row.id), "title": f"{row.operatore} | {row.Commessa} | {row.Task} - {getattr(row, 'note', '')}".replace('"', "'").replace('\n', ' '), "start": f"{row.Inizio.strftime('%Y-%m-%d')}T{row.ora_i}", "end": f"{row.Fine.strftime('%Y-%m-%d')}T{row.ora_f}", "color": color_map.get(row.operatore, "#3D85C6"), "extendedProps": {"nota": str(getattr(row, 'note', '')).replace('"', "'").replace('\n', ' ')}} for row in df_p.itertuples()]
         calendar(events=cal_events_agenda, options={"initialView": "listDay", "headerToolbar": {"left": "prev,next today", "center": "title", "right": "listDay,listWeek,listMonth"}, "buttonText": {"listDay": "Giorno", "listWeek": "Settimana", "listMonth": "Mese"}, "noEventsContent": "Nessun task per questa data", "displayEventTime": True, "locale": "it", "height": 1000}, key="calendar_agenda_vertical")
         
 with tabs[3]: 
@@ -947,12 +951,13 @@ with tabs[3]:
 
         edited_log = st.data_editor(df_edit, column_config={"id": None, "Commessa": st.column_config.Column(disabled=True), "Task": st.column_config.Column(disabled=True), "operatore": st.column_config.SelectboxColumn("Operatore", options=sorted([o['nome'] for o in ops_list]), width="medium", required=True), "tag": st.column_config.SelectboxColumn("Tag", options=sorted(list(mappa_tags.keys())), width="medium"), "inizio": st.column_config.DateColumn("Inizio", format="DD/MM/YYYY"), "fine": st.column_config.DateColumn("Fine", format="DD/MM/YYYY"), "ora_i": st.column_config.TimeColumn("Ora Inizio", format="HH:mm"), "ora_f": st.column_config.TimeColumn("Ora Fine", format="HH:mm")}, width='stretch', hide_index=True)
         if st.button("Salva Modifiche Tabella"):
-            for _, r in edited_log.iterrows():
-                try: supabase.table("Log_Tempi").update({"operatore": r['operatore'], "inizio": str(r['Inizio']), "fine": str(r['Fine']), "ora_i": str(r['ora_i']), "ora_f": str(r['ora_f']), "note": r['note'], "tag": mappa_tags.get(r["tag"])}).eq("id", r['id']).execute()
+            # Sostituito iterrows
+            for row_dict in edited_log.to_dict('records'):
+                try: supabase.table("Log_Tempi").update({"operatore": row_dict['operatore'], "inizio": str(row_dict['Inizio']), "fine": str(row_dict['Fine']), "ora_i": str(row_dict['ora_i']), "ora_f": str(row_dict['ora_f']), "note": row_dict['note'], "tag": mappa_tags.get(row_dict["tag"])}).eq("id", row_dict['id']).execute()
                 except Exception as e: 
-                    logger.error(f"Errore aggiornamento log {r['id']}: {e}")
-                    st.error(f"Errore log {r['id']}: {e}")
-            st.success("Modifiche salvate!"); get_cached_data.clear(); st.rerun()
+                    logger.error(f"Errore aggiornamento log {row_dict['id']}: {e}")
+                    st.error(f"Errore log {row_dict['id']}: {e}")
+            st.success("Modifiche salvate!"); clear_cache("Log_Tempi"); st.rerun()
 
 with tabs[4]: 
     st.header("⚙️ Setup di Sistema")
@@ -1050,11 +1055,17 @@ with tabs[5]:
             all_nodes = list_commesse + list_tags
             node_map = {name: i for i, name in enumerate(all_nodes)}
             
-            node_colors = ["#1E3A8A"] * len(list_commesse) + [color_discrete_map.get(t, "#4B5563") for t in list_tags]
-            def hex_to_rgba(hex_val, alpha=0.5): return f'rgba({tuple(int(hex_val.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))[0]}, {tuple(int(hex_val.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))[1]}, {tuple(int(hex_val.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))[2]}, {alpha})' if pd.notna(hex_val) else f'rgba(128, 128, 128, {alpha})'
-
-            fig_sankey = go.Figure(data=[go.Sankey(node = dict(pad=30, thickness=20, label=all_nodes, color=node_colors), textfont = dict(size = 14, color = "black"), link = dict(source=links_sankey[col_comm].map(node_map), target=links_sankey[col_tag].map(node_map), value=links_sankey['ore_pesate'], color=[hex_to_rgba(color_discrete_map.get(t, "#808080"), 0.5) for t in links_sankey[col_tag]], customdata=links_sankey['ore_formattate'], hovertemplate='Da: %{source.label}<br>A: %{target.label}<br>Durata: %{customdata}<extra></extra>'))])
-            fig_sankey.update_layout(height=600, margin=dict(l=150, r=150, t=60, b=10))
-            st.plotly_chart(fig_sankey, width='stretch')
+            node_colors = ["#1E3A8A"] * len(list_commesse) + [color_discrete_map.get(t, "#4CAF50") for t in list_tags]
             
-    else: st.info("Nessun dato disponibile per le statistiche. Filtra i log o inserisci nuove attività.")
+            fig_sankey = go.Figure(data=[go.Sankey(
+                node = dict(pad=15, thickness=20, line=dict(color="black", width=0.5), label=all_nodes, color=node_colors),
+                link = dict(
+                    source=[node_map[s] for s in links_sankey[col_comm]],
+                    target=[node_map[t] for t in links_sankey[col_tag]],
+                    value=links_sankey['ore_pesate'],
+                    customdata=links_sankey['ore_formattate'],
+                    hovertemplate="%{source.label} ➔ %{target.label}<br>Ore Totali: %{customdata}<extra></extra>",
+                    color="rgba(200, 200, 200, 0.4)"
+                ))])
+            fig_sankey.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig_sankey, use_container_width=True)
