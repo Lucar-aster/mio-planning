@@ -851,13 +851,14 @@ if l and tk and cm:
         azione_singola_sync("Log_Tempi", "update", {"ora_f": ora_attuale}, "id", log_id)
         st.toast("Log chiuso correttamente!", icon="✅")
 
+    if "target_task_modal" in st.session_state and st.session_state.target_task_modal is not None:
+        task_id_m, data_m = st.session_state.pop("target_task_modal")
+        modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
+
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
         st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
         
-    if "target_task_modal" in st.session_state and st.session_state.target_task_modal is not None:
-        task_id_m, data_m = st.session_state.pop("target_task_modal")
-        modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
         
     if not (log_aperti := df[df['ora_f'].isna() | (df['ora_f'] == 'None')]).empty:
         st.markdown("<h4 style='margin-bottom: 0px; padding-top: 0px;'>⏱️ Log in Corso</h4>", unsafe_allow_html=True)
