@@ -846,14 +846,14 @@ if l and tk and cm:
         st.markdown('</div>', unsafe_allow_html=True)
 		
     # --- SEZIONE LOG APERTI ---
+    if "target_task_modal" in st.session_state and st.session_state.target_task_modal is not None:
+        task_id_m, data_m = st.session_state.pop("target_task_modal")
+        modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
+
     def azione_chiudi_log(log_id):
         ora_attuale = datetime.now(tz).strftime('%H:%M:%S')
         azione_singola_sync("Log_Tempi", "update", {"ora_f": ora_attuale}, "id", log_id)
         st.toast("Log chiuso correttamente!", icon="✅")
-
-    if "target_task_modal" in st.session_state and st.session_state.target_task_modal is not None:
-        task_id_m, data_m = st.session_state.pop("target_task_modal")
-        modal_gestione_clic(task_id=task_id_m, data_clic=data_m) 
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
         azione_chiudi_log(log_id)
