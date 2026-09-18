@@ -856,7 +856,6 @@ if l and tk and cm:
         st.toast("Log chiuso correttamente!", icon="✅")
 
     def azione_chiudi_e_apri_modal(log_id, task_id):
-	    st.session_state["target_task_modal"] = id_task
         azione_chiudi_log(log_id)
         st.session_state.target_task_modal = (task_id, datetime.now(tz).date())
         
