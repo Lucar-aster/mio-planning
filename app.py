@@ -13,7 +13,6 @@ import plotly.express as px
 import io
 import logging
 import datetime as dt
-import time # Mantenuto per compatibilità generale
 
 # --- 1. CONFIGURAZIONE PAGINA E COSTANTI ---
 LOGO_URL = "https://vjeqrhseqbfsomketjoj.supabase.co/storage/v1/object/public/icona/logo.png"
